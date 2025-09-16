@@ -1,7 +1,7 @@
 services:
   postgres_db:
     image: postgres:15-alpine
-    container_name: action_reaction_db
+    container_name: area_postgres_db
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -12,7 +12,7 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d
+      - ./docker/postgres:/docker-entrypoint-initdb.d
     networks:
       - area_network
     healthcheck:
@@ -21,18 +21,37 @@ services:
       timeout: 10s
       retries: 3
 
+  redis:
+    image: redis:7-alpine
+    container_name: area_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - area_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PgAdmin (optionnel pour debug)
   # pgadmin:
   #   image: dpage/pgadmin4:latest
-  #   container_name: action_reaction_pgadmin
+  #   container_name: area_pgadmin
   #   restart: unless-stopped
   #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: admin@actionreaction.com
+  #     PGADMIN_DEFAULT_EMAIL: admin@area.com
   #     PGADMIN_DEFAULT_PASSWORD: admin123
   #     PGADMIN_CONFIG_SERVER_MODE: 'False'
   #   ports:
   #     - "5050:80"
   #   volumes:
-  #     - pgadmin_data:/var/lib/pgadmin
+  #     - pgadmin_data:/var/lib/pgladmin
   #   networks:
   #     - area_network
   #   depends_on:
@@ -42,8 +61,10 @@ services:
 volumes:
   postgres_data:
     driver: local
-  pgadmin_data:
+  redis_data:
     driver: local
+  # pgadmin_data:
+  #   driver: local
 
 networks:
   area_network:
