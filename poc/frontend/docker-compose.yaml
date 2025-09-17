@@ -1,0 +1,25 @@
+services:
+  vuejs-app:
+    build:
+      context: ./vuejs
+      dockerfile: Dockerfile
+    ports:
+      - "5174:5174"
+    environment:
+      - NODE_ENV=production
+  react-app:
+    build:
+      context: ./react
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=production
+  nuxtjs-app:
+    build:
+      context: ./nuxtjs
+      dockerfile: Dockerfile
+    ports:
+      - "5176:5176"
+    environment:
+      - NODE_ENV=production
