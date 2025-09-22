@@ -28,11 +28,15 @@ services:
     container_name: AREA-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT}:3000"
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
     environment:
       REACT_APP_API_URL: http://localhost:${BACKEND_PORT}
+      NUXT_PORT: ${FRONTEND_PORT}
     networks:
       - area_network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       postgres_db:
         condition: service_healthy

@@ -1,70 +1,90 @@
-# Getting Started with Create React App
+# POC Frontend React
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Description
 
-## Available Scripts
+Ce dossier contient un **Proof of Concept (POC)** d'application frontend développée avec React.js.
 
-In the project directory, you can run:
+## Contenu
 
-### `npm start`
+- `src/` - Code source de l'application React
+- `public/` - Fichiers publics statiques
+- `package.json` - Dépendances et scripts npm
+- `Dockerfile` - Configuration Docker pour le déploiement
+- `.env` - Variables d'environnement
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Technologies utilisées
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- **React 19** - Bibliothèque JavaScript pour les interfaces utilisateur
+- **React DOM** - Rendu DOM pour React
+- **React Scripts** - Outils de build et de développement
+- **Testing Library** - Suite de tests pour React
+- **Docker** - Conteneurisation
 
-### `npm test`
+## Installation et développement
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Prérequis
+- Node.js 18+
+- npm ou yarn
 
-### `npm run build`
+### Installation
+```bash
+npm install
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Développement
+```bash
+npm start
+```
+L'application sera accessible sur http://localhost:3000
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Tests
+```bash
+npm test
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Construction
+```bash
+npm run build
+```
 
-### `npm run eject`
+## Déploiement Docker
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```bash
+# Construction de l'image
+docker build -t area-react-poc .
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# Lancement du conteneur
+docker run -d -p 3000:3000 --name area-react-container area-react-poc
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Fonctionnalités du POC
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- Architecture React avec composants fonctionnels
+- Hooks React modernes
+- Suite de tests intégrée avec Testing Library
+- Hot reloading en développement
+- Build optimisé pour production
+- Configuration Docker prête
 
-## Learn More
+## Scripts disponibles
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- `npm start` - Mode développement avec hot reload
+- `npm run build` - Construction pour production
+- `npm test` - Exécution des tests
+- `npm run eject` - Éjection de la configuration (irréversible)
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Structure du projet
 
-### Code Splitting
+```
+src/
+├── components/     # Composants React réutilisables
+├── pages/         # Pages/vues de l'application
+├── hooks/         # Hooks personnalisés
+├── utils/         # Fonctions utilitaires
+├── styles/        # Fichiers CSS/SCSS
+└── App.js         # Composant principal
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Notes
 
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Ce POC démontre l'utilisation de React.js avec les dernières fonctionnalités et bonnes pratiques pour créer une application web moderne et réactive.
