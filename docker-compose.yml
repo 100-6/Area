@@ -22,11 +22,23 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${BACKEND_DB_USER} -d ${BACKEND_DB_NAME}"]
       interval: 3s
       timeout: 10s
-      retries: 10
-    profiles:
-      - dev-db
-      - dev
-      - prod
+      retries: 3
+ 
+  front-end:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: AREA-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:${BACKEND_PORT}
+    networks:
+      - area_network
+    depends_on:
+      postgres_db:
+        condition: service_healthy
 
   redis:
     image: redis:7-alpine
