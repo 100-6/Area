@@ -75,6 +75,9 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - FRONTEND_URL=${FRONTEND_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
     volumes:
       - ./backend/src:/app/src:ro
       - ./backend/package.json:/app/package.json:ro
@@ -138,6 +141,9 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - FRONTEND_URL=${FRONTEND_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
     networks:
       - area_network
     depends_on:
