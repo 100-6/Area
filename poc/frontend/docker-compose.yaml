@@ -1,12 +1,13 @@
 services:
-  vuejs-app:
+  html-css-app:
     build:
-      context: ./vuejs
+      context: ./html-css
       dockerfile: Dockerfile
     ports:
-      - "5174:5174"
-    environment:
-      - NODE_ENV=production
+      - "5172:80"
+    container_name: poc-html-css
+    restart: unless-stopped
+
   react-app:
     build:
       context: ./react

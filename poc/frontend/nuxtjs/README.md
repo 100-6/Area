@@ -1,9 +1,5 @@
 # POC Frontend Nuxt.js
 
-## Description
-
-Ce dossier contient un **Proof of Concept (POC)** d'application frontend développée avec Nuxt.js 3 et Vue.js.
-
 ## Contenu
 
 - `app.vue` - Point d'entrée principal de l'application Nuxt
@@ -74,7 +70,3 @@ docker run -d -p 3000:3000 --name area-nuxt-container area-nuxt-poc
 - `npm run generate` - Génération de site statique
 - `npm run preview` - Prévisualisation du build
 - `npm run postinstall` - Préparation post-installation
-
-## Notes
-
-Ce POC démontre l'utilisation de Nuxt.js pour créer une application Vue.js moderne avec des fonctionnalités avancées comme le Server-Side Rendering (SSR) et la génération statique.
