@@ -1,52 +1,39 @@
 services:
+  # ===========================================
+  # SHARED SERVICES (dev-db, dev, prod)
+  # ===========================================
   postgres_db:
     image: postgres:15-alpine
     container_name: area_postgres_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${BACKEND_DB_NAME}
+      POSTGRES_USER: ${BACKEND_DB_USER}
+      POSTGRES_PASSWORD: ${BACKEND_DB_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${BACKEND_DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres:/docker-entrypoint-initdb.d
     networks:
       - area_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 30s
+      test: ["CMD-SHELL", "pg_isready -U ${BACKEND_DB_USER} -d ${BACKEND_DB_NAME}"]
+      interval: 3s
       timeout: 10s
       retries: 3
- 
-  front-end:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: AREA-frontend
-    restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
-    environment:
-      REACT_APP_API_URL: http://localhost:${BACKEND_PORT}
-      NUXT_PORT: ${FRONTEND_PORT}
-    networks:
-      - area_network
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    depends_on:
-      postgres_db:
-        condition: service_healthy
+    profiles:
+      - dev-db
+      - dev
+      - prod
 
   redis:
     image: redis:7-alpine
     container_name: area_redis
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT}:6379"
     volumes:
       - redis_data:/data
       - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
@@ -55,36 +42,178 @@ services:
       - area_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
+      interval: 3s
       timeout: 10s
-      retries: 3
+      retries: 10
+    profiles:
+      - dev-db
+      - dev
+      - prod
 
-  # PgAdmin (optionnel pour debug)
-  # pgadmin:
-  #   image: dpage/pgadmin4:latest
-  #   container_name: area_pgadmin
-  #   restart: unless-stopped
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: admin@area.com
-  #     PGADMIN_DEFAULT_PASSWORD: admin123
-  #     PGADMIN_CONFIG_SERVER_MODE: 'False'
-  #   ports:
-  #     - "5050:80"
+  # ===========================================
+  # DEVELOPMENT SERVICES
+  # ===========================================
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: area_backend_dev
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT}:8080"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - DB_HOST=postgres_db
+      - DB_PORT=5432
+      - DB_NAME=${BACKEND_DB_NAME}
+      - DB_USER=${BACKEND_DB_USER}
+      - DB_PASSWORD=${BACKEND_DB_PASSWORD}
+      - PORT=${BACKEND_PORT}
+      - JWT_SECRET=${BACKEND_JWT_SECRET}
+      - JWT_EXPIRES_IN=${BACKEND_JWT_EXPIRES_IN}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - FRONTEND_URL=${FRONTEND_URL}
+    volumes:
+      - ./backend/src:/app/src:ro
+      - ./backend/package.json:/app/package.json:ro
+      - node_modules_backend:/app/node_modules
+    networks:
+      - area_network
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - dev
+
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: area_frontend_dev
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - NUXT_PUBLIC_API_URL=http://localhost:${BACKEND_PORT}
+      - PORT=${FRONTEND_PORT}
+    volumes:
+      - ./frontend:/app
+      - node_modules_frontend:/app/node_modules
+      - nuxt_cache:/app/.nuxt
+    networks:
+      - area_network
+    depends_on:
+      - backend-dev
+    profiles:
+      - dev
+
+  # ===========================================
+  # PRODUCTION SERVICES
+  # ===========================================
+  backend-prod:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: area_backend_prod
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT}:8080"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - DB_HOST=postgres_db
+      - DB_PORT=5432
+      - DB_NAME=${BACKEND_DB_NAME}
+      - DB_USER=${BACKEND_DB_USER}
+      - DB_PASSWORD=${BACKEND_DB_PASSWORD}
+      - PORT=${BACKEND_PORT}
+      - JWT_SECRET=${BACKEND_JWT_SECRET}
+      - JWT_EXPIRES_IN=${BACKEND_JWT_EXPIRES_IN}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - FRONTEND_URL=${FRONTEND_URL}
+    networks:
+      - area_network
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - prod
+
+  frontend-prod:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: area_frontend_prod
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - NUXT_PUBLIC_API_URL=${FRONTEND_URL}
+      - PORT=${FRONTEND_PORT}
+    networks:
+      - area_network
+    depends_on:
+      - backend-prod
+    profiles:
+      - prod
+
+  nginx:
+    image: nginx:alpine
+    container_name: area_nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT}:80"
+      - "${NGINX_HTTPS_PORT}:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - mobile_builds:/var/www/mobile:ro
+    networks:
+      - area_network
+    depends_on:
+      - backend-prod
+      - frontend-prod
+    profiles:
+      - prod
+
+  # ===========================================
+  # OPTIONAL SERVICES
+  # ===========================================
+  # mobile-builder:
+  #   build:
+  #     context: ./mobile
+  #     dockerfile: Dockerfile
+  #   container_name: area_mobile_builder
   #   volumes:
-  #     - pgadmin_data:/var/lib/pgladmin
-  #   networks:
-  #     - area_network
-  #   depends_on:
-  #     postgres_db:
-  #       condition: service_healthy
+  #     - mobile_builds:/app/build
+  #   profiles:
+  #     - dev
+  #     - prod
 
 volumes:
   postgres_data:
     driver: local
   redis_data:
     driver: local
-  # pgadmin_data:
-  #   driver: local
+  node_modules_backend:
+    driver: local
+  node_modules_frontend:
+    driver: local
+  nuxt_cache:
+    driver: local
+  mobile_builds:
+    driver: local
 
 networks:
   area_network:
