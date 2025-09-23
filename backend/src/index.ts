@@ -7,6 +7,7 @@ import 'colors';
 
 // Import routes
 import systemRoutes from './core/routes/system';
+import authRoutes from './core/routes/auth';
 
 dotenv.config();
 
@@ -26,9 +27,9 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Next routes to be added here, ex :
+// Routes
 app.use('/', systemRoutes);
-// app.use('/api/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 // app.use('/api/users', userRoutes);
 // app.use('/api/services', serviceRoutes);
 // app.use('/api/areas', areaRoutes);
