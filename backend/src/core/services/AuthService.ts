@@ -115,6 +115,46 @@ class AuthService {
     }
 
     /**
+     * Obtenir l'URL d'authentification Discord
+     */
+    getDiscordAuthUrl(): string {
+        if (!this.oauthManager.isDiscordConfigured())
+            throw new Error('DISCORD_OAUTH_NOT_CONFIGURED');
+        return this.oauthManager.getDiscordAuthUrl();
+    }
+
+    /**
+     * Gérer le callback Discord OAuth
+     */
+    async handleDiscordCallback(code: string): Promise<AuthResult> {
+        try {
+            const user = await this.oauthManager.handleDiscordCallback(code);
+
+            if (!user || !user.id || !user.email)
+                throw new Error('INVALID_OAUTH_USER_DATA');
+            if (!user.is_active)
+                throw new Error('ACCOUNT_INACTIVE');
+            const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+            console.log(`SUCCESS: Discord OAuth login: ${user.email} (ID: ${user.id})`.green);
+            return {
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.first_name || '',
+                    lastName: user.last_name || '',
+                    createdAt: user.created_at
+                },
+                token
+            };
+        } catch (error) {
+            console.error('Discord OAuth callback error:'.red, error);
+            if (error instanceof Error)
+                throw error;
+            throw new Error('OAUTH_CALLBACK_FAILED');
+        }
+    }
+
+    /**
      * Obtenir l'URL d'authentification Google
      */
     getGoogleAuthUrl(): string {
@@ -226,6 +266,20 @@ class AuthService {
      */
     isGoogleConfigured(): boolean {
         return this.oauthManager.isGoogleConfigured();
+    }
+
+    /**
+     * Vérifier si Discord OAuth est configuré
+     */
+    isDiscordConfigured(): boolean {
+        return this.oauthManager.isDiscordConfigured();
+    }
+
+    /**
+     * Obtenir le statut de tous les providers OAuth
+     */
+    getOAuthProvidersStatus(): any {
+        return this.oauthManager.getProvidersStatus();
     }
 }
 
