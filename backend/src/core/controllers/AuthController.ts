@@ -142,53 +142,6 @@ export class AuthController {
         }
     };
 
-    /**
-     * Obtenir les informations de l'utilisateur actuel
-     * GET /api/auth/me
-     */
-    public getCurrentUser = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const token = req.headers.authorization?.replace('Bearer ', '');
-
-            if (!token) {
-                res.status(401).json({ error: 'No token provided' });
-                return;
-            }
-
-            const user = await this.authService.getCurrentUser(token);
-            res.json({
-                success: true,
-                user: user
-            });
-        } catch (error) {
-            console.error('Get current user error:'.red, error);
-            let errorMessage = 'Failed to get user information';
-            let statusCode = 500;
-
-            if (error instanceof Error) {
-                switch (error.message) {
-                    case 'USER_NOT_FOUND_OR_INACTIVE':
-                        errorMessage = 'User not found or inactive';
-                        statusCode = 404;
-                        break;
-                    case 'Token expired':
-                        errorMessage = 'Token expired';
-                        statusCode = 401;
-                        break;
-                    case 'Invalid token':
-                    case 'TOKEN_VERIFICATION_FAILED':
-                        errorMessage = 'Invalid token';
-                        statusCode = 401;
-                        break;
-                }
-            }
-
-            res.status(statusCode).json({
-                success: false,
-                error: errorMessage
-            });
-        }
-    };
 
     /**
      * Route de déconnexion

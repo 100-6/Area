@@ -32,17 +32,6 @@ interface ValidationError {
     message: string;
 }
 
-interface CurrentUserResult {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    avatarUrl?: string;
-    emailVerified: boolean;
-    registrationMethod: string;
-    lastLoginAt?: Date;
-    createdAt: Date;
-}
 
 class AuthService {
     private jwtManager: JwtManager;
@@ -233,41 +222,6 @@ class AuthService {
         return errors;
     }
 
-    /**
-     * Obtenir les informations de l'utilisateur actuel
-     */
-    async getCurrentUser(token: string): Promise<CurrentUserResult> {
-        try {
-            const decoded = this.jwtManager.verifyToken(token);
-            const user = await User.findById(decoded.userId);
-
-            if (!user || !user.is_active) {
-                throw new Error('USER_NOT_FOUND_OR_INACTIVE');
-            }
-
-            console.log(`SUCCESS: Current user data retrieved: ${user.email} (ID: ${user.id})`.green);
-            
-            return {
-                id: user.id,
-                email: user.email,
-                firstName: user.first_name || '',
-                lastName: user.last_name || '',
-                avatarUrl: user.avatar_url || undefined,
-                emailVerified: user.email_verified,
-                registrationMethod: user.registration_method,
-                lastLoginAt: user.last_login_at || undefined,
-                createdAt: user.created_at
-            };
-        } catch (error) {
-            if (error instanceof Error && (error.message === 'Token expired' || error.message === 'Invalid token' || error.message === 'Token verification failed')) {
-                throw error;
-            }
-            if (error instanceof Error && error.message === 'USER_NOT_FOUND_OR_INACTIVE') {
-                throw error;
-            }
-            throw new Error('TOKEN_VERIFICATION_FAILED');
-        }
-    }
 
     /**
      * Vérifier si Google OAuth est configuré
