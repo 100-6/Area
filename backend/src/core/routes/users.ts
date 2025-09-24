@@ -8,4 +8,7 @@ const userController = new UserController();
 // GET /api/users/me
 router.get('/me', requireAuth, userController.getMe);
 
+// POST /api/users/changePassword
+router.post('/changePassword', requireAuth, userController.changePassword);
+
 export default router;
