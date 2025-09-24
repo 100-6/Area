@@ -32,6 +32,7 @@ interface ValidationError {
     message: string;
 }
 
+
 class AuthService {
     private jwtManager: JwtManager;
     private oauthManager: OAuthManager;
@@ -260,6 +261,7 @@ class AuthService {
             errors.push({ field: 'password', message: 'Password is required' });
         return errors;
     }
+
 
     /**
      * Vérifier si Google OAuth est configuré
