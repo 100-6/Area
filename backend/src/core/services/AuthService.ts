@@ -2,6 +2,7 @@ import { User } from '../models/User';
 import { PasswordManager } from '../../shared/auth/PasswordManager';
 import { JwtManager } from '../../shared/auth/JwtManager';
 import { OAuthManager } from '../../shared/auth/OAuthManager';
+import { UserSession } from '../models/UserSession';
 import 'colors';
 
 interface RegisterData {
@@ -24,7 +25,8 @@ interface AuthResult {
         lastName: string;
         createdAt: Date;
     };
-    token: string;
+    token: string; // access token (short lived)
+    refreshToken: string; // refresh token (long lived)
 }
 
 interface ValidationError {
@@ -66,7 +68,10 @@ class AuthService {
             registration_method: 'email',
             email_verified: false
         });
-        const token = this.jwtManager.generateToken({userId: newUser.id, email: newUser.email});
+    const token = this.jwtManager.generateToken({userId: newUser.id, email: newUser.email});
+    const refreshToken = this.jwtManager.generateRefreshToken({ userId: newUser.id, email: newUser.email });
+    const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await UserSession.create(newUser.id, refreshToken, refreshExpiry);
         console.log(`SUCCESS: New user registered: ${email} (ID: ${newUser.id})`.green);
         return {
             user: {
@@ -76,7 +81,8 @@ class AuthService {
                 lastName: newUser.last_name || '',
                 createdAt: newUser.created_at
             },
-            token
+            token,
+            refreshToken
         };
     }
 
@@ -101,7 +107,10 @@ class AuthService {
         if (!isPasswordValid)
             throw new Error('INVALID_CREDENTIALS');
         await User.updateLastLogin(user.id);
-        const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+    const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+    const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
+    const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await UserSession.create(user.id, refreshToken, refreshExpiry);
         console.log(`SUCCESS: User logged in: ${email} (ID: ${user.id})`.green);
         return {
             user: {
@@ -111,7 +120,8 @@ class AuthService {
                 lastName: user.last_name || '',
                 createdAt: user.created_at
             },
-            token
+            token,
+            refreshToken
         };
     }
 
@@ -136,6 +146,9 @@ class AuthService {
             if (!user.is_active)
                 throw new Error('ACCOUNT_INACTIVE');
             const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+            const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
+            const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            await UserSession.create(user.id, refreshToken, refreshExpiry);
             console.log(`SUCCESS: Discord OAuth login: ${user.email} (ID: ${user.id})`.green);
             return {
                 user: {
@@ -145,7 +158,8 @@ class AuthService {
                     lastName: user.last_name || '',
                     createdAt: user.created_at
                 },
-                token
+                token,
+                refreshToken
             };
         } catch (error) {
             console.error('Discord OAuth callback error:'.red, error);
@@ -176,6 +190,9 @@ class AuthService {
             if (!user.is_active)
                 throw new Error('ACCOUNT_INACTIVE');
             const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+            const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
+            const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            await UserSession.create(user.id, refreshToken, refreshExpiry);
             console.log(`SUCCESS: Google OAuth login: ${user.email} (ID: ${user.id})`.green);
             return {
                 user: {
@@ -185,7 +202,8 @@ class AuthService {
                     lastName: user.last_name || '',
                     createdAt: user.created_at
                 },
-                token
+                token,
+                refreshToken
             };
         } catch (error) {
             console.error('Google OAuth callback error:'.red, error);
@@ -282,6 +300,45 @@ class AuthService {
      */
     getOAuthProvidersStatus(): any {
         return this.oauthManager.getProvidersStatus();
+    }
+
+    /**
+     * Refresh tokens using a valid refresh token (rotation strategy)
+     */
+    async refreshTokens(refreshToken: string): Promise<{ token: string; refreshToken: string }> {
+        if (!refreshToken)
+            throw new Error('NO_REFRESH_TOKEN');
+        // Verify & decode refresh token
+        try {
+            const decoded = this.jwtManager.verifyToken(refreshToken); // will throw if expired/invalid
+            if (decoded.type !== 'refresh')
+                throw new Error('INVALID_REFRESH_TOKEN');
+            // Check session in DB
+            const session = await UserSession.findActiveByToken(refreshToken);
+            if (!session)
+                throw new Error('REFRESH_SESSION_NOT_FOUND');
+            // Issue new tokens
+            const newAccessToken = this.jwtManager.generateToken({ userId: decoded.userId, email: decoded.email });
+            const newRefreshToken = this.jwtManager.generateRefreshToken({ userId: decoded.userId, email: decoded.email });
+            const newExpiry = this.jwtManager.getTokenExpiry(newRefreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            const rotated = await UserSession.rotate(refreshToken, newRefreshToken, newExpiry);
+            if (!rotated)
+                throw new Error('REFRESH_ROTATION_FAILED');
+            return { token: newAccessToken, refreshToken: newRefreshToken };
+        } catch (error) {
+            if (error instanceof Error)
+                throw error;
+            throw new Error('INVALID_REFRESH_TOKEN');
+        }
+    }
+
+    /**
+     * Logout: invalidate refresh token (session)
+     */
+    async logout(refreshToken?: string): Promise<void> {
+        if (!refreshToken)
+            return; // nothing to do
+        await UserSession.deactivateByToken(refreshToken);
     }
 }
 
