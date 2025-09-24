@@ -3,12 +3,12 @@
     <UContainer>
       <div class="flex items-center justify-between h-16">
         <!-- Logo -->
-        <NuxtLink to="/" class="flex items-center space-x-2 group">
-          <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 group-hover:scale-110"
-               style="background-color: var(--color-primary);">
-            <UIcon name="i-heroicons-puzzle-piece" class="w-5 h-5" style="color: var(--color-accent);" />
-          </div>
-          <span class="text-xl font-bold text-brand-accent">AREA</span>
+        <NuxtLink to="/" class="group">
+          <img
+            src="/AutoLogo.png"
+            alt="Auto Logo"
+            class="h-16 w-auto object-contain transition-all duration-200 group-hover:scale-110"
+          />
         </NuxtLink>
 
         <!-- Desktop Navigation -->

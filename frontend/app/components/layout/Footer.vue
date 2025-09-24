@@ -6,16 +6,16 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <!-- Brand Section -->
           <div class="lg:col-span-1">
-            <div class="flex items-center space-x-2 mb-4">
-              <div class="w-8 h-8 rounded-lg flex items-center justify-center"
-                   style="background-color: var(--color-primary);">
-                <UIcon name="i-heroicons-puzzle-piece" class="w-5 h-5" style="color: var(--color-accent);" />
-              </div>
-              <span class="text-xl font-bold text-brand-accent">AREA</span>
+            <div class="mb-6">
+              <img
+                src="/AutoLogo.png"
+                alt="Auto Logo"
+                class="h-16 w-auto object-contain"
+              />
             </div>
             <p class="text-gray-600 mb-6 leading-relaxed">
               Connectez et automatisez vos services préférés en quelques clics.
-              Simplifiez votre quotidien avec AREA.
+              Simplifiez votre quotidien avec nos solutions d'automatisation.
             </p>
             <div class="flex space-x-4">
               <UButton
@@ -138,7 +138,7 @@
         <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
           <div class="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6">
             <p class="text-sm text-gray-500">
-              © {{ currentYear }} AREA. Tous droits réservés.
+              © {{ currentYear }} Auto. Tous droits réservés.
             </p>
             <div class="flex items-center space-x-6">
               <NuxtLink to="/privacy" class="text-sm text-gray-500 hover:text-brand-tertiary transition-colors duration-200">

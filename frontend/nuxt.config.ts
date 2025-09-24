@@ -7,5 +7,11 @@ export default defineNuxtConfig({
     host: '0.0.0.0'
   },
   modules: ['@nuxt/ui'],
-  css: ['~/assets/css/main.css']
+  css: ['~/assets/css/main.css', '~/assets/css/transitions.css'],
+  app: {
+    pageTransition: {
+      name: 'page',
+      mode: 'out-in'
+    }
+  }
 })
