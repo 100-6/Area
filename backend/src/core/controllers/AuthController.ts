@@ -51,6 +51,68 @@ export class AuthController {
         }
     };
 
+    /* =============================   OAuth    ============================= */
+    /*                                   |                                    */
+    /*                                   v                                    */
+
+    /**
+     * Initiate Discord OAuth
+     * GET /api/auth/discord
+     */
+    public discordLogin = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const authUrl = this.authService.getDiscordAuthUrl();
+            res.redirect(authUrl);
+        } catch (error) {
+            console.error('Discord OAuth redirect error:'.red, error);
+            if (error instanceof Error && error.message === 'DISCORD_OAUTH_NOT_CONFIGURED')
+                res.status(500).json({ error: 'Discord OAuth not configured' });
+            else
+                res.status(500).json({ error: 'Failed to initiate Discord OAuth' });
+        }
+    };
+
+    /**
+     * Handle Discord OAuth callback
+     * GET /api/auth/discord/callback
+     */
+    public discordCallback = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { code, error } = req.query;
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+            if (error) {
+                console.error('Discord OAuth error:', error);
+                res.redirect(`${frontendUrl}/auth/error?error=${error}`);
+                return;
+            }
+            if (!code) {
+                res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
+                return;
+            }
+            const result = await this.authService.handleDiscordCallback(code as string);
+            res.redirect(`${frontendUrl}/auth/success?token=${result.token}&provider=discord`);
+        } catch (error) {
+            console.error('Discord OAuth callback error:'.red, error);
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            let errorMessage = 'Authentication failed';
+            if (error instanceof Error) {
+                switch (error.message) {
+                    case 'INVALID_OAUTH_USER_DATA':
+                        errorMessage = 'Invalid user data received from Discord';
+                        break;
+                    case 'ACCOUNT_INACTIVE':
+                        errorMessage = 'Account is inactive';
+                        break;
+                    case 'OAUTH_CALLBACK_FAILED':
+                        errorMessage = 'Discord authentication failed';
+                        break;
+                }
+            }
+            res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}&provider=discord`);
+        }
+    };
+
     /**
      * Initiate Google OAuth
      * GET /api/auth/google
@@ -108,6 +170,10 @@ export class AuthController {
             res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
         }
     };
+
+    /*                                   ^                                    */
+    /*                                   |                                    */
+    /* =============================   OAuth    ============================= */
 
     /**
      * Vérifier un token JWT

@@ -6,8 +6,13 @@ const authController = new AuthController();
 
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/logout', authController.logout);
+router.get('/verify', authController.verifyToken);
 
 router.get('/google', authController.googleLogin);
 router.get('/google/callback', authController.googleCallback);
+
+router.get('/discord', authController.discordLogin);
+router.get('/discord/callback', authController.discordCallback);
 
 export default router;
