@@ -10,7 +10,7 @@
 
       <UContainer class="relative z-10 py-20 lg:py-32">
         <div class="grid lg:grid-cols-2 gap-12 items-center max-w-7xl mx-auto">
-          <div class="text-center lg:text-left space-y-12">
+          <div class="text-center lg:text-left space-y-12 fade-in">
             <div class="space-y-6">
               <h1 class="text-5xl lg:text-7xl font-bold leading-tight tracking-tight" style="color: var(--text-primary);">
                 Automatisez votre
@@ -51,7 +51,7 @@
               <UButton
                 size="xl"
                 variant="ghost"
-                class="px-8 py-4 text-lg font-medium hover:bg-gray-50 transition-all duration-300"
+                class="px-8 py-4 text-lg font-medium smooth-hover"
                 style="color: var(--text-primary);"
               >
                 <UIcon name="i-heroicons-eye" class="w-6 h-6 mr-2" />
@@ -75,7 +75,7 @@
             </div>
           </div>
 
-          <div class="lg:flex lg:justify-end">
+          <div class="lg:flex lg:justify-end fade-in">
             <div class="relative flex flex-col items-center">
               <div class="relative mb-6 p-4 lg:p-6 rounded-3xl max-w-xs lg:max-w-md"
                    style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(167, 240, 186, 0.1)); border: 2px solid var(--color-primary); box-shadow: var(--shadow-xl);">
@@ -111,7 +111,7 @@
     <!-- Workflow Demo Section -->
     <section class="py-20 lg:py-32 overflow-hidden" style="background: var(--bg-secondary);">
       <UContainer>
-        <div class="text-center mb-16">
+        <div class="text-center mb-16 slide-up">
           <h2 class="text-4xl lg:text-5xl font-bold mb-6" style="color: var(--text-primary);">
             Créez des workflows en
             <span class="text-green-600">3 étapes simples</span>
@@ -122,7 +122,7 @@
         </div>
 
         <div class="max-w-6xl mx-auto">
-          <div class="grid lg:grid-cols-3 gap-8 items-center">
+          <div class="grid lg:grid-cols-3 gap-8 items-center fade-in">
             <UiWorkflowStepCard
               :step="1"
               icon="i-heroicons-plus-circle"
@@ -194,7 +194,7 @@
     <!-- Features Section -->
     <section class="py-20 lg:py-32" style="background: var(--bg-primary);">
       <UContainer>
-        <div class="text-center max-w-3xl mx-auto mb-20">
+        <div class="text-center max-w-3xl mx-auto mb-20 slide-up">
           <h2 class="text-4xl lg:text-5xl font-bold mb-6" style="color: var(--text-primary);">
             Pourquoi 50K+ équipes nous font
             <span class="text-green-600">confiance</span>
@@ -204,10 +204,10 @@
           </p>
         </div>
 
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <div class="group p-8 rounded-2xl border transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 fade-in">
+          <div class="group p-8 rounded-2xl border card-hover"
                style="background: var(--bg-card); border-color: var(--border-color);">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110"
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 smooth-hover group-hover:scale-110"
                  style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));">
               <UIcon name="i-heroicons-puzzle-piece" class="w-7 h-7" style="color: var(--color-tertiary);" />
             </div>
@@ -222,9 +222,9 @@
             </div>
           </div>
 
-          <div class="group p-8 rounded-2xl border transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+          <div class="group p-8 rounded-2xl border card-hover"
                style="background: var(--bg-card); border-color: var(--border-color);">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110"
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 smooth-hover group-hover:scale-110"
                  style="background: linear-gradient(135deg, var(--color-secondary), var(--color-tertiary));">
               <UIcon name="i-heroicons-bolt" class="w-7 h-7 text-white" />
             </div>
@@ -240,9 +240,9 @@
             </div>
           </div>
 
-          <div class="group p-8 rounded-2xl border transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+          <div class="group p-8 rounded-2xl border card-hover"
                style="background: var(--bg-card); border-color: var(--border-color);">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110"
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 smooth-hover group-hover:scale-110"
                  style="background: linear-gradient(135deg, var(--color-tertiary), var(--color-accent));">
               <UIcon name="i-heroicons-shield-check" class="w-7 h-7 text-white" />
             </div>
@@ -256,9 +256,9 @@
             </div>
           </div>
 
-          <div class="group p-8 rounded-2xl border transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+          <div class="group p-8 rounded-2xl border card-hover"
                style="background: var(--bg-card); border-color: var(--border-color);">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110"
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 smooth-hover group-hover:scale-110"
                  style="background: linear-gradient(135deg, var(--color-primary), var(--color-tertiary));">
               <UIcon name="i-heroicons-chart-bar-square" class="w-7 h-7" style="color: var(--text-white);" />
             </div>
@@ -268,9 +268,9 @@
             </p>
           </div>
 
-          <div class="group p-8 rounded-2xl border transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+          <div class="group p-8 rounded-2xl border card-hover"
                style="background: var(--bg-card); border-color: var(--border-color);">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110"
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 smooth-hover group-hover:scale-110"
                  style="background: linear-gradient(135deg, var(--color-secondary), var(--color-accent));">
               <UIcon name="i-heroicons-users" class="w-7 h-7 text-white" />
             </div>
@@ -280,9 +280,9 @@
             </p>
           </div>
 
-          <div class="group p-8 rounded-2xl border transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+          <div class="group p-8 rounded-2xl border card-hover"
                style="background: var(--bg-card); border-color: var(--border-color);">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110"
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 smooth-hover group-hover:scale-110"
                  style="background: linear-gradient(135deg, var(--color-tertiary), var(--color-primary));">
               <UIcon name="i-heroicons-cpu-chip" class="w-7 h-7 text-white" />
             </div>
@@ -298,7 +298,7 @@
     <!-- Services Section -->
     <section class="py-20 lg:py-32" style="background: var(--bg-secondary);">
       <UContainer>
-        <div class="text-center max-w-3xl mx-auto mb-16">
+        <div class="text-center max-w-3xl mx-auto mb-16 slide-up">
           <h2 class="text-4xl lg:text-5xl font-bold mb-6" style="color: var(--text-primary);">
             Plus de <span class="text-green-600">1000 intégrations</span>
           </h2>
@@ -316,7 +316,7 @@
         >
           <div class="flex space-x-6">
             <div v-for="service in services" :key="service.name" class="flex-shrink-0">
-              <div class="flex items-center space-x-4 px-6 py-4 rounded-2xl border transition-all duration-300 hover:scale-105 hover:shadow-lg"
+              <div class="flex items-center space-x-4 px-6 py-4 rounded-2xl border smooth-hover"
                    style="background: var(--bg-card); border-color: var(--border-color);">
                 <div class="w-10 h-10 flex items-center justify-center">
                   <UIcon :name="service.icon" class="w-8 h-8" />
@@ -337,7 +337,7 @@
       </div>
 
       <UContainer class="relative z-10">
-        <div class="text-center max-w-4xl mx-auto">
+        <div class="text-center max-w-4xl mx-auto fade-in">
           <h2 class="text-4xl lg:text-6xl font-bold mb-8" style="color: var(--text-white);">
             Prêt à automatiser votre
             <br />
@@ -372,7 +372,7 @@
             <UButton
               size="xl"
               variant="outline"
-              class="px-10 py-5 text-lg font-semibold rounded-2xl border-2 transition-all duration-300 hover:bg-white/10"
+              class="px-10 py-5 text-lg font-semibold rounded-2xl border-2 button-hover"
               style="border-color: var(--text-white); color: var(--text-white);"
             >
               <UIcon name="i-heroicons-calendar-days" class="w-6 h-6 mr-2" />

@@ -12,9 +12,9 @@
       <div class="grid lg:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
 
         <!-- Section formulaire -->
-        <div class="order-2 lg:order-1">
+        <div class="order-2 lg:order-1 fade-in">
           <div class="max-w-md mx-auto">
-            <div class="text-center mb-8">
+            <div class="text-center mb-8 slide-up">
               <h1 class="text-4xl lg:text-5xl font-bold mb-4" style="color: var(--text-primary);">
                 Rejoignez
                 <span class="bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent">Auto</span>
@@ -25,7 +25,8 @@
             </div>
 
             <!-- AuthForm de Nuxt UI -->
-            <UAuthForm
+            <div class="scale-in">
+              <UAuthForm
               :fields="formFields"
               :providers="authProviders"
               title=""
@@ -36,19 +37,20 @@
                 class: 'w-full justify-center'
               }"
               @submit="handleSubmit"
-            />
+              />
+            </div>
 
-            <div class="mt-6 text-center">
+            <div class="mt-6 text-center fade-in">
               <p class="text-sm" style="color: var(--text-secondary);">
                 Déjà un compte ?
-                <NuxtLink to="/login" class="font-medium hover:underline" style="color: var(--color-tertiary);">
+                <NuxtLink to="/login" class="font-medium smooth-hover transition-colors duration-200 hover:underline" style="color: var(--color-tertiary);">
                   Se connecter
                 </NuxtLink>
               </p>
             </div>
 
             <!-- Avantages -->
-            <div class="mt-8 space-y-3">
+            <div class="mt-8 space-y-3 fade-in">
               <div class="flex items-center gap-3" style="color: var(--text-secondary);">
                 <UIcon name="i-heroicons-check-circle" class="w-5 h-5" style="color: var(--color-secondary);" />
                 <span class="text-sm">Gratuit pour commencer</span>
@@ -66,10 +68,10 @@
         </div>
 
         <!-- Section robot -->
-        <div class="order-1 lg:order-2">
+        <div class="order-1 lg:order-2 fade-in">
           <div class="relative flex flex-col items-center">
             <!-- Bulle de dialogue -->
-            <div class="relative mb-6 p-4 lg:p-6 rounded-3xl max-w-xs lg:max-w-md"
+            <div class="relative mb-6 p-4 lg:p-6 rounded-3xl max-w-xs lg:max-w-md smooth-hover"
                  style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(167, 240, 186, 0.1)); border: 2px solid var(--color-primary); box-shadow: var(--shadow-xl);">
 
               <div class="text-base lg:text-lg font-medium text-center" style="color: var(--color-tertiary);">
@@ -207,7 +209,7 @@ useHead({
 </script>
 
 <style scoped>
-/* Styles personnalisés pour améliorer l'apparence du formulaire */
+/* Styles de base pour les formulaires */
 :deep(.form-input) {
   background: var(--bg-card) !important;
   border: 1px solid var(--border-color) !important;
@@ -216,7 +218,6 @@ useHead({
 
 :deep(.form-input:focus) {
   border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 3px rgba(167, 240, 186, 0.1) !important;
 }
 
 :deep(.form-input::placeholder) {
@@ -231,6 +232,12 @@ useHead({
   background: var(--bg-card) !important;
   border: 1px solid var(--border-color) !important;
   color: var(--text-primary) !important;
+}
+
+:deep(input[type="text"]:focus),
+:deep(input[type="email"]:focus),
+:deep(input[type="password"]:focus) {
+  border-color: var(--color-primary) !important;
 }
 
 /* Style pour les labels */
