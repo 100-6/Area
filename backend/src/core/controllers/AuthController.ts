@@ -31,7 +31,8 @@ export class AuthController {
         try {
             const registerData: RegisterRequest = req.body;
             const result = await this.authService.register(registerData);
-
+            // Set refresh token cookie (no rotation or invalidation logic yet)
+            this.setRefreshCookie(res, result.refreshToken);
             res.status(201).json({message: 'Registration successful', user: result.user, token: result.token});
         } catch (error) {
             console.error('ERROR: Registration failed:'.red, error);
@@ -46,7 +47,7 @@ export class AuthController {
         try {
             const loginData: LoginRequest = req.body;
             const result = await this.authService.login(loginData);
-
+            this.setRefreshCookie(res, result.refreshToken);
             res.json({message: 'Login successful', user: result.user, token: result.token});
         } catch (error) {
             console.error('ERROR: Login failed:'.red, error);
@@ -94,7 +95,8 @@ export class AuthController {
                 return;
             }
             const result = await this.authService.handleDiscordCallback(code as string);
-            res.redirect(`${frontendUrl}/auth/success?token=${result.token}&provider=discord`);
+            // Can't reliably set HttpOnly cookie cross-domain via redirect without same-site alignment; send token in URL as before + (optional) plan for frontend to hit /api/auth/transfer to set cookie server-side.
+            res.redirect(`${frontendUrl}/auth/success?token=${result.token}&provider=discord&refresh=${result.refreshToken}`);
         } catch (error) {
             console.error('Discord OAuth callback error:'.red, error);
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -152,7 +154,7 @@ export class AuthController {
                 return;
             }
             const result = await this.authService.handleGoogleCallback(code as string);
-            res.redirect(`${frontendUrl}/auth/success?token=${result.token}`);
+            res.redirect(`${frontendUrl}/auth/success?token=${result.token}&refresh=${result.refreshToken}`);
         } catch (error) {
             console.error('Google OAuth callback error:'.red, error);
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -218,6 +220,43 @@ export class AuthController {
     public logout = (req: Request, res: Response): void => {
         res.json({ message: 'Logout successful' });
     };
+
+    /**
+     * Exchange refresh token for new access token (no rotation yet)
+     * POST /api/auth/refresh
+     */
+    public refresh = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const bodyToken = (req.body && req.body.refreshToken) || undefined;
+            // Prefer cookie if present; cookie-parser not yet added so we read header fallback until integrated.
+            const headerToken = req.headers['x-refresh-token'] as string | undefined;
+            const provided = bodyToken || headerToken;
+            if (!provided) {
+                res.status(400).json({ error: 'No refresh token provided' });
+                return;
+            }
+            const result = await this.authService.refreshAccessToken(provided);
+            res.json({ token: result.token, user: result.user });
+        } catch (error) {
+            let status = 401;
+            let msg = 'Invalid or expired refresh token';
+            if (error instanceof Error) {
+                if (error.message === 'USER_NOT_FOUND_OR_INACTIVE') msg = 'User not found or inactive';
+                if (error.message === 'Refresh token expired') msg = 'Refresh token expired';
+                if (error.message === 'Invalid refresh token') msg = 'Invalid refresh token';
+            }
+            res.status(status).json({ error: msg });
+        }
+    };
+
+    /**
+     * Helper to set refresh cookie (placeholder—cookie-parser not yet integrated in this commit)
+     */
+    private setRefreshCookie(res: Response, refreshToken: string) {
+        // If you add cookie-parser later, convert to res.cookie('refreshToken', refreshToken, options)
+        // For now, expose via header so the frontend can store it; (NOT IDEAL SECURITY) kept minimal per request.
+        res.setHeader('x-refresh-token', refreshToken);
+    }
 
     /**
      * Gérer les erreurs du service

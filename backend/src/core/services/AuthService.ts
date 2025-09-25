@@ -25,6 +25,7 @@ interface AuthResult {
         createdAt: Date;
     };
     token: string;
+    refreshToken: string;
 }
 
 interface ValidationError {
@@ -66,7 +67,8 @@ class AuthService {
             registration_method: 'email',
             email_verified: false
         });
-        const token = this.jwtManager.generateToken({userId: newUser.id, email: newUser.email});
+    const token = this.jwtManager.generateToken({userId: newUser.id, email: newUser.email});
+    const refreshToken = this.jwtManager.generateRefreshToken({userId: newUser.id, email: newUser.email});
         console.log(`SUCCESS: New user registered: ${email} (ID: ${newUser.id})`.green);
         return {
             user: {
@@ -76,7 +78,8 @@ class AuthService {
                 lastName: newUser.last_name || '',
                 createdAt: newUser.created_at
             },
-            token
+            token,
+            refreshToken
         };
     }
 
@@ -101,7 +104,8 @@ class AuthService {
         if (!isPasswordValid)
             throw new Error('INVALID_CREDENTIALS');
         await User.updateLastLogin(user.id);
-        const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+    const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+    const refreshToken = this.jwtManager.generateRefreshToken({userId: user.id, email: user.email});
         console.log(`SUCCESS: User logged in: ${email} (ID: ${user.id})`.green);
         return {
             user: {
@@ -111,7 +115,8 @@ class AuthService {
                 lastName: user.last_name || '',
                 createdAt: user.created_at
             },
-            token
+            token,
+            refreshToken
         };
     }
 
@@ -136,6 +141,7 @@ class AuthService {
             if (!user.is_active)
                 throw new Error('ACCOUNT_INACTIVE');
             const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+            const refreshToken = this.jwtManager.generateRefreshToken({userId: user.id, email: user.email});
             console.log(`SUCCESS: Discord OAuth login: ${user.email} (ID: ${user.id})`.green);
             return {
                 user: {
@@ -145,7 +151,8 @@ class AuthService {
                     lastName: user.last_name || '',
                     createdAt: user.created_at
                 },
-                token
+                token,
+                refreshToken
             };
         } catch (error) {
             console.error('Discord OAuth callback error:'.red, error);
@@ -176,6 +183,7 @@ class AuthService {
             if (!user.is_active)
                 throw new Error('ACCOUNT_INACTIVE');
             const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+            const refreshToken = this.jwtManager.generateRefreshToken({userId: user.id, email: user.email});
             console.log(`SUCCESS: Google OAuth login: ${user.email} (ID: ${user.id})`.green);
             return {
                 user: {
@@ -185,13 +193,36 @@ class AuthService {
                     lastName: user.last_name || '',
                     createdAt: user.created_at
                 },
-                token
+                token,
+                refreshToken
             };
         } catch (error) {
             console.error('Google OAuth callback error:'.red, error);
             if (error instanceof Error)
                 throw error;
             throw new Error('OAUTH_CALLBACK_FAILED');
+        }
+    }
+
+    /**
+     * Exchange refresh token for new access token (no rotation/invalidation logic yet)
+     */
+    async refreshAccessToken(refreshToken: string): Promise<{ token: string; user: { id: string; email: string } }> {
+        try {
+            const decoded = this.jwtManager.verifyRefreshToken(refreshToken);
+            if (!decoded.userId || !decoded.email) throw new Error('INVALID_REFRESH_TOKEN');
+            const user = await User.findById(decoded.userId);
+            if (!user || !user.is_active) throw new Error('USER_NOT_FOUND_OR_INACTIVE');
+            // For now we simply issue a new access token; we do NOT generate a new refresh token in this commit (no rotation yet)
+            const newAccessToken = this.jwtManager.generateToken({ userId: user.id, email: user.email });
+            return { token: newAccessToken, user: { id: user.id, email: user.email } };
+        } catch (error) {
+            if (error instanceof Error) {
+                if (['Refresh token expired', 'Invalid refresh token', 'Refresh token verification failed', 'USER_NOT_FOUND_OR_INACTIVE'].includes(error.message)) {
+                    throw error;
+                }
+            }
+            throw new Error('REFRESH_FAILED');
         }
     }
 
