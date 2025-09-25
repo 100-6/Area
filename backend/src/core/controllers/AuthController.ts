@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import AuthService from '../services/AuthService';
+import UserService from '../services/UserService';
 import 'colors';
 
 interface RegisterRequest {
@@ -16,9 +17,11 @@ interface LoginRequest {
 
 export class AuthController {
     private authService: AuthService;
+    private userService: UserService;
 
     constructor() {
         this.authService = new AuthService();
+        this.userService = new UserService();
     }
 
     /**
@@ -28,8 +31,7 @@ export class AuthController {
         try {
             const registerData: RegisterRequest = req.body;
             const result = await this.authService.register(registerData);
-
-            res.status(201).json({message: 'Registration successful', user: result.user, token: result.token});
+            res.status(201).json({message: 'Registration successful', user: result.user, token: result.token, refreshToken: result.refreshToken});
         } catch (error) {
             console.error('ERROR: Registration failed:'.red, error);
             this.handleServiceError(error, res);
@@ -43,11 +45,73 @@ export class AuthController {
         try {
             const loginData: LoginRequest = req.body;
             const result = await this.authService.login(loginData);
-
-            res.json({message: 'Login successful', user: result.user, token: result.token});
+            res.json({message: 'Login successful', user: result.user, token: result.token, refreshToken: result.refreshToken});
         } catch (error) {
             console.error('ERROR: Login failed:'.red, error);
             this.handleServiceError(error, res);
+        }
+    };
+
+    /* =============================   OAuth    ============================= */
+    /*                                   |                                    */
+    /*                                   v                                    */
+
+    /**
+     * Initiate Discord OAuth
+     * GET /api/auth/discord
+     */
+    public discordLogin = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const authUrl = this.authService.getDiscordAuthUrl();
+            res.redirect(authUrl);
+        } catch (error) {
+            console.error('Discord OAuth redirect error:'.red, error);
+            if (error instanceof Error && error.message === 'DISCORD_OAUTH_NOT_CONFIGURED')
+                res.status(500).json({ error: 'Discord OAuth not configured' });
+            else
+                res.status(500).json({ error: 'Failed to initiate Discord OAuth' });
+        }
+    };
+
+    /**
+     * Handle Discord OAuth callback
+     * GET /api/auth/discord/callback
+     */
+    public discordCallback = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { code, error } = req.query;
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+            if (error) {
+                console.error('Discord OAuth error:', error);
+                res.redirect(`${frontendUrl}/auth/error?error=${error}`);
+                return;
+            }
+            if (!code) {
+                res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
+                return;
+            }
+            const result = await this.authService.handleDiscordCallback(code as string);
+            // Can't reliably set HttpOnly cookie cross-domain via redirect without same-site alignment; send token in URL as before + (optional) plan for frontend to hit /api/auth/transfer to set cookie server-side.
+            res.redirect(`${frontendUrl}/auth/success?token=${result.token}&provider=discord&refresh=${result.refreshToken}`);
+        } catch (error) {
+            console.error('Discord OAuth callback error:'.red, error);
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            let errorMessage = 'Authentication failed';
+            if (error instanceof Error) {
+                switch (error.message) {
+                    case 'INVALID_OAUTH_USER_DATA':
+                        errorMessage = 'Invalid user data received from Discord';
+                        break;
+                    case 'ACCOUNT_INACTIVE':
+                        errorMessage = 'Account is inactive';
+                        break;
+                    case 'OAUTH_CALLBACK_FAILED':
+                        errorMessage = 'Discord authentication failed';
+                        break;
+                }
+            }
+            res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}&provider=discord`);
         }
     };
 
@@ -87,7 +151,7 @@ export class AuthController {
                 return;
             }
             const result = await this.authService.handleGoogleCallback(code as string);
-            res.redirect(`${frontendUrl}/auth/success?token=${result.token}`);
+            res.redirect(`${frontendUrl}/auth/success?token=${result.token}&refresh=${result.refreshToken}`);
         } catch (error) {
             console.error('Google OAuth callback error:'.red, error);
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -108,6 +172,10 @@ export class AuthController {
             res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
         }
     };
+
+    /*                                   ^                                    */
+    /*                                   |                                    */
+    /* =============================   OAuth    ============================= */
 
     /**
      * Vérifier un token JWT
@@ -142,12 +210,55 @@ export class AuthController {
         }
     };
 
+
     /**
      * Route de déconnexion
      */
     public logout = (req: Request, res: Response): void => {
-        res.json({ message: 'Logout successful' });
+        const refreshToken = (req.body && req.body.refreshToken) || req.headers['x-refresh-token'];
+        // Fire and forget (no await) but safe to await; choose await for consistency
+        this.authService.logout(typeof refreshToken === 'string' ? refreshToken : undefined)
+            .then(() => { res.json({ message: 'Logout successful' }); })
+            .catch(() => { res.json({ message: 'Logout successful' }); });
+        
     };
+
+    /**
+     * Refresh access & refresh token pair
+     */
+    public refresh = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const refreshToken = req.body?.refreshToken || req.headers['x-refresh-token'];
+            if (!refreshToken || typeof refreshToken !== 'string') {
+                res.status(400).json({ error: 'Refresh token required' });
+                return;
+            }
+            const tokens = await this.authService.refreshTokens(refreshToken);
+            res.json({ message: 'Tokens refreshed', token: tokens.token, refreshToken: tokens.refreshToken });
+        } catch (error) {
+            let message = 'Invalid refresh token';
+            if (error instanceof Error) {
+                switch (error.message) {
+                    case 'NO_REFRESH_TOKEN':
+                        message = 'Refresh token missing'; break;
+                    case 'INVALID_REFRESH_TOKEN':
+                    case 'REFRESH_SESSION_NOT_FOUND':
+                    case 'REFRESH_ROTATION_FAILED':
+                        message = 'Invalid refresh token'; break;
+                }
+            }
+            res.status(401).json({ error: message });
+        }
+    };
+    
+    /**
+     * Helper to set refresh cookie (placeholder—cookie-parser not yet integrated in this commit)
+     */
+    private setRefreshCookie(res: Response, refreshToken: string) {
+        // If you add cookie-parser later, convert to res.cookie('refreshToken', refreshToken, options)
+        // For now, expose via header so the frontend can store it; (NOT IDEAL SECURITY) kept minimal per request.
+        res.setHeader('x-refresh-token', refreshToken);
+    }
 
     /**
      * Initiate GitHub OAuth
