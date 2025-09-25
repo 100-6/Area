@@ -12,4 +12,7 @@ router.patch('/me', requireAuth, userController.updateMe);
 // DELETE /api/users/me
 router.delete('/me', requireAuth, userController.deleteMe);
 
+// POST /api/users/changePassword
+router.post('/changePassword', requireAuth, userController.changePassword);
+
 export default router;

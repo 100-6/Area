@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import AuthService from '../services/AuthService';
+import UserService from '../services/UserService';
 import 'colors';
 
 interface RegisterRequest {
@@ -16,9 +17,11 @@ interface LoginRequest {
 
 export class AuthController {
     private authService: AuthService;
+    private userService: UserService;
 
     constructor() {
         this.authService = new AuthService();
+        this.userService = new UserService();
     }
 
     /**
