@@ -28,9 +28,7 @@ export class AuthController {
         try {
             const registerData: RegisterRequest = req.body;
             const result = await this.authService.register(registerData);
-            // Set refresh token cookie (no rotation or invalidation logic yet)
-            this.setRefreshCookie(res, result.refreshToken);
-            res.status(201).json({message: 'Registration successful', user: result.user, token: result.token});
+            res.status(201).json({message: 'Registration successful', user: result.user, token: result.token, refreshToken: result.refreshToken});
         } catch (error) {
             console.error('ERROR: Registration failed:'.red, error);
             this.handleServiceError(error, res);
@@ -44,8 +42,7 @@ export class AuthController {
         try {
             const loginData: LoginRequest = req.body;
             const result = await this.authService.login(loginData);
-            this.setRefreshCookie(res, result.refreshToken);
-            res.json({message: 'Login successful', user: result.user, token: result.token});
+            res.json({message: 'Login successful', user: result.user, token: result.token, refreshToken: result.refreshToken});
         } catch (error) {
             console.error('ERROR: Login failed:'.red, error);
             this.handleServiceError(error, res);
@@ -215,7 +212,39 @@ export class AuthController {
      * Route de déconnexion
      */
     public logout = (req: Request, res: Response): void => {
-        res.json({ message: 'Logout successful' });
+        const refreshToken = (req.body && req.body.refreshToken) || req.headers['x-refresh-token'];
+        // Fire and forget (no await) but safe to await; choose await for consistency
+        this.authService.logout(typeof refreshToken === 'string' ? refreshToken : undefined)
+            .then(() => { res.json({ message: 'Logout successful' }); })
+            .catch(() => { res.json({ message: 'Logout successful' }); });
+    };
+
+    /**
+     * Refresh access & refresh token pair
+     */
+    public refresh = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const refreshToken = req.body?.refreshToken || req.headers['x-refresh-token'];
+            if (!refreshToken || typeof refreshToken !== 'string') {
+                res.status(400).json({ error: 'Refresh token required' });
+                return;
+            }
+            const tokens = await this.authService.refreshTokens(refreshToken);
+            res.json({ message: 'Tokens refreshed', token: tokens.token, refreshToken: tokens.refreshToken });
+        } catch (error) {
+            let message = 'Invalid refresh token';
+            if (error instanceof Error) {
+                switch (error.message) {
+                    case 'NO_REFRESH_TOKEN':
+                        message = 'Refresh token missing'; break;
+                    case 'INVALID_REFRESH_TOKEN':
+                    case 'REFRESH_SESSION_NOT_FOUND':
+                    case 'REFRESH_ROTATION_FAILED':
+                        message = 'Invalid refresh token'; break;
+                }
+            }
+            res.status(401).json({ error: message });
+        }
     };
 
     /**
