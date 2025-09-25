@@ -246,35 +246,7 @@ export class AuthController {
             res.status(401).json({ error: message });
         }
     };
-
-    /**
-     * Exchange refresh token for new access token (no rotation yet)
-     * POST /api/auth/refresh
-     */
-    public refresh = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const bodyToken = (req.body && req.body.refreshToken) || undefined;
-            // Prefer cookie if present; cookie-parser not yet added so we read header fallback until integrated.
-            const headerToken = req.headers['x-refresh-token'] as string | undefined;
-            const provided = bodyToken || headerToken;
-            if (!provided) {
-                res.status(400).json({ error: 'No refresh token provided' });
-                return;
-            }
-            const result = await this.authService.refreshAccessToken(provided);
-            res.json({ token: result.token, user: result.user });
-        } catch (error) {
-            let status = 401;
-            let msg = 'Invalid or expired refresh token';
-            if (error instanceof Error) {
-                if (error.message === 'USER_NOT_FOUND_OR_INACTIVE') msg = 'User not found or inactive';
-                if (error.message === 'Refresh token expired') msg = 'Refresh token expired';
-                if (error.message === 'Invalid refresh token') msg = 'Invalid refresh token';
-            }
-            res.status(status).json({ error: msg });
-        }
-    };
-
+    
     /**
      * Helper to set refresh cookie (placeholder—cookie-parser not yet integrated in this commit)
      */
