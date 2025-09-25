@@ -25,8 +25,8 @@ interface AuthResult {
         lastName: string;
         createdAt: Date;
     };
-    token: string; // access token (short lived)
-    refreshToken: string; // refresh token (long lived)
+    token: string;
+    refreshToken: string;
 }
 
 interface ValidationError {
@@ -210,6 +210,28 @@ class AuthService {
             if (error instanceof Error)
                 throw error;
             throw new Error('OAUTH_CALLBACK_FAILED');
+        }
+    }
+
+    /**
+     * Exchange refresh token for new access token (no rotation/invalidation logic yet)
+     */
+    async refreshAccessToken(refreshToken: string): Promise<{ token: string; user: { id: string; email: string } }> {
+        try {
+            const decoded = this.jwtManager.verifyRefreshToken(refreshToken);
+            if (!decoded.userId || !decoded.email) throw new Error('INVALID_REFRESH_TOKEN');
+            const user = await User.findById(decoded.userId);
+            if (!user || !user.is_active) throw new Error('USER_NOT_FOUND_OR_INACTIVE');
+            // For now we simply issue a new access token; we do NOT generate a new refresh token in this commit (no rotation yet)
+            const newAccessToken = this.jwtManager.generateToken({ userId: user.id, email: user.email });
+            return { token: newAccessToken, user: { id: user.id, email: user.email } };
+        } catch (error) {
+            if (error instanceof Error) {
+                if (['Refresh token expired', 'Invalid refresh token', 'Refresh token verification failed', 'USER_NOT_FOUND_OR_INACTIVE'].includes(error.message)) {
+                    throw error;
+                }
+            }
+            throw new Error('REFRESH_FAILED');
         }
     }
 

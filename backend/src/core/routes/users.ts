@@ -7,5 +7,9 @@ const userController = new UserController();
 
 // GET /api/users/me
 router.get('/me', requireAuth, userController.getMe);
+// PATCH /api/users/me
+router.patch('/me', requireAuth, userController.updateMe);
+// DELETE /api/users/me
+router.delete('/me', requireAuth, userController.deleteMe);
 
 export default router;

@@ -95,6 +95,27 @@ export class JwtManager {
     }
 
     /**
+     * Verify a refresh token (separate to allow different error messaging/logic later)
+     */
+    verifyRefreshToken(token: string): JwtPayload {
+        try {
+            const decoded = jwt.verify(token, this.secretKey, { issuer: 'area-backend', audience: 'area-frontend' });
+            if ((decoded as JwtPayload).type !== 'refresh')
+                throw new Error('Invalid refresh token');
+            return decoded as JwtPayload;
+        } catch (error: unknown) {
+            const err = error as Error & { name: string };
+            if (err.name === 'TokenExpiredError') {
+                throw new Error('Refresh token expired');
+            } else if (err.name === 'JsonWebTokenError') {
+                throw new Error('Invalid refresh token');
+            } else {
+                throw new Error('Refresh token verification failed');
+            }
+        }
+    }
+
+    /**
      * Check if token is expired
      */
     isTokenExpired(token: string): boolean {
