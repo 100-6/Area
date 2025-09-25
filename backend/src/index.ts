@@ -8,6 +8,7 @@ import 'colors';
 // Import routes
 import systemRoutes from './core/routes/system';
 import authRoutes from './core/routes/auth';
+import userRoutes from './core/routes/users';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/', systemRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 // app.use('/api/users', userRoutes);
 // app.use('/api/services', serviceRoutes);
 // app.use('/api/areas', areaRoutes);
