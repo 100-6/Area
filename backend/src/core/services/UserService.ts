@@ -50,30 +50,29 @@ export class UserService {
    */
   async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
     const user = await User.findById(userId);
-     if (!user || !user.is_active) {
+    if (!user || !user.is_active) {
       throw new Error('USER_NOT_FOUND_OR_INACTIVE');
-      }
-      if (!user.password_hash) {
-        // Compte créé via OAuth sans mot de passe local
-        throw new Error('NO_LOCAL_PASSWORD');
-      }
-      const isCurrentValid = await PasswordManager.comparePassword(currentPassword, user.password_hash);
-      if (!isCurrentValid) {
-        throw new Error('INVALID_CURRENT_PASSWORD');
-      }
-      if (currentPassword === newPassword) {
-        throw new Error('PASSWORD_SAME_AS_OLD');
-      }
-      const validation = PasswordManager.validatePasswordStrength(newPassword);
-      if (!validation.isValid) {
-        const error: any = new Error('PASSWORD_VALIDATION_FAILED');
-        error.validationErrors = validation.errors;
-        throw error;
-      }
-      const newHash = await PasswordManager.hashPassword(newPassword);
-      await User.update(userId, { password_hash: newHash });
     }
-  };
+    if (!user.password_hash) {
+      // Compte créé via OAuth sans mot de passe local
+      throw new Error('NO_LOCAL_PASSWORD');
+    }
+    const isCurrentValid = await PasswordManager.comparePassword(currentPassword, user.password_hash);
+    if (!isCurrentValid) {
+      throw new Error('INVALID_CURRENT_PASSWORD');
+    }
+    if (currentPassword === newPassword) {
+      throw new Error('PASSWORD_SAME_AS_OLD');
+    }
+    const validation = PasswordManager.validatePasswordStrength(newPassword);
+    if (!validation.isValid) {
+      const error: any = new Error('PASSWORD_VALIDATION_FAILED');
+      error.validationErrors = validation.errors;
+      throw error;
+    }
+    const newHash = await PasswordManager.hashPassword(newPassword);
+    await User.update(userId, { password_hash: newHash });
+  }
 
   /**
    * Mettre à jour le profil utilisateur (public interne) par ID
@@ -113,7 +112,7 @@ export class UserService {
 
     await User.update(userId, updatePayload);
     return this.getUserProfile(userId);
-  };
+  }
 
   /**
    * Supprimer (désactiver) le compte utilisateur par ID
@@ -124,7 +123,7 @@ export class UserService {
       throw new Error('USER_NOT_FOUND_OR_INACTIVE');
     }
     await User.hardDelete(userId);
-  };
+  }
 }
 
 export default UserService;
