@@ -1,4 +1,5 @@
 import { GoogleProvider } from './oauth/providers/GoogleProvider';
+import { GitHubProvider } from './oauth/providers/GitHubProvider';
 import { User } from '../../core/models/User';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
 
@@ -18,9 +19,11 @@ interface OAuthUser {
 
 export class OAuthManager {
     private googleProvider: GoogleProvider;
+    private gitHubProvider: GitHubProvider;
 
     constructor() {
         this.googleProvider = new GoogleProvider();
+        this.gitHubProvider = new GitHubProvider();
     }
 
     /**
@@ -92,4 +95,78 @@ export class OAuthManager {
     isGoogleConfigured(): boolean {
         return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
     }
+
+    /**
+     * Generate GitHub OAuth URL
+     */
+    getGitHubAuthUrl(): string {
+        return this.gitHubProvider.getAuthUrl();
+    }
+
+    /**
+     * Handle GitHub OAuth callback
+     */
+    async handleGitHubCallback(code: string): Promise<OAuthUser> {
+        try {
+            const gitHubProfile = await this.gitHubProvider.handleCallback(code);
+            return await this.findOrCreateUserFromGitHub(gitHubProfile);
+        } catch (error) {
+            throw new Error(`GitHub OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Find or create user from GitHub profile
+     */
+    private async findOrCreateUserFromGitHub(gitHubProfile: any): Promise<OAuthUser> {
+        try {
+            const existingAuthProvider = await UserAuthProvider.findByProviderAndId('github', gitHubProfile.id);
+
+            if (existingAuthProvider) {
+                const user = await User.findById(existingAuthProvider.user_id);
+                if (!user)
+                    throw new Error(`User not found for auth provider: ${existingAuthProvider.user_id}`);
+                await UserAuthProvider.updateTokens(user.id, 'github', gitHubProfile.accessToken, undefined);
+                await User.updateLastLogin(user.id);
+                return user;
+            }
+
+            let user = await User.findByEmail(gitHubProfile.email);
+            if (!user) {
+                user = await User.create({ 
+                    email: gitHubProfile.email, 
+                    first_name: gitHubProfile.firstName || '', 
+                    last_name: gitHubProfile.lastName || '', 
+                    avatar_url: gitHubProfile.avatarUrl || '', 
+                    email_verified: true, 
+                    registration_method: 'oauth' 
+                });
+            }
+
+            await UserAuthProvider.createOrUpdate({ 
+                user_id: user.id, 
+                provider: 'github', 
+                provider_user_id: gitHubProfile.id, 
+                provider_email: gitHubProfile.email, 
+                provider_data: gitHubProfile, 
+                access_token: gitHubProfile.accessToken, 
+                refresh_token: undefined, 
+                is_primary: true 
+            });
+
+            await User.updateLastLogin(user.id);
+            return user;
+
+        } catch (error) {
+            throw new Error(`User creation/update error: ${error}`);
+        }
+    }
+
+    /**
+     * Check if GitHub OAuth is configured
+     */
+    isGitHubConfigured(): boolean {
+        return !!(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
+    }
+
 }

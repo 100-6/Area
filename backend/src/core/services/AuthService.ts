@@ -227,6 +227,55 @@ class AuthService {
     isGoogleConfigured(): boolean {
         return this.oauthManager.isGoogleConfigured();
     }
+
+    /**
+     * Obtenir l'URL d'authentification GitHub
+     */
+    getGitHubAuthUrl(): string {
+        if (!this.oauthManager.isGitHubConfigured())
+            throw new Error('GITHUB_OAUTH_NOT_CONFIGURED');
+        return this.oauthManager.getGitHubAuthUrl();
+    }
+
+    /**
+     * Gérer le callback GitHub OAuth
+     */
+    async handleGitHubCallback(code: string): Promise<AuthResult> {
+        try {
+            const user = await this.oauthManager.handleGitHubCallback(code);
+
+            if (!user || !user.id || !user.email)
+                throw new Error('INVALID_OAUTH_USER_DATA');
+            if (!user.is_active)
+                throw new Error('ACCOUNT_INACTIVE');
+
+            const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+            console.log(`SUCCESS: GitHub OAuth login: ${user.email} (ID: ${user.id})`.green);
+
+            return {
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.first_name || '',
+                    lastName: user.last_name || '',
+                    createdAt: user.created_at
+                },
+                token
+            };
+        } catch (error) {
+            console.error('GitHub OAuth callback error:'.red, error);
+            if (error instanceof Error)
+                throw error;
+            throw new Error('OAUTH_CALLBACK_FAILED');
+        }
+    }
+
+    /**
+     * Vérifier si GitHub OAuth est configuré
+     */
+    isGitHubConfigured(): boolean {
+        return this.oauthManager.isGitHubConfigured();
+    }
 }
 
 export default AuthService;
