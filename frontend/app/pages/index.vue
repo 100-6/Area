@@ -131,7 +131,7 @@
               icon-background="var(--color-primary)"
               icon-color="var(--color-tertiary)"
               example="Gmail - Nouvel email"
-              example-icon="i-heroicons-envelope"
+              example-icon="i-logos-google-gmail"
             />
 
             <UiWorkflowConnector :linked="true" />
@@ -144,7 +144,7 @@
               icon-background="var(--color-secondary)"
               icon-color="white"
               example="Slack - Envoyer message"
-              example-icon="i-heroicons-chat-bubble-left-ellipsis"
+              example-icon="i-logos-slack-icon"
               example-background="rgba(72, 199, 116, 0.1)"
               example-border-color="var(--color-secondary)"
             />

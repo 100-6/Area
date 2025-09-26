@@ -24,6 +24,55 @@
               </p>
             </div>
 
+            <!-- Message d'erreur -->
+            <div v-if="errorMessage" class="mb-4 p-4 rounded-lg border border-red-200 bg-red-50 scale-in">
+              <div class="flex items-center">
+                <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-red-500 mr-2" />
+                <p class="text-sm text-red-600">{{ errorMessage }}</p>
+              </div>
+            </div>
+
+            <!-- Exigences mot de passe -->
+            <div v-if="password" class="mb-4 p-4 rounded-lg border scale-in" :class="passwordStrength.isValid ? 'border-green-200 bg-green-50' : 'border-yellow-200 bg-yellow-50'">
+              <h4 class="font-medium text-sm mb-2" :class="passwordStrength.isValid ? 'text-green-700' : 'text-yellow-700'">
+                Exigences du mot de passe :
+              </h4>
+              <div class="space-y-1">
+                <div class="flex items-center text-xs">
+                  <UIcon :name="passwordStrength.checks.length ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
+                         class="w-4 h-4 mr-2"
+                         :class="passwordStrength.checks.length ? 'text-green-500' : 'text-red-500'" />
+                  <span :class="passwordStrength.checks.length ? 'text-green-600' : 'text-red-600'">
+                    Au moins 8 caractères
+                  </span>
+                </div>
+                <div class="flex items-center text-xs">
+                  <UIcon :name="passwordStrength.checks.uppercase ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
+                         class="w-4 h-4 mr-2"
+                         :class="passwordStrength.checks.uppercase ? 'text-green-500' : 'text-red-500'" />
+                  <span :class="passwordStrength.checks.uppercase ? 'text-green-600' : 'text-red-600'">
+                    Au moins une majuscule
+                  </span>
+                </div>
+                <div class="flex items-center text-xs">
+                  <UIcon :name="passwordStrength.checks.number ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
+                         class="w-4 h-4 mr-2"
+                         :class="passwordStrength.checks.number ? 'text-green-500' : 'text-red-500'" />
+                  <span :class="passwordStrength.checks.number ? 'text-green-600' : 'text-red-600'">
+                    Au moins un chiffre
+                  </span>
+                </div>
+                <div class="flex items-center text-xs">
+                  <UIcon :name="passwordStrength.checks.special ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
+                         class="w-4 h-4 mr-2"
+                         :class="passwordStrength.checks.special ? 'text-green-500' : 'text-red-500'" />
+                  <span :class="passwordStrength.checks.special ? 'text-green-600' : 'text-red-600'">
+                    Au moins un caractère spécial
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <!-- AuthForm de Nuxt UI -->
             <div class="scale-in">
               <UAuthForm
@@ -31,10 +80,11 @@
               :providers="authProviders"
               title=""
               :submit-button="{
-                label: 'Créer mon compte',
+                label: isLoading ? 'Création du compte...' : 'Créer mon compte',
                 size: 'lg',
                 color: 'primary',
-                class: 'w-full justify-center'
+                class: 'w-full justify-center',
+                loading: isLoading
               }"
               @submit="handleSubmit"
               />
@@ -108,13 +158,41 @@
 </template>
 
 <script setup lang="ts">
-// Configuration des champs du formulaire
+definePageMeta({
+  middleware: 'guest'
+})
+
+const { register, loginWithProvider } = useAuth()
+const isLoading = ref(false)
+const errorMessage = ref('')
+
+// Validation du mot de passe
+const password = ref('')
+const passwordStrength = computed(() => {
+  const pwd = password.value
+  const checks = {
+    length: pwd.length >= 8,
+    uppercase: /[A-Z]/.test(pwd),
+    number: /\d/.test(pwd),
+    special: /[!@#$%^&*(),.?":{}|<>]/.test(pwd)
+  }
+
+  const score = Object.values(checks).filter(Boolean).length
+  return { checks, score, isValid: score === 4 }
+})
 const formFields = [
   {
-    name: 'name',
+    name: 'firstName',
     type: 'text',
-    label: 'Nom complet',
-    placeholder: 'Votre nom complet',
+    label: 'Prénom',
+    placeholder: 'Votre prénom',
+    required: true
+  },
+  {
+    name: 'lastName',
+    type: 'text',
+    label: 'Nom',
+    placeholder: 'Votre nom',
     required: true
   },
   {
@@ -146,60 +224,66 @@ const formFields = [
   }
 ]
 
-// Fournisseurs d'authentification
 const authProviders = [
   {
     label: 'Continuer avec Google',
     icon: 'i-logos-google-icon',
     style: 'background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);',
-    click: () => {
-      // Logique de connexion Google
-      console.log('Login with Google')
-    }
+    click: () => loginWithProvider('google')
   },
   {
     label: 'Continuer avec GitHub',
     icon: 'i-logos-github-icon',
     style: 'background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);',
-    click: () => {
-      // Logique de connexion GitHub
-      console.log('Login with GitHub')
-    }
+    click: () => loginWithProvider('github')
   },
   {
     label: 'Continuer avec Discord',
     icon: 'i-logos-discord-icon',
     style: 'background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);',
-    click: () => {
-      // Logique de connexion Discord
-      console.log('Login with Discord')
-    }
+    click: () => loginWithProvider('discord')
   }
 ]
 
-// Gestion de la soumission du formulaire
-const handleSubmit = async (data: any) => {
-  console.log('Registration data:', data)
+const handleSubmit = async (event: any) => {
+  if (isLoading.value) return
 
-  // Validation des mots de passe
+  const data = event.data || event
+  password.value = data.password || ''
+
   if (data.password !== data.confirmPassword) {
-    // Afficher une erreur
+    errorMessage.value = 'Les mots de passe ne correspondent pas'
     return
   }
 
-  // Logique d'inscription
-  try {
-    // Appel API d'inscription
-    console.log('Creating account for:', data.email)
+  if (!data.terms) {
+    errorMessage.value = 'Vous devez accepter les conditions d\'utilisation'
+    return
+  }
 
-    // Redirection après inscription réussie
-    await navigateTo('/dashboard')
-  } catch (error) {
+  if (!passwordStrength.value.isValid) {
+    errorMessage.value = 'Le mot de passe ne respecte pas toutes les exigences'
+    return
+  }
+
+  isLoading.value = true
+  errorMessage.value = ''
+
+  try {
+    await register({
+      email: data.email,
+      password: data.password,
+      firstName: data.firstName,
+      lastName: data.lastName
+    })
+  } catch (error: any) {
     console.error('Registration error:', error)
+    errorMessage.value = error.message || 'Une erreur est survenue lors de l\'inscription'
+  } finally {
+    isLoading.value = false
   }
 }
 
-// Configuration SEO
 useHead({
   title: 'Inscription - Auto',
   meta: [

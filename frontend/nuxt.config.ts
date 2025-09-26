@@ -1,8 +1,7 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-    devServer: {
+  devServer: {
     port: parseInt(process.env.NUXT_PORT || '3000'),
     host: '0.0.0.0'
   },
@@ -13,5 +12,12 @@ export default defineNuxtConfig({
       name: 'page',
       mode: 'out-in'
     }
+  },
+  runtimeConfig: {
+    public: {
+      backendUrl: process.env.BACKEND_URL || 'http://localhost:8080'
+    },
+    // Configuration côté serveur pour Docker
+    backendUrl: process.env.BACKEND_URL || 'http://area_backend_dev:8080'
   }
 })

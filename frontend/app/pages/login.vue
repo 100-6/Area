@@ -24,6 +24,14 @@
               </p>
             </div>
 
+            <!-- Message d'erreur -->
+            <div v-if="errorMessage" class="mb-4 p-4 rounded-lg border border-red-200 bg-red-50 scale-in">
+              <div class="flex items-center">
+                <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-red-500 mr-2" />
+                <p class="text-sm text-red-600">{{ errorMessage }}</p>
+              </div>
+            </div>
+
             <!-- AuthForm de Nuxt UI -->
             <div class="scale-in">
               <UAuthForm
@@ -31,10 +39,11 @@
               :providers="authProviders"
               title=""
               :submit-button="{
-                label: 'Se connecter',
+                label: isLoading ? 'Connexion...' : 'Se connecter',
                 size: 'lg',
                 color: 'primary',
-                class: 'w-full justify-center'
+                class: 'w-full justify-center',
+                loading: isLoading
               }"
               @submit="handleSubmit"
               />
@@ -107,7 +116,9 @@
 </template>
 
 <script setup lang="ts">
-// Configuration des champs du formulaire
+definePageMeta({
+  middleware: 'guest'
+})
 const formFields = [
   {
     name: 'email',
@@ -131,53 +142,51 @@ const formFields = [
   }
 ]
 
-// Fournisseurs d'authentification
+const { login, loginWithProvider } = useAuth()
+const isLoading = ref(false)
+const errorMessage = ref('')
 const authProviders = [
   {
     label: 'Continuer avec Google',
     icon: 'i-logos-google-icon',
     style: 'background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);',
-    click: () => {
-      // Logique de connexion Google
-      console.log('Login with Google')
-    }
+    click: () => loginWithProvider('google')
   },
   {
     label: 'Continuer avec GitHub',
     icon: 'i-logos-github-icon',
     style: 'background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);',
-    click: () => {
-      // Logique de connexion GitHub
-      console.log('Login with GitHub')
-    }
+    click: () => loginWithProvider('github')
   },
   {
     label: 'Continuer avec Discord',
     icon: 'i-logos-discord-icon',
     style: 'background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);',
-    click: () => {
-      // Logique de connexion Discord
-      console.log('Login with Discord')
-    }
+    click: () => loginWithProvider('discord')
   }
 ]
 
-// Gestion de la soumission du formulaire
-const handleSubmit = async (data: any) => {
-  console.log('Login data:', data)
+const handleSubmit = async (event: any) => {
+  if (isLoading.value) return
+
+  const data = event.data || event
+
+  isLoading.value = true
+  errorMessage.value = ''
 
   try {
-    // Appel API de connexion
-    console.log('Logging in:', data.email)
-
-    // Redirection après connexion réussie
-    await navigateTo('/dashboard')
-  } catch (error) {
+    await login({
+      email: data.email,
+      password: data.password
+    })
+  } catch (error: any) {
     console.error('Login error:', error)
+    errorMessage.value = error.message || 'Une erreur est survenue lors de la connexion'
+  } finally {
+    isLoading.value = false
   }
 }
 
-// Configuration SEO
 useHead({
   title: 'Connexion - Auto',
   meta: [
