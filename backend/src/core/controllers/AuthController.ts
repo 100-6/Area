@@ -381,6 +381,66 @@ export class AuthController {
     };
 
     /**
+     * Initiate Dropbox OAuth
+     * GET /api/auth/dropbox
+     */
+    public dropboxLogin = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const authUrl = this.authService.getDropboxAuthUrl();
+            res.redirect(authUrl);
+        } catch (error) {
+            console.error('Dropbox OAuth redirect error:'.red, error);
+            if (error instanceof Error && error.message === 'DROPBOX_OAUTH_NOT_CONFIGURED')
+                res.status(500).json({ error: 'Dropbox OAuth not configured' });
+            else
+                res.status(500).json({ error: 'Failed to initiate Dropbox OAuth' });
+        }
+    };
+
+    /**
+     * Handle Dropbox OAuth callback
+     * GET /api/auth/dropbox/callback
+     */
+    public dropboxCallback = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { code, error } = req.query;
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+            if (error) {
+                console.error('Dropbox OAuth error:', error);
+                res.redirect(`${frontendUrl}/auth/error?error=${error}`);
+                return;
+            }
+            if (!code) {
+                res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
+                return;
+            }
+
+            const result = await this.authService.handleDropboxCallback(code as string);
+            res.redirect(`${frontendUrl}/auth/success?token=${result.token}`);
+        } catch (error) {
+            console.error('Dropbox OAuth callback error:'.red, error);
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            let errorMessage = 'Authentication failed';
+            
+            if (error instanceof Error) {
+                switch (error.message) {
+                    case 'INVALID_OAUTH_USER_DATA':
+                        errorMessage = 'Invalid user data received';
+                        break;
+                    case 'ACCOUNT_INACTIVE':
+                        errorMessage = 'Account is inactive';
+                        break;
+                    case 'OAUTH_CALLBACK_FAILED':
+                        errorMessage = 'OAuth authentication failed';
+                        break;
+                }
+            }
+            res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
+        }
+    };
+
+    /**
      * Gérer les erreurs du service
      */
     private handleServiceError(error: any, res: Response): void {

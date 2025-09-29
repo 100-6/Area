@@ -2,6 +2,7 @@
 import { GoogleProvider } from './oauth/providers/GoogleProvider';
 import { GitHubProvider } from './oauth/providers/GitHubProvider';
 import { GitLabProvider } from './oauth/providers/GitLabProvider';
+import { DropboxProvider } from './oauth/providers/DropboxProvider';
 import { DiscordProvider } from './oauth/providers/DiscordProvider';
 import { User } from '../../core/models/User';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
@@ -24,12 +25,14 @@ export class OAuthManager {
     private googleProvider: GoogleProvider;
     private gitHubProvider: GitHubProvider;
     private gitLabProvider: GitLabProvider;
+    private dropboxProvider: DropboxProvider;
     private discordProvider: DiscordProvider;
 
     constructor() {
         this.googleProvider = new GoogleProvider();
         this.gitHubProvider = new GitHubProvider();
         this.gitLabProvider = new GitLabProvider();
+        this.dropboxProvider = new DropboxProvider();
         this.discordProvider = new DiscordProvider();
     }
 
@@ -244,6 +247,32 @@ export class OAuthManager {
      */
     isGitLabConfigured(): boolean {
         return !!(process.env.GITLAB_CLIENT_ID && process.env.GITLAB_CLIENT_SECRET);
+    }
+
+    /**
+     * Generate Dropbox OAuth URL
+     */
+    getDropboxAuthUrl(): string {
+        return this.dropboxProvider.getAuthUrl();
+    }
+
+    /**
+     * Handle Dropbox OAuth callback
+     */
+    async handleDropboxCallback(code: string): Promise<OAuthUser> {
+        try {
+            const dropboxProfile = await this.dropboxProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('dropbox', dropboxProfile);
+        } catch (error) {
+            throw new Error(`Dropbox OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Check if Dropbox OAuth is configured
+     */
+    isDropboxConfigured(): boolean {
+        return !!(process.env.DROPBOX_CLIENT_ID && process.env.DROPBOX_CLIENT_SECRET);
     }
 
 }
