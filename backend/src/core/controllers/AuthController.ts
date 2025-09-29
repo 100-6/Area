@@ -321,6 +321,66 @@ export class AuthController {
     };
 
     /**
+     * Initiate GitLab OAuth
+     * GET /api/auth/gitlab
+     */
+    public gitLabLogin = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const authUrl = this.authService.getGitLabAuthUrl();
+            res.redirect(authUrl);
+        } catch (error) {
+            console.error('GitLab OAuth redirect error:'.red, error);
+            if (error instanceof Error && error.message === 'GITLAB_OAUTH_NOT_CONFIGURED')
+                res.status(500).json({ error: 'GitLab OAuth not configured' });
+            else
+                res.status(500).json({ error: 'Failed to initiate GitLab OAuth' });
+        }
+    };
+
+    /**
+     * Handle GitLab OAuth callback
+     * GET /api/auth/gitlab/callback
+     */
+    public gitLabCallback = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { code, error } = req.query;
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+            if (error) {
+                console.error('GitLab OAuth error:', error);
+                res.redirect(`${frontendUrl}/auth/error?error=${error}`);
+                return;
+            }
+            if (!code) {
+                res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
+                return;
+            }
+
+            const result = await this.authService.handleGitLabCallback(code as string);
+            res.redirect(`${frontendUrl}/auth/success?token=${result.token}`);
+        } catch (error) {
+            console.error('GitLab OAuth callback error:'.red, error);
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            let errorMessage = 'Authentication failed';
+            
+            if (error instanceof Error) {
+                switch (error.message) {
+                    case 'INVALID_OAUTH_USER_DATA':
+                        errorMessage = 'Invalid user data received';
+                        break;
+                    case 'ACCOUNT_INACTIVE':
+                        errorMessage = 'Account is inactive';
+                        break;
+                    case 'OAUTH_CALLBACK_FAILED':
+                        errorMessage = 'OAuth authentication failed';
+                        break;
+                }
+            }
+            res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
+        }
+    };
+
+    /**
      * Gérer les erreurs du service
      */
     private handleServiceError(error: any, res: Response): void {

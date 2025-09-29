@@ -1,6 +1,7 @@
 // backend/src/shared/auth/OAuthManager.ts
 import { GoogleProvider } from './oauth/providers/GoogleProvider';
 import { GitHubProvider } from './oauth/providers/GitHubProvider';
+import { GitLabProvider } from './oauth/providers/GitLabProvider';
 import { DiscordProvider } from './oauth/providers/DiscordProvider';
 import { User } from '../../core/models/User';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
@@ -22,11 +23,13 @@ interface OAuthUser {
 export class OAuthManager {
     private googleProvider: GoogleProvider;
     private gitHubProvider: GitHubProvider;
+    private gitLabProvider: GitLabProvider;
     private discordProvider: DiscordProvider;
 
     constructor() {
         this.googleProvider = new GoogleProvider();
         this.gitHubProvider = new GitHubProvider();
+        this.gitLabProvider = new GitLabProvider();
         this.discordProvider = new DiscordProvider();
     }
 
@@ -215,6 +218,32 @@ export class OAuthManager {
      */
     isGitHubConfigured(): boolean {
         return !!(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
+    }
+
+    /**
+     * Generate GitLab OAuth URL
+     */
+    getGitLabAuthUrl(): string {
+        return this.gitLabProvider.getAuthUrl();
+    }
+
+    /**
+     * Handle GitLab OAuth callback
+     */
+    async handleGitLabCallback(code: string): Promise<OAuthUser> {
+        try {
+            const gitLabProfile = await this.gitLabProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('gitlab', gitLabProfile);
+        } catch (error) {
+            throw new Error(`GitLab OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Check if GitLab OAuth is configured
+     */
+    isGitLabConfigured(): boolean {
+        return !!(process.env.GITLAB_CLIENT_ID && process.env.GITLAB_CLIENT_SECRET);
     }
 
 }
