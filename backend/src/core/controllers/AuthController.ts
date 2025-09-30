@@ -1,6 +1,7 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import AuthService from '../services/AuthService';
 import UserService from '../services/UserService';
+import { asyncHandler } from '../middleware/error';
 import 'colors';
 
 interface RegisterRequest {
@@ -15,6 +16,12 @@ interface LoginRequest {
     password: string;
 }
 
+interface CustomError extends Error {
+    statusCode?: number;
+    validationErrors?: Array<{ field: string; message: string }>;
+    code?: string;
+}
+
 export class AuthController {
     private authService: AuthService;
     private userService: UserService;
@@ -27,30 +34,94 @@ export class AuthController {
     /**
      * Enregistrement d'un nouvel utilisateur
      */
-    public register = async (req: Request, res: Response): Promise<void> => {
+    public register = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const registerData: RegisterRequest = req.body;
+        
         try {
-            const registerData: RegisterRequest = req.body;
             const result = await this.authService.register(registerData);
-            res.status(201).json({message: 'Registration successful', user: result.user, token: result.token, refreshToken: result.refreshToken});
+            res.status(201).json({success: true, message: 'Registration successful', user: result.user, token: result.token, refreshToken: result.refreshToken});
         } catch (error) {
-            console.error('ERROR: Registration failed:'.red, error);
-            this.handleServiceError(error, res);
+            next(error);
         }
-    };
+    });
 
     /**
      * Connexion avec email/password
      */
-    public login = async (req: Request, res: Response): Promise<void> => {
+    public login = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const loginData: LoginRequest = req.body;
+        
+        console.log('Login attempt for email:'.blue, loginData);
         try {
-            const loginData: LoginRequest = req.body;
             const result = await this.authService.login(loginData);
-            res.json({message: 'Login successful', user: result.user, token: result.token, refreshToken: result.refreshToken});
+            res.json({success: true, message: 'Login successful', user: result.user, token: result.token, refreshToken: result.refreshToken});
         } catch (error) {
-            console.error('ERROR: Login failed:'.red, error);
-            this.handleServiceError(error, res);
+            next(error);
         }
-    };
+    });
+
+    /**
+     * Vérifier un token JWT
+     */
+    public verifyToken = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const token = req.headers.authorization?.replace('Bearer ', '');
+
+        if (!token) {
+            const error = new Error('NO_TOKEN_PROVIDED') as CustomError;
+            error.statusCode = 401;
+            error.code = 'NO_TOKEN_PROVIDED';
+            return next(error);
+        }
+        try {
+            const result = await this.authService.verifyToken(token);
+            res.json({success: true, valid: true, user: result});
+        } catch (error) {
+            next(error);
+        }
+    });
+
+    /**
+     * Route de déconnexion
+     */
+    public logout = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const refreshToken = (req.body && req.body.refreshToken) || req.headers['x-refresh-token'];
+        
+        try {
+            await this.authService.logout(typeof refreshToken === 'string' ? refreshToken : undefined);
+            res.json({success: true, message: 'Logout successful'});
+        } catch (error) {
+            res.json({success: true, message: 'Logout failed'}); // Always return success to avoid token fishing
+        }
+    });
+
+    /**
+     * Refresh access & refresh token pair
+     */
+    public refresh = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+        const refreshToken = req.body?.refreshToken || req.headers['x-refresh-token'];
+        
+        if (!refreshToken || typeof refreshToken !== 'string') {
+            const error = new Error('NO_REFRESH_TOKEN') as CustomError;
+            error.statusCode = 400;
+            error.code = 'NO_REFRESH_TOKEN';
+            return next(error);
+        }
+        try {
+            const tokens = await this.authService.refreshTokens(refreshToken);
+            res.json({ success: true, message: 'Tokens refreshed', token: tokens.token, refreshToken: tokens.refreshToken});
+        } catch (error) {
+            next(error);
+        }
+    });
+    
+    /**
+     * Helper to set refresh cookie (placeholder—cookie-parser not yet integrated in this commit)
+     */
+    private setRefreshCookie(res: Response, refreshToken: string) {
+        // If you add cookie-parser later, convert to res.cookie('refreshToken', refreshToken, options)
+        // For now, expose via header so the frontend can store it; (NOT IDEAL SECURITY) kept minimal per request.
+        res.setHeader('x-refresh-token', refreshToken);
+    }
 
     /* =============================   OAuth    ============================= */
     /*                                   |                                    */
@@ -177,93 +248,6 @@ export class AuthController {
         }
     };
 
-    /*                                   ^                                    */
-    /*                                   |                                    */
-    /* =============================   OAuth    ============================= */
-
-    /**
-     * Vérifier un token JWT
-     */
-    public verifyToken = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const token = req.headers.authorization?.replace('Bearer ', '');
-
-            if (!token) {
-                res.status(401).json({ error: 'No token provided' });
-                return;
-            }
-            const result = await this.authService.verifyToken(token);
-            res.json({valid: true, user: result});
-        } catch (error) {
-            console.error('Token verification error:'.red, error);
-            let errorMessage = 'Invalid or expired token';
-            if (error instanceof Error) {
-                switch (error.message) {
-                    case 'USER_NOT_FOUND_OR_INACTIVE':
-                        errorMessage = 'User not found or inactive';
-                        break;
-                    case 'Token expired':
-                        errorMessage = 'Token expired';
-                        break;
-                    case 'Invalid token':
-                        errorMessage = 'Invalid token';
-                        break;
-                }
-            }
-            res.status(401).json({valid: false, error: errorMessage});
-        }
-    };
-
-
-    /**
-     * Route de déconnexion
-     */
-    public logout = (req: Request, res: Response): void => {
-        const refreshToken = (req.body && req.body.refreshToken) || req.headers['x-refresh-token'];
-        // Fire and forget (no await) but safe to await; choose await for consistency
-        this.authService.logout(typeof refreshToken === 'string' ? refreshToken : undefined)
-            .then(() => { res.json({ message: 'Logout successful' }); })
-            .catch(() => { res.json({ message: 'Logout successful' }); });
-        
-    };
-
-    /**
-     * Refresh access & refresh token pair
-     */
-    public refresh = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const refreshToken = req.body?.refreshToken || req.headers['x-refresh-token'];
-            if (!refreshToken || typeof refreshToken !== 'string') {
-                res.status(400).json({ error: 'Refresh token required' });
-                return;
-            }
-            const tokens = await this.authService.refreshTokens(refreshToken);
-            res.json({ message: 'Tokens refreshed', token: tokens.token, refreshToken: tokens.refreshToken });
-        } catch (error) {
-            let message = 'Invalid refresh token';
-            if (error instanceof Error) {
-                switch (error.message) {
-                    case 'NO_REFRESH_TOKEN':
-                        message = 'Refresh token missing'; break;
-                    case 'INVALID_REFRESH_TOKEN':
-                    case 'REFRESH_SESSION_NOT_FOUND':
-                    case 'REFRESH_ROTATION_FAILED':
-                        message = 'Invalid refresh token'; break;
-                }
-            }
-            res.status(401).json({ error: message });
-        }
-    };
-    
-    /**
-     * Helper to set refresh cookie (placeholder—cookie-parser not yet integrated in this commit)
-     */
-    private setRefreshCookie(res: Response, refreshToken: string) {
-        // If you add cookie-parser later, convert to res.cookie('refreshToken', refreshToken, options)
-        // For now, expose via header so the frontend can store it; (NOT IDEAL SECURITY) kept minimal per request.
-        res.setHeader('x-refresh-token', refreshToken);
-    }
-
     /**
      * Initiate GitHub OAuth
      * GET /api/auth/github
@@ -300,9 +284,8 @@ export class AuthController {
                 res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
                 return;
             }
-
             const result = await this.authService.handleGitHubCallback(code as string);
-            res.redirect(`${redirectUrl}/auth/success?token=${result.token}`);
+            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&refresh=${result.refreshToken}`);
         } catch (error) {
             console.error('GitHub OAuth callback error:'.red, error);
             const isMobile = this.isMobileRequest(req);
@@ -413,6 +396,68 @@ export class AuthController {
             return process.env.FRONTEND_URL || 'http://localhost:3000';
         }
     }
+
+    /**
+     * Initiate Dropbox OAuth
+     * GET /api/auth/dropbox
+     */
+    public dropboxLogin = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const authUrl = this.authService.getDropboxAuthUrl();
+            res.redirect(authUrl);
+        } catch (error) {
+            console.error('Dropbox OAuth redirect error:'.red, error);
+            if (error instanceof Error && error.message === 'DROPBOX_OAUTH_NOT_CONFIGURED')
+                res.status(500).json({ error: 'Dropbox OAuth not configured' });
+            else
+                res.status(500).json({ error: 'Failed to initiate Dropbox OAuth' });
+        }
+    };
+
+    /**
+     * Handle Dropbox OAuth callback
+     * GET /api/auth/dropbox/callback
+     */
+    public dropboxCallback = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { code, error } = req.query;
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);œ
+
+            if (error) {
+                console.error('Dropbox OAuth error:', error);
+                res.redirect(`${redirectUrl}/auth/error?error=${error}`);
+                return;
+            }
+            if (!code) {
+                res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
+                return;
+            }
+
+            const result = await this.authService.handleDropboxCallback(code as string);
+            res.redirect(`${redirectUrl}/auth/success?token=${result.token}`);
+        } catch (error) {
+            console.error('Dropbox OAuth callback error:'.red, error);
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
+            let errorMessage = 'Authentication failed';
+            
+            if (error instanceof Error) {
+                switch (error.message) {
+                    case 'INVALID_OAUTH_USER_DATA':
+                        errorMessage = 'Invalid user data received';
+                        break;
+                    case 'ACCOUNT_INACTIVE':
+                        errorMessage = 'Account is inactive';
+                        break;
+                    case 'OAUTH_CALLBACK_FAILED':
+                        errorMessage = 'OAuth authentication failed';
+                        break;
+                }
+            }
+            res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
+        }
+    };
 
     /**
      * Gérer les erreurs du service

@@ -1,18 +1,16 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/UserController';
-import { requireAuth } from '../../shared/auth/authMiddleware';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
 const userController = new UserController();
 
-// GET /api/users/me
-router.get('/me', requireAuth, userController.getMe);
-// PATCH /api/users/me
-router.patch('/me', requireAuth, userController.updateMe);
-// DELETE /api/users/me
-router.delete('/me', requireAuth, userController.deleteMe);
+router
+    .route('/me')
+    .get(requireAuth, userController.getMe) // GET /api/users/me
+    .patch(requireAuth, userController.updateMe) // PATCH /api/users/me
+    .delete(requireAuth, userController.deleteMe); // DELETE /api/users/me
 
-// POST /api/users/changePassword
 router.post('/changePassword', requireAuth, userController.changePassword);
 
 export default router;

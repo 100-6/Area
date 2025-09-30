@@ -178,7 +178,7 @@ CREATE INDEX idx_executions_area_status ON area_executions(area_id, status);
 CREATE TABLE user_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    session_token VARCHAR(512) UNIQUE NOT NULL,
+    session_token TEXT UNIQUE NOT NULL,
     device_info JSONB,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
