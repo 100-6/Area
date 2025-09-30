@@ -214,18 +214,35 @@ services:
       - prod
 
   # ===========================================
-  # OPTIONAL SERVICES
+  # MOBILE SERVICES (APK Build uniquement)
   # ===========================================
-  # mobile-builder:
-  #   build:
-  #     context: ./mobile
-  #     dockerfile: Dockerfile
-  #   container_name: area_mobile_builder
-  #   volumes:
-  #     - mobile_builds:/app/build
-  #   profiles:
-  #     - dev
-  #     - prod
+  mobile-apk-builder:
+    build:
+      context: ./mobile
+      dockerfile: Dockerfile
+      target: build
+      args:
+        - API_URL=${MOBILE_API_URL:-http://10.0.2.2:8080}
+    container_name: area_mobile_apk_builder
+    volumes:
+      - mobile_builds:/app/build/app/outputs/flutter-apk
+    profiles:
+      - mobile
+      - build
+
+  mobile-apk-export:
+    build:
+      context: ./mobile
+      dockerfile: Dockerfile
+      target: export
+      args:
+        - API_URL=${MOBILE_API_URL:-http://10.0.2.2:8080}
+    container_name: area_mobile_apk_export
+    volumes:
+      - mobile_builds:/output
+    profiles:
+      - mobile
+      - build
 
 volumes:
   postgres_data:
