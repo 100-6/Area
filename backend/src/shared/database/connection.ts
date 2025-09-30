@@ -46,7 +46,6 @@ class Database {
             const client = await this.pool.connect();
             await client.query('SELECT NOW()');
             client.release();
-            console.log('Database connection test successful'.green);
             this.isConnected = true;
             return true;
         } catch (error) {

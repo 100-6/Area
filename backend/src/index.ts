@@ -5,10 +5,9 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import 'colors';
 
-// Import routes
-import systemRoutes from './core/routes/system';
-import authRoutes from './core/routes/auth';
-import userRoutes from './core/routes/users';
+import { errorHandler, notFoundHandler } from './core/middleware/error';
+
+import routes from './core/routes/_index';
 
 dotenv.config();
 
@@ -25,33 +24,15 @@ const corsOptions = {
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(morgan('combined'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Routes
-app.use('/', systemRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-// app.use('/api/users', userRoutes);
-// app.use('/api/services', serviceRoutes);
-// app.use('/api/areas', areaRoutes);
+app.use('/', routes);
 
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error('ERROR:'.red, err.message);
-    res.status(500).json({
-        error: 'Internal server error',
-        ...(process.env.NODE_ENV === 'development' && { details: err.message })
-    });
-});
-
-app.use((req, res) => {
-    console.log('404 - Redirecting to frontend:'.yellow, req.originalUrl.cyan);
-    res.redirect(`${FRONTEND_URL}/404`);
-});
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 app.listen(PORT, () => {
     console.log('AREA Backend Server running on'.green.bold, `http://localhost:${PORT}`.cyan);
     console.log('Frontend URL:'.blue, FRONTEND_URL.cyan);
-    console.log('404 redirects to:'.yellow, `${FRONTEND_URL}/404`.cyan);
-    console.log('Architecture: Modular AREA Platform'.magenta);
 });
