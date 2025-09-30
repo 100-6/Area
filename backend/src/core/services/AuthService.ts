@@ -416,6 +416,114 @@ class AuthService {
     isGitHubConfigured(): boolean {
         return this.oauthManager.isGitHubConfigured();
     }
+
+    /**
+     * Obtenir l'URL d'authentification GitLab
+     */
+    getGitLabAuthUrl(): string {
+        if (!this.oauthManager.isGitLabConfigured())
+            throw new Error('GITLAB_OAUTH_NOT_CONFIGURED');
+        return this.oauthManager.getGitLabAuthUrl();
+    }
+
+    /**
+     * Gérer le callback GitLab OAuth
+     */
+    async handleGitLabCallback(code: string): Promise<AuthResult> {
+        try {
+            const user = await this.oauthManager.handleGitLabCallback(code);
+
+            if (!user || !user.id || !user.email)
+                throw new Error('INVALID_OAUTH_USER_DATA');
+            if (!user.is_active)
+                throw new Error('ACCOUNT_INACTIVE');
+
+            const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+            const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
+            const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            await UserSession.create(user.id, refreshToken, refreshExpiry);
+            
+            console.log(`SUCCESS: GitLab OAuth login: ${user.email} (ID: ${user.id})`.green);
+
+            return {
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.first_name || '',
+                    lastName: user.last_name || '',
+                    createdAt: user.created_at
+                },
+                token,
+                refreshToken
+            };
+        } catch (error) {
+            console.error('GitLab OAuth callback error:'.red, error);
+            if (error instanceof Error)
+                throw error;
+            throw new Error('OAUTH_CALLBACK_FAILED');
+        }
+    }
+
+    /**
+     * Vérifier si GitLab OAuth est configuré
+     */
+    isGitLabConfigured(): boolean {
+        return this.oauthManager.isGitLabConfigured();
+    }
+
+    /**
+     * Obtenir l'URL d'authentification Dropbox
+     */
+    getDropboxAuthUrl(): string {
+        if (!this.oauthManager.isDropboxConfigured())
+            throw new Error('DROPBOX_OAUTH_NOT_CONFIGURED');
+        return this.oauthManager.getDropboxAuthUrl();
+    }
+
+    /**
+     * Gérer le callback Dropbox OAuth
+     */
+    async handleDropboxCallback(code: string): Promise<AuthResult> {
+        try {
+            const user = await this.oauthManager.handleDropboxCallback(code);
+
+            if (!user || !user.id || !user.email)
+                throw new Error('INVALID_OAUTH_USER_DATA');
+            if (!user.is_active)
+                throw new Error('ACCOUNT_INACTIVE');
+
+            const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+            const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
+            const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            await UserSession.create(user.id, refreshToken, refreshExpiry);
+            
+            console.log(`SUCCESS: Dropbox OAuth login: ${user.email} (ID: ${user.id})`.green);
+
+            return {
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.first_name || '',
+                    lastName: user.last_name || '',
+                    createdAt: user.created_at
+                },
+                token,
+                refreshToken
+            };
+        } catch (error) {
+            console.error('Dropbox OAuth callback error:'.red, error);
+            if (error instanceof Error)
+                throw error;
+            throw new Error('OAUTH_CALLBACK_FAILED');
+        }
+    }
+
+    /**
+     * Vérifier si Dropbox OAuth est configuré
+     */
+    isDropboxConfigured(): boolean {
+        return this.oauthManager.isDropboxConfigured();
+    }
 }
 
 export default AuthService;

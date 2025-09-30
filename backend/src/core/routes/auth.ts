@@ -19,4 +19,10 @@ router.get('/discord/callback', authController.discordCallback);
 router.get('/github', authController.gitHubLogin);
 router.get('/github/callback', authController.gitHubCallback);
 
+router.get('/gitlab', authController.gitLabLogin);
+router.get('/gitlab/callback', authController.gitLabCallback);
+
+router.get('/dropbox', authController.dropboxLogin);
+router.get('/dropbox/callback', authController.dropboxCallback);
+
 export default router;
