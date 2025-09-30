@@ -129,7 +129,7 @@ export const useAuth = () => {
     }
   }
 
-  const loginWithProvider = (provider: 'google' | 'discord' | 'github'): void => {
+  const loginWithProvider = (provider: 'google' | 'discord' | 'github' | 'gitlab' | 'dropbox'): void => {
     window.location.href = `${backendUrl}/api/auth/${provider}`
   }
 

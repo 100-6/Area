@@ -11,8 +11,8 @@
           />
         </NuxtLink>
 
-        <!-- Desktop Navigation -->
-        <nav class="hidden md:flex items-center space-x-8">
+        <!-- Desktop Navigation - Absolument centré -->
+        <nav class="hidden md:flex items-center space-x-8 absolute left-1/2 transform -translate-x-1/2">
           <NuxtLink to="/" class="text-gray-700 hover:text-brand-tertiary transition-colors duration-200">
             Accueil
           </NuxtLink>

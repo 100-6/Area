@@ -165,7 +165,7 @@ const iconBackground = computed(() => {
     case 'success':
       return 'background: var(--color-secondary);'
     default:
-      return 'background: var(--color-primary);'
+      return 'background: rgba(72, 199, 116, 0.1);'
   }
 })
 
@@ -178,7 +178,7 @@ const iconColor = computed(() => {
     case 'success':
       return 'color: white;'
     default:
-      return 'color: var(--color-tertiary);'
+      return 'color: var(--color-secondary);'
   }
 })
 </script>
