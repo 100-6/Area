@@ -1,0 +1,53 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+@import "./variables.css";
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  color: var(--color-tertiary);
+  transition: var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-tertiary-hover);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+
+input, textarea, select {
+  font-family: inherit;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-color);
+  transition: var(--transition-fast);
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--color-tertiary);
+}
+
+.card {
+  background-color: var(--bg-card);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-sm);
+}
