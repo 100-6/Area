@@ -32,11 +32,9 @@
               </div>
             </div>
 
-            <!-- AuthForm de Nuxt UI -->
             <div class="scale-in">
               <UAuthForm
               :fields="formFields"
-              :providers="authProviders"
               title=""
               :submit-button="{
                 label: isLoading ? 'Connexion...' : 'Se connecter',
@@ -47,6 +45,20 @@
               }"
               @submit="handleSubmit"
               />
+              <USeparator label="ou" class="my-6 text-sm" style="border-color: rgb(107, 114, 128); color: rgb(75, 85, 99);" />
+
+              <!-- Boutons OAuth -->
+              <div class="flex gap-3">
+                <UButton
+                  v-for="provider in authProviders"
+                  :key="provider.icon"
+                  :style="provider.style"
+                  class="flex-1"
+                  @click="provider.onClick"
+                >
+                  <UIcon :name="provider.icon" class="w-5 h-5" />
+                </UButton>
+              </div>
             </div>
 
             <div class="mt-6 text-center fade-in">
@@ -89,8 +101,8 @@
                   :typingSpeed="80"
                   :pauseDuration="2500"
                   :showCursor="true"
-                  cursorCharacter="●"
-                  cursorClass="ml-2 text-green-400 animate-pulse"
+                  cursorCharacter="|"
+                  cursorClass="ml-2 text-green-400"
                 />
               </div>
 
@@ -147,22 +159,34 @@ const isLoading = ref(false)
 const errorMessage = ref('')
 const authProviders = [
   {
-    label: 'Continuer avec Google',
+    label: '',
     icon: 'i-logos-google-icon',
-    style: 'background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);',
+    style: 'background: var(--bg-card); border: 1px solid rgb(17, 24, 39); color: var(--text-primary); height: 48px; flex: 1; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 0.5rem;',
     onClick: () => loginWithProvider('google')
   },
   {
-    label: 'Continuer avec GitHub',
+    label: '',
     icon: 'i-logos-github-icon',
-    style: 'background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);',
+    style: 'background: var(--bg-card); border: 1px solid rgb(17, 24, 39); color: var(--text-primary); height: 48px; flex: 1; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 0.5rem;',
     onClick: () => loginWithProvider('github')
   },
   {
-    label: 'Continuer avec Discord',
+    label: '',
     icon: 'i-logos-discord-icon',
-    style: 'background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);',
+    style: 'background: var(--bg-card); border: 1px solid rgb(17, 24, 39); color: var(--text-primary); height: 48px; flex: 1; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 0.5rem;',
     onClick: () => loginWithProvider('discord')
+  },
+  {
+    label: '',
+    icon: 'i-logos-gitlab-icon',
+    style: 'background: var(--bg-card); border: 1px solid rgb(17, 24, 39); color: var(--text-primary); height: 48px; flex: 1; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 0.5rem;',
+    onClick: () => loginWithProvider('gitlab')
+  },
+  {
+    label: '',
+    icon: 'i-logos-dropbox',
+    style: 'background: var(--bg-card); border: 1px solid rgb(17, 24, 39); color: var(--text-primary); height: 48px; flex: 1; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 0.5rem;',
+    onClick: () => loginWithProvider('dropbox')
   }
 ]
 
@@ -219,6 +243,7 @@ useHead({
   background: var(--bg-card) !important;
   border: 1px solid var(--border-color) !important;
   color: var(--text-primary) !important;
+  border-radius: var(--border-radius-md) !important;
 }
 
 :deep(input[type="text"]:focus),

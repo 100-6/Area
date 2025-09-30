@@ -15,23 +15,6 @@
         :class="robotClasses"
         class="relative z-10 object-contain drop-shadow-2xl"
       />
-
-      <!-- Éléments décoratifs flottants -->
-      <div
-        v-if="showFloatingElements"
-        class="absolute top-10 -left-6 w-4 h-4 rounded-full animate-bounce"
-        style="background: var(--color-secondary); animation-delay: 0s;"
-      ></div>
-      <div
-        v-if="showFloatingElements"
-        class="absolute top-20 -right-4 w-3 h-3 rounded-full animate-bounce"
-        style="background: var(--color-primary); animation-delay: 0.2s;"
-      ></div>
-      <div
-        v-if="showFloatingElements"
-        class="absolute bottom-16 -left-8 w-5 h-5 rounded-full animate-bounce"
-        style="background: var(--color-tertiary); animation-delay: 0.4s;"
-      ></div>
     </div>
   </div>
 </template>

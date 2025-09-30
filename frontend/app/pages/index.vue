@@ -65,7 +65,7 @@
                 <span>100% gratuit pour commencer</span>
               </div>
               <div class="flex items-center gap-2" style="color: var(--text-secondary);">
-                <UIcon name="i-heroicons-lightning-bolt" class="w-5 h-5" style="color: var(--color-secondary);" />
+                <UIcon name="i-heroicons-bolt" class="w-5 h-5" style="color: var(--color-secondary);" />
                 <span>Setup en 30 secondes</span>
               </div>
               <div class="flex items-center gap-2" style="color: var(--text-secondary);">
@@ -86,8 +86,8 @@
                     :typingSpeed="80"
                     :pauseDuration="2500"
                     :showCursor="true"
-                    cursorCharacter="●"
-                    cursorClass="ml-2 text-green-400 animate-pulse"
+                    cursorCharacter="|"
+                    cursorClass="ml-2 text-green-400"
                   />
                 </div>
 
@@ -153,18 +153,14 @@
               <div class="relative text-center p-8 rounded-2xl border overflow-hidden"
                    style="background: linear-gradient(135deg, var(--color-tertiary), var(--color-accent)); color: var(--text-white); box-shadow: var(--shadow-xl);">
 
-                <div class="absolute top-4 right-6 w-2 h-2 rounded-full bg-green-300 animate-bounce" style="animation-delay: 0s; animation-duration: 2s;"></div>
-                <div class="absolute top-8 left-8 w-1.5 h-1.5 rounded-full bg-white animate-bounce" style="animation-delay: 0.3s; animation-duration: 2.5s;"></div>
-                <div class="absolute bottom-6 right-12 w-1 h-1 rounded-full bg-green-200 animate-bounce" style="animation-delay: 0.6s; animation-duration: 1.8s;"></div>
-
                 <div class="relative z-10">
                   <div class="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4"
                        style="background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px);">
                     <UIcon name="i-heroicons-check-circle" class="w-10 h-10 text-green-300" />
                   </div>
 
-                  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-70 h-70 rounded-full border-2 border-green-300 opacity-30" style="animation: ping 3s infinite;"></div>
-                  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full border border-white opacity-20" style="animation: ping 4s infinite;"></div>
+                  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full border-2 border-green-300 opacity-30 animate-ping" style="animation-duration: 3s;"></div>
+                  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full border border-white opacity-20 animate-ping" style="animation-duration: 4s;"></div>
 
                   <h3 class="text-2xl font-bold mb-2">
                     Mission accomplie !
@@ -174,13 +170,7 @@
                     <span class="inline-block animate-bounce">✓</span>
                   </p>
 
-                  <div class="mt-6 bg-white bg-opacity-20 rounded-full h-2 overflow-hidden">
-                    <div class="h-full bg-green-300 rounded-full animate-pulse"
-                         style="width: 100%; animation: fillBar 2s ease-out;">
-                    </div>
-                  </div>
-
-                  <p class="text-sm mt-2 opacity-75">
+                  <p class="text-sm mt-6 opacity-75">
                     100% automatisé • 24/7 actif • 0 intervention requise
                   </p>
                 </div>

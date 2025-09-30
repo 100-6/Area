@@ -3,7 +3,7 @@
     <span>{{ displayedText }}</span>
     <span
       v-if="showCursor"
-      class="animate-pulse"
+      class="cursor-blink"
       :class="cursorClass"
     >{{ cursorCharacter }}</span>
   </span>
@@ -67,3 +67,14 @@ onMounted(() => {
 onUnmounted(() => {
 })
 </script>
+
+<style scoped>
+@keyframes cursor-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: cursor-blink 1s infinite;
+}
+</style>
