@@ -11,70 +11,104 @@
     ]"
     @click="clickable && $emit('click')"
   >
-    <!-- Header avec icône et titre -->
-    <div class="flex items-center justify-between mb-4" v-if="title || $slots.header">
-      <div class="flex items-center space-x-3">
-        <!-- Icône -->
-        <div
-          v-if="icon"
+    <!-- Layout pour les cartes de stats (layout horizontal) -->
+    <div v-if="layout === 'stat'" class="flex items-center justify-between">
+      <div>
+        <p v-if="title" class="text-sm text-gray-600 font-medium">{{ title }}</p>
+        <p v-if="value" class="text-3xl font-bold text-gray-900 mt-1">{{ value }}</p>
+      </div>
+      <div
+        v-if="icon"
+        :class="[
+          'p-3 rounded-full',
+          iconSize === 'sm' && 'p-2',
+          iconSize === 'lg' && 'p-4',
+          iconSize === 'xl' && 'p-5'
+        ]"
+        :style="iconBackground"
+      >
+        <UIcon
+          :name="icon"
           :class="[
-            'w-10 h-10 rounded-full flex items-center justify-center',
-            iconSize === 'sm' && 'w-8 h-8',
-            iconSize === 'lg' && 'w-12 h-12',
-            iconSize === 'xl' && 'w-14 h-14'
+            'w-6 h-6',
+            iconSize === 'sm' && 'w-4 h-4',
+            iconSize === 'lg' && 'w-8 h-8',
+            iconSize === 'xl' && 'w-10 h-10'
           ]"
-          :style="iconBackground"
-        >
-          <UIcon
-            :name="icon"
+          :style="iconColor"
+        />
+      </div>
+    </div>
+
+    <!-- Layout standard (layout vertical) -->
+    <div v-else>
+      <!-- Header avec icône et titre -->
+      <div v-if="icon || title || subtitle || slots['header-actions'] || slots['title-extra']" class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-3">
+          <!-- Icône -->
+          <div
+            v-if="icon"
             :class="[
-              'w-5 h-5',
-              iconSize === 'sm' && 'w-4 h-4',
-              iconSize === 'lg' && 'w-6 h-6',
-              iconSize === 'xl' && 'w-7 h-7'
+              'w-10 h-10 rounded-full flex items-center justify-center',
+              iconSize === 'sm' && 'w-8 h-8',
+              iconSize === 'lg' && 'w-12 h-12',
+              iconSize === 'xl' && 'w-14 h-14'
             ]"
-            :style="iconColor"
-          />
-        </div>
-
-        <!-- Titre et labels -->
-        <div class="flex-1">
-          <div class="flex items-center space-x-2">
-            <h4 v-if="title" :class="titleClass">{{ title }}</h4>
-            <slot name="title-extra" />
+            :style="iconBackground"
+          >
+            <UIcon
+              :name="icon"
+              :class="[
+                'w-5 h-5',
+                iconSize === 'sm' && 'w-4 h-4',
+                iconSize === 'lg' && 'w-6 h-6',
+                iconSize === 'xl' && 'w-7 h-7'
+              ]"
+              :style="iconColor"
+            />
           </div>
-          <p v-if="subtitle" :class="subtitleClass">{{ subtitle }}</p>
-          <slot name="subtitle" />
+
+          <!-- Titre et labels -->
+          <div class="flex-1">
+            <div v-if="title || slots['title-extra']" class="flex items-center space-x-2">
+              <h4 v-if="title" :class="titleClass">{{ title }}</h4>
+              <slot name="title-extra" />
+            </div>
+            <p v-if="subtitle" :class="subtitleClass">{{ subtitle }}</p>
+            <slot name="subtitle" />
+          </div>
+        </div>
+
+        <!-- Actions header (badges, boutons, etc.) -->
+        <div v-if="slots['header-actions']" class="flex items-center space-x-2">
+          <slot name="header-actions" />
         </div>
       </div>
 
-      <!-- Actions header (badges, boutons, etc.) -->
-      <div class="flex items-center space-x-2">
-        <slot name="header-actions" />
-      </div>
-    </div>
+      <!-- Contenu principal -->
+      <div class="space-y-3">
+        <slot name="default" />
 
-    <!-- Contenu principal -->
-    <div class="space-y-3">
-      <slot name="default" />
+        <!-- Contenu simple avec value -->
+        <div v-if="value && !slots.default" class="text-xl font-bold text-gray-900">
+          {{ value }}
+        </div>
 
-      <!-- Contenu simple avec value -->
-      <div v-if="value" class="text-xl font-bold text-gray-900">
-        {{ value }}
+        <!-- Description -->
+        <p v-if="description" class="text-sm text-gray-500">{{ description }}</p>
       </div>
 
-      <!-- Description -->
-      <p v-if="description" class="text-sm text-gray-500">{{ description }}</p>
-    </div>
-
-    <!-- Footer avec actions -->
-    <div v-if="$slots.footer" class="mt-4 pt-4 border-t border-gray-100">
-      <slot name="footer" />
+      <!-- Footer avec actions -->
+      <div v-if="slots.footer" class="mt-4 pt-4 border-t border-gray-100">
+        <slot name="footer" />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+const slots = useSlots()
+
 interface Props {
   title?: string
   subtitle?: string
@@ -83,6 +117,7 @@ interface Props {
   icon?: string
   iconSize?: 'sm' | 'md' | 'lg' | 'xl'
   variant?: 'default' | 'danger' | 'warning' | 'success'
+  layout?: 'default' | 'stat'
   hoverable?: boolean
   clickable?: boolean
   className?: string
@@ -91,6 +126,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   iconSize: 'md',
   variant: 'default',
+  layout: 'default',
   hoverable: true,
   clickable: false
 })

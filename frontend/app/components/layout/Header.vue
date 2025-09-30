@@ -77,7 +77,7 @@
                     Dashboard
                   </button>
                   <hr class="my-1" style="border-color: var(--border-color);">
-                  <button @click="handleLogout; isProfileMenuOpen = false" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center text-red-600">
+                  <button @click="() => { handleLogout(); isProfileMenuOpen = false }" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center text-red-600">
                     <UIcon name="i-heroicons-arrow-right-on-rectangle" class="w-4 h-4 mr-2" />
                     Se déconnecter
                   </button>
@@ -164,7 +164,7 @@
                   Mon Profil
                 </UButton>
               </NuxtLink>
-              <UButton variant="ghost" color="gray" block @click="handleLogout">
+              <UButton variant="ghost" color="gray" block @click="() => { handleLogout(); isMenuOpen = false }">
                 <UIcon name="i-heroicons-arrow-right-on-rectangle" class="w-4 h-4 mr-2" />
                 Se déconnecter
               </UButton>
@@ -210,6 +210,7 @@ const getUserInitials = () => {
 const handleLogout = async () => {
   await logout()
   isMenuOpen.value = false
+  isProfileMenuOpen.value = false
 }
 
 const route = useRoute()

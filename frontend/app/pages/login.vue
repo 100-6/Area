@@ -150,19 +150,19 @@ const authProviders = [
     label: 'Continuer avec Google',
     icon: 'i-logos-google-icon',
     style: 'background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);',
-    click: () => loginWithProvider('google')
+    onClick: () => loginWithProvider('google')
   },
   {
     label: 'Continuer avec GitHub',
     icon: 'i-logos-github-icon',
     style: 'background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);',
-    click: () => loginWithProvider('github')
+    onClick: () => loginWithProvider('github')
   },
   {
     label: 'Continuer avec Discord',
     icon: 'i-logos-discord-icon',
     style: 'background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);',
-    click: () => loginWithProvider('discord')
+    onClick: () => loginWithProvider('discord')
   }
 ]
 

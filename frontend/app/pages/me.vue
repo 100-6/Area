@@ -3,6 +3,28 @@
     <!-- Hero Section avec cover photo -->
     <div class="relative h-64 overflow-hidden" style="background: linear-gradient(135deg, var(--color-secondary), var(--color-tertiary));">
       <div class="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent"></div>
+
+      <!-- Cercles décoratifs -->
+      <div class="absolute inset-0 overflow-hidden">
+        <!-- Grand cercle en haut à droite -->
+        <div class="absolute -top-16 -right-16 w-40 h-40 rounded-full opacity-10" style="background: var(--color-primary);"></div>
+
+        <!-- Cercle moyen en haut à gauche -->
+        <div class="absolute -top-8 -left-8 w-24 h-24 rounded-full opacity-15" style="background: white;"></div>
+
+        <!-- Petit cercle au centre droit -->
+        <div class="absolute top-12 -right-6 w-16 h-16 rounded-full opacity-10" style="background: var(--color-primary);"></div>
+
+        <!-- Cercle moyen en bas à gauche -->
+        <div class="absolute -bottom-12 left-1/4 w-32 h-32 rounded-full opacity-8" style="background: white;"></div>
+
+        <!-- Petit cercle en haut centre -->
+        <div class="absolute top-6 left-1/3 w-12 h-12 rounded-full opacity-12" style="background: var(--color-primary);"></div>
+
+        <!-- Cercle moyen en bas à droite -->
+        <div class="absolute -bottom-8 right-1/3 w-20 h-20 rounded-full opacity-10" style="background: white;"></div>
+      </div>
+
       <div class="absolute bottom-8 left-8 right-8">
         <UContainer>
           <div class="flex items-end space-x-6">
@@ -114,7 +136,7 @@
                 title="Workflows actifs"
                 value="0"
                 icon="i-heroicons-bolt"
-                icon-size="lg"
+                layout="stat"
                 class="bg-white rounded-xl shadow-sm"
                 :hoverable="false"
               />
@@ -123,7 +145,7 @@
                 title="Exécutions ce mois"
                 value="0"
                 icon="i-heroicons-chart-bar"
-                icon-size="lg"
+                layout="stat"
                 class="bg-white rounded-xl shadow-sm"
                 :hoverable="false"
               />
@@ -132,7 +154,7 @@
                 title="Services connectés"
                 value="0"
                 icon="i-heroicons-puzzle-piece"
-                icon-size="lg"
+                layout="stat"
                 class="bg-white rounded-xl shadow-sm"
                 :hoverable="false"
               />
@@ -159,24 +181,44 @@
                 </InfoCard>
 
                 <!-- Déconnexion -->
-                <InfoCard
-                  title="Se déconnecter"
-                  subtitle="Fermer votre session"
-                  icon="i-heroicons-arrow-right-on-rectangle"
-                  icon-size="lg"
-                  variant="success"
-                  clickable
-                  class="border-green-200"
-                  style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));"
+                <div
                   @click="handleLogout"
+                  class="group relative overflow-hidden rounded-xl border border-red-200 p-6 transition-all duration-300 hover:border-red-300 hover:shadow-lg cursor-pointer transform hover:scale-[1.02]"
+                  style="background: linear-gradient(135deg, #fef2f2, #fee2e2);"
                 >
-                  <template #title-extra>
-                    <!-- Titre et subtitle seront blancs via le variant success -->
-                  </template>
-                  <template #header-actions>
-                    <UIcon name="i-heroicons-arrow-right" class="w-5 h-5 text-white/60 group-hover:text-white transition-colors" />
-                  </template>
-                </InfoCard>
+                  <!-- Effet subtil de survol -->
+                  <div class="absolute inset-0 bg-gradient-to-r from-red-500/5 to-red-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                  <div class="relative flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                      <!-- Icône avec animation -->
+                      <div class="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 group-hover:bg-red-200 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3">
+                        <UIcon name="i-heroicons-arrow-right-on-rectangle" class="w-6 h-6 text-red-600 group-hover:text-red-700 transition-colors" />
+                      </div>
+
+                      <!-- Texte -->
+                      <div>
+                        <h4 class="font-semibold text-red-800 group-hover:text-red-900 transition-colors">Se déconnecter</h4>
+                        <p class="text-sm text-red-600 group-hover:text-red-700 transition-colors">Fermer votre session en toute sécurité</p>
+                      </div>
+                    </div>
+
+                    <!-- Flèche avec animation -->
+                    <div class="flex items-center space-x-2">
+                      <div class="w-8 h-8 rounded-full bg-red-100 group-hover:bg-red-200 flex items-center justify-center transition-all duration-200 group-hover:translate-x-1">
+                        <UIcon name="i-heroicons-arrow-right" class="w-4 h-4 text-red-600 group-hover:text-red-700 transition-colors" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Indicateur de sécurité -->
+                  <div class="mt-3 pt-3 border-t border-red-100 group-hover:border-red-200 transition-colors">
+                    <div class="flex items-center text-xs text-red-500 group-hover:text-red-600 transition-colors">
+                      <UIcon name="i-heroicons-shield-check" class="w-3 h-3 mr-1" />
+                      <span>Action sécurisée</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -192,30 +234,44 @@
               <div class="grid md:grid-cols-2 gap-6">
                 <!-- Prénom -->
                 <InfoCard
-                  title="PRÉNOM"
-                  :value="user?.firstName || 'Non renseigné'"
                   icon="i-heroicons-identification"
-                />
+                >
+                  <template #default>
+                    <div class="space-y-2">
+                      <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Prénom</label>
+                      <p class="text-xl font-bold text-gray-900">{{ user?.firstName || 'Non renseigné' }}</p>
+                    </div>
+                  </template>
+                </InfoCard>
 
                 <!-- Nom -->
                 <InfoCard
-                  title="NOM"
-                  :value="user?.lastName || 'Non renseigné'"
                   icon="i-heroicons-tag"
-                />
+                >
+                  <template #default>
+                    <div class="space-y-2">
+                      <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Nom</label>
+                      <p class="text-xl font-bold text-gray-900">{{ user?.lastName || 'Non renseigné' }}</p>
+                    </div>
+                  </template>
+                </InfoCard>
               </div>
 
               <!-- Email - Section spéciale -->
               <div class="mt-6">
                 <InfoCard
-                  title="ADRESSE EMAIL"
-                  :value="user?.email"
                   icon="i-heroicons-envelope"
-                  variant="default"
+                  variant="success"
                   class="bg-gradient-to-r from-gray-50 via-white to-gray-50 hover:from-green-50 hover:via-white hover:to-green-50"
                 >
                   <template #header-actions>
                     <span class="text-xs font-medium px-2.5 py-0.5 rounded-full" style="background: var(--color-primary); color: var(--color-tertiary);">Vérifié</span>
+                  </template>
+                  <template #default>
+                    <div class="space-y-2">
+                      <label class="text-sm font-semibold text-gray-600 uppercase tracking-wide">Adresse email</label>
+                      <p class="text-xl font-bold text-gray-900">{{ user?.email }}</p>
+                    </div>
                   </template>
                 </InfoCard>
               </div>
@@ -327,6 +383,9 @@ definePageMeta({
   middleware: 'auth'
 })
 
+// Import the InfoCard component explicitly to ensure it's available
+import InfoCard from '~/components/ui/InfoCard.vue'
+
 const { user, logout, updateProfile } = useAuth()
 
 const isEditing = ref(false)
@@ -409,3 +468,42 @@ useHead({
   ]
 })
 </script>
+
+<style scoped>
+/* Styles de base pour les formulaires */
+:deep(.form-input) {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+:deep(.form-input:focus) {
+  border-color: var(--color-primary) !important;
+}
+
+:deep(.form-input::placeholder) {
+  color: var(--text-secondary) !important;
+  opacity: 0.7;
+}
+
+/* Style pour tous les inputs */
+:deep(input[type="text"]),
+:deep(input[type="email"]),
+:deep(input[type="password"]) {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+:deep(input[type="text"]:focus),
+:deep(input[type="email"]:focus),
+:deep(input[type="password"]:focus) {
+  border-color: var(--color-primary) !important;
+}
+
+/* Style pour les labels */
+:deep(label) {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+</style>
