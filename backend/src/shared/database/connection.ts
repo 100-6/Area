@@ -28,7 +28,6 @@ class Database {
             console.error('Unexpected error on idle client'.red, err);
             this.isConnected = false;
         });
-        this.testConnection();
     }
 
     public static getInstance(): Database {
