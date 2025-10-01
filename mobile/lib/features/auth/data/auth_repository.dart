@@ -58,11 +58,11 @@ class AuthRepository {
     return prefs.getString(_refreshTokenKey);
   }
 
-  /// Obtient l'utilisateur connecté actuel
+  /// Obtient l'utilisateur connecté actuel depuis le cache local
   Future<User> getCurrentUser() async {
     final prefs = await SharedPreferences.getInstance();
     final userJson = prefs.getString(_userKey);
-    
+
     if (userJson == null) {
       return User.empty;
     }
@@ -72,6 +72,104 @@ class AuthRepository {
       return User.fromJson(userData);
     } catch (e) {
       return User.empty;
+    }
+  }
+
+  /// Récupère les données utilisateur depuis l'API /me
+  Future<Result<User>> fetchCurrentUser() async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return Result.failure(AuthFailure('No token available'));
+      }
+
+      final response = await _apiService.get(
+        ApiConstants.meEndpoint,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      final userData = response['user'] as Map<String, dynamic>;
+      final user = User.fromJson(userData);
+
+      // Mise à jour du cache local
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_userKey, jsonEncode(user.toJson()));
+
+      return Result.success(user);
+    } on ApiException catch (e) {
+      return Result.failure(AuthFailure(e.message));
+    } catch (e) {
+      return Result.failure(
+        AuthFailure('Erreur lors de la récupération du profil: ${e.toString()}'),
+      );
+    }
+  }
+
+  /// Met à jour le profil utilisateur (prénom, nom)
+  Future<Result<User>> updateProfile({
+    String? firstName,
+    String? lastName,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return Result.failure(AuthFailure('No token available'));
+      }
+
+      final body = <String, dynamic>{};
+      if (firstName != null) body['firstName'] = firstName;
+      if (lastName != null) body['lastName'] = lastName;
+
+      final response = await _apiService.patch(
+        ApiConstants.meEndpoint,
+        headers: {'Authorization': 'Bearer $token'},
+        body: body,
+      );
+
+      final userData = response['user'] as Map<String, dynamic>;
+      final user = User.fromJson(userData);
+
+      // Mise à jour du cache local
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_userKey, jsonEncode(user.toJson()));
+
+      return Result.success(user);
+    } on ApiException catch (e) {
+      return Result.failure(AuthFailure(e.message));
+    } catch (e) {
+      return Result.failure(
+        AuthFailure('Erreur lors de la mise à jour du profil: ${e.toString()}'),
+      );
+    }
+  }
+
+  /// Change le mot de passe
+  Future<Result<void>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return Result.failure(AuthFailure('No token available'));
+      }
+
+      await _apiService.post(
+        '${ApiConstants.userBase}/changePassword',
+        headers: {'Authorization': 'Bearer $token'},
+        body: {
+          'currentPassword': currentPassword,
+          'newPassword': newPassword,
+        },
+      );
+
+      return Result.success(null);
+    } on ApiException catch (e) {
+      return Result.failure(AuthFailure(e.message));
+    } catch (e) {
+      return Result.failure(
+        AuthFailure('Erreur lors du changement de mot de passe: ${e.toString()}'),
+      );
     }
   }
 
