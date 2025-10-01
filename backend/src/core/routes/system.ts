@@ -1,87 +1,86 @@
 import { Router, Request, Response } from 'express';
-import fs from 'fs';
-import path from 'path';
+import { moduleRegistry } from '../../modules/registry';
+import { appBootstrap } from '../../shared/bootstrap/ApplicationBootstrap';
 import 'colors';
 
 const router = Router();
 
-const loadAvailableServices = () => {
-    const services: any[] = [];
-    const modulesPath = path.join(__dirname, '../../modules');
-
-    try {
-        if (!fs.existsSync(modulesPath))
-            throw new Error(`Modules directory not found at ${modulesPath}`);
-        const moduleDirectories = fs.readdirSync(modulesPath, { withFileTypes: true })
-            .filter(dirent => dirent.isDirectory())
-            .map(dirent => dirent.name);
-        if (moduleDirectories.length === 0)
-            throw new Error('No modules found in modules directory');
-        for (const moduleName of moduleDirectories) {
-            try {
-                const configPath = path.join(modulesPath, moduleName, 'config');
-                const moduleConfig = require(configPath);
-
-                if (!moduleConfig || !moduleConfig.name) {
-                    console.warn(`WARNING: Module ${moduleName} has invalid config (missing name)`.yellow);
-                    continue;
-                }
-                services.push({
-                    name: moduleConfig.name,
-                    actions: moduleConfig.actions || [],
-                    reactions: moduleConfig.reactions || []
-                });
-                console.log(`SUCCESS: Loaded module: ${moduleConfig.name}`.green);
-            } catch (error) {
-                console.error(`ERROR: Failed to load module ${moduleName}:`.red, error instanceof Error ? error.message : String(error));
-            }
-        }
-        if (services.length === 0)
-            throw new Error('No valid modules could be loaded');
-        return services;
-    } catch (error) {
-        console.error('ERROR: Loading modules failed:'.red, error instanceof Error ? error.message : String(error));
-        throw error;
-    }
-};
-
+/**
+ * GET /about.json
+ * Retourne la liste des services disponibles et leurs actions/reactions
+ */
 router.get('/about.json', (req: Request, res: Response) => {
     try {
-        const clientIP = req.ip || 'Ip address not found';
-        const availableServices = loadAvailableServices();
+        if (!moduleRegistry.isInitialized())
+            throw new Error('Application not initialized yet');
+        const clientIP = req.ip || req.socket.remoteAddress || 'unknown';
+        const activeModules = moduleRegistry.getActiveModules();
+        const services = activeModules.map(module => {
+            const moduleInfo = module.getModuleInfo();
+            return {
+                name: moduleInfo.name,
+                actions: moduleInfo.actions,
+                reactions: moduleInfo.reactions
+            };
+        });
 
         res.json({
-            client: {host: clientIP},
-            server: {current_time: Math.floor(Date.now() / 1000), services: availableServices}
+            client: { 
+                host: clientIP 
+            },
+            server: { 
+                current_time: Math.floor(Date.now() / 1000), 
+                services: services 
+            }
         });
+        console.log(`[System] /about.json served with ${services.length} service(s)`.green);
     } catch (error) {
-        console.error('ERROR: /about.json failed:'.red, error instanceof Error ? error.message : String(error));
+        console.error('[System] /about.json failed:'.red, error);
         res.status(500).json({
             error: 'Failed to load services',
             message: error instanceof Error ? error.message : 'Unknown error',
-            client: {host: req.ip || req.connection.remoteAddress || '127.0.0.1'},
-            server: {current_time: Math.floor(Date.now() / 1000), services: []}
+            client: { 
+                host: req.ip || req.socket.remoteAddress || 'unknown' 
+            },
+            server: { 
+                current_time: Math.floor(Date.now() / 1000), 
+                services: [] 
+            }
         });
     }
 });
 
+/**
+ * GET /health
+ * Health check de l'application
+ */
 router.get('/health', (req: Request, res: Response) => {
     try {
-        const servicesCount = loadAvailableServices().length;
+        const healthStatus = appBootstrap.getHealthStatus();
+        const modulesCount = moduleRegistry.getAllModules().length;
+        const isHealthy = 
+            healthStatus.initialized &&
+            healthStatus.services.database &&
+            healthStatus.services.redis &&
+            healthStatus.services.eventBus &&
+            healthStatus.services.modules;
 
-        res.json({
-            status: 'OK',
+        res.status(isHealthy ? 200 : 503).json({
+            status: isHealthy ? 'OK' : 'DEGRADED',
             timestamp: new Date().toISOString(),
             service: 'area-backend',
-            modules_loaded: servicesCount
+            modules_loaded: modulesCount,
+            services: healthStatus.services,
+            uptime: process.uptime()
         });
     } catch (error) {
-        console.error('WARNING: Health check degraded:'.yellow, error instanceof Error ? error.message : String(error));
+        console.error('[System] Health check failed:'.red, error);
+        
         res.status(503).json({
             status: 'DEGRADED',
             timestamp: new Date().toISOString(),
             service: 'area-backend',
-            error: 'Modules loading failed',
+            error: 'Health check failed',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }

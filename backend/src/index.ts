@@ -6,8 +6,8 @@ import dotenv from 'dotenv';
 import 'colors';
 
 import { errorHandler, notFoundHandler } from './core/middleware/error';
-
 import routes from './core/routes/_index';
+import { appBootstrap } from './shared/bootstrap/ApplicationBootstrap';
 
 dotenv.config();
 
@@ -32,7 +32,17 @@ app.use('/', routes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-    console.log('AREA Backend Server running on'.green.bold, `http://localhost:${PORT}`.cyan);
-    console.log('Frontend URL:'.blue, FRONTEND_URL.cyan);
-});
+async function startServer() {
+    try {
+        await appBootstrap.initialize();
+        app.listen(PORT, () => {
+            console.log(` Server listening on port ${PORT}`.cyan.bold);
+            console.log(` Frontend URL: ${FRONTEND_URL}`.cyan);
+        });
+    } catch (error) {
+        console.error('Failed to start server:'.red, error);
+        process.exit(1);
+    }
+}
+
+startServer();
