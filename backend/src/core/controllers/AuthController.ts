@@ -151,23 +151,25 @@ export class AuthController {
     public discordCallback = async (req: Request, res: Response): Promise<void> => {
         try {
             const { code, error } = req.query;
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
 
             if (error) {
                 console.error('Discord OAuth error:', error);
-                res.redirect(`${frontendUrl}/auth/error?error=${error}`);
+                res.redirect(`${redirectUrl}/auth/error?error=${error}`);
                 return;
             }
             if (!code) {
-                res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
+                res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
                 return;
             }
             const result = await this.authService.handleDiscordCallback(code as string);
             // Can't reliably set HttpOnly cookie cross-domain via redirect without same-site alignment; send token in URL as before + (optional) plan for frontend to hit /api/auth/transfer to set cookie server-side.
-            res.redirect(`${frontendUrl}/auth/success?token=${result.token}&provider=discord&refresh=${result.refreshToken}`);
+            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=discord&refresh=${result.refreshToken}`);
         } catch (error) {
             console.error('Discord OAuth callback error:'.red, error);
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
             let errorMessage = 'Authentication failed';
             if (error instanceof Error) {
                 switch (error.message) {
@@ -182,7 +184,7 @@ export class AuthController {
                         break;
                 }
             }
-            res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}&provider=discord`);
+            res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent(errorMessage)}&provider=discord`);
         }
     };
 
@@ -210,22 +212,24 @@ export class AuthController {
     public googleCallback = async (req: Request, res: Response): Promise<void> => {
         try {
             const { code, error } = req.query;
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
 
             if (error) {
                 console.error('Google OAuth error:', error);
-                res.redirect(`${frontendUrl}/auth/error?error=${error}`);
+                res.redirect(`${redirectUrl}/auth/error?error=${error}`);
                 return;
             }
             if (!code) {
-                res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
+                res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
                 return;
             }
             const result = await this.authService.handleGoogleCallback(code as string);
-            res.redirect(`${frontendUrl}/auth/success?token=${result.token}&refresh=${result.refreshToken}`);
+            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&refresh=${result.refreshToken}`);
         } catch (error) {
             console.error('Google OAuth callback error:'.red, error);
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
             let errorMessage = 'Authentication failed';
             if (error instanceof Error) {
                 switch (error.message) {
@@ -240,7 +244,7 @@ export class AuthController {
                         break;
                 }
             }
-            res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
+            res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
         }
     };
 
@@ -268,22 +272,24 @@ export class AuthController {
     public gitHubCallback = async (req: Request, res: Response): Promise<void> => {
         try {
             const { code, error } = req.query;
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
 
             if (error) {
                 console.error('GitHub OAuth error:', error);
-                res.redirect(`${frontendUrl}/auth/error?error=${error}`);
+                res.redirect(`${redirectUrl}/auth/error?error=${error}`);
                 return;
             }
             if (!code) {
-                res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
+                res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
                 return;
             }
             const result = await this.authService.handleGitHubCallback(code as string);
-            res.redirect(`${frontendUrl}/auth/success?token=${result.token}&refresh=${result.refreshToken}`);
+            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&refresh=${result.refreshToken}`);
         } catch (error) {
             console.error('GitHub OAuth callback error:'.red, error);
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
             let errorMessage = 'Authentication failed';
             
             if (error instanceof Error) {
@@ -299,7 +305,7 @@ export class AuthController {
                         break;
                 }
             }
-            res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
+            res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
         }
     };
 
@@ -327,23 +333,25 @@ export class AuthController {
     public gitLabCallback = async (req: Request, res: Response): Promise<void> => {
         try {
             const { code, error } = req.query;
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
 
             if (error) {
                 console.error('GitLab OAuth error:', error);
-                res.redirect(`${frontendUrl}/auth/error?error=${error}`);
+                res.redirect(`${redirectUrl}/auth/error?error=${error}`);
                 return;
             }
             if (!code) {
-                res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
+                res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
                 return;
             }
 
             const result = await this.authService.handleGitLabCallback(code as string);
-            res.redirect(`${frontendUrl}/auth/success?token=${result.token}`);
+            res.redirect(`${redirectUrl}/auth/success?token=${result.token}`);
         } catch (error) {
             console.error('GitLab OAuth callback error:'.red, error);
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
             let errorMessage = 'Authentication failed';
             
             if (error instanceof Error) {
@@ -359,9 +367,35 @@ export class AuthController {
                         break;
                 }
             }
-            res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
+            res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
         }
     };
+
+    /**
+     * Détecter si la requête provient d'un device mobile
+     */
+    private isMobileRequest(req: Request): boolean {
+        const userAgent = req.headers['user-agent'] || '';
+        const isMobileUA = /Mobile|Android|iPhone|iPad|iPod|Windows Phone/i.test(userAgent);
+
+        // Vérifier aussi les paramètres de query pour forcer le mode mobile
+        const mobileParam = req.query.mobile === 'true';
+
+        return isMobileUA || mobileParam;
+    }
+
+    /**
+     * Obtenir l'URL de redirection appropriée selon le type de client
+     */
+    private getRedirectUrl(isMobile: boolean): string {
+        if (isMobile) {
+            // Utiliser le custom URL scheme pour l'app mobile
+            return 'autoarea://oauth';
+        } else {
+            // Utiliser l'URL frontend classique pour le web
+            return process.env.FRONTEND_URL || 'http://localhost:3000';
+        }
+    }
 
     /**
      * Initiate Dropbox OAuth
@@ -387,23 +421,25 @@ export class AuthController {
     public dropboxCallback = async (req: Request, res: Response): Promise<void> => {
         try {
             const { code, error } = req.query;
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);œ
 
             if (error) {
                 console.error('Dropbox OAuth error:', error);
-                res.redirect(`${frontendUrl}/auth/error?error=${error}`);
+                res.redirect(`${redirectUrl}/auth/error?error=${error}`);
                 return;
             }
             if (!code) {
-                res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
+                res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
                 return;
             }
 
             const result = await this.authService.handleDropboxCallback(code as string);
-            res.redirect(`${frontendUrl}/auth/success?token=${result.token}`);
+            res.redirect(`${redirectUrl}/auth/success?token=${result.token}`);
         } catch (error) {
             console.error('Dropbox OAuth callback error:'.red, error);
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
             let errorMessage = 'Authentication failed';
             
             if (error instanceof Error) {
@@ -419,7 +455,7 @@ export class AuthController {
                         break;
                 }
             }
-            res.redirect(`${frontendUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
+            res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
         }
     };
 

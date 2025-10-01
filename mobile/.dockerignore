@@ -1,0 +1,83 @@
+# Flutter/Dart specific
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+*.iml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+
+# Tests
+test/
+*.test.dart
+coverage/
+
+# Logs
+*.log
+
+# Local environment
+.env
+.env.local
+
+# Node modules (if any)
+node_modules/
+
+# Android specific
+android/.gradle/
+android/gradle/
+android/local.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/key.properties
+android/gradlew
+android/gradlew.bat
+
+# iOS specific
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/App.framework
+ios/Flutter/engine/
+ios/ServiceDefinitions.json
+ios/Runner/GeneratedPluginRegistrant.*
+
+# Web specific
+web/
+
+# Linux specific
+linux/flutter/ephemeral/
+
+# macOS specific
+macos/Flutter/ephemeral/
+
+# Windows specific
+windows/flutter/ephemeral/
+
+# Build outputs (except what we need)
+*.apk
+*.aab
+*.ipa
+*.exe

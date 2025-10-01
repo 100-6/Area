@@ -1,0 +1,1 @@
+ /home/eric/tek3/G-DEV-500-PAR-5-1-area-9/mobile/.dart_tool/flutter_build/79e4ec36e35441fe51afeddd5c77db58/dart_build_result.json: 
