@@ -41,7 +41,7 @@ class ApiService {
   }) async {
     try {
       final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
-      
+
       final response = await _client
           .get(
             url,
@@ -49,6 +49,32 @@ class ApiService {
               ...ApiConstants.jsonHeaders,
               if (headers != null) ...headers,
             },
+          )
+          .timeout(ApiConstants.timeoutDuration);
+
+      return _handleResponse(response);
+    } catch (e) {
+      throw ApiException('Erreur de connexion: ${e.toString()}');
+    }
+  }
+
+  /// Effectue une requête PATCH
+  Future<Map<String, dynamic>> patch(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+
+      final response = await _client
+          .patch(
+            url,
+            headers: {
+              ...ApiConstants.jsonHeaders,
+              if (headers != null) ...headers,
+            },
+            body: body != null ? jsonEncode(body) : null,
           )
           .timeout(ApiConstants.timeoutDuration);
 

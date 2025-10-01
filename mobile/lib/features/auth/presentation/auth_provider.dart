@@ -59,4 +59,59 @@ class AuthProvider extends ChangeNotifier {
   void refresh() {
     notifyListeners();
   }
+
+  /// Récupère les données utilisateur depuis l'API
+  Future<bool> fetchUserData() async {
+    try {
+      final result = await _authRepository.fetchCurrentUser();
+      if (result.isSuccess) {
+        _user = result.data!;
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Met à jour le profil utilisateur
+  Future<String?> updateProfile({
+    String? firstName,
+    String? lastName,
+  }) async {
+    try {
+      final result = await _authRepository.updateProfile(
+        firstName: firstName,
+        lastName: lastName,
+      );
+      if (result.isSuccess) {
+        _user = result.data!;
+        notifyListeners();
+        return null; // Succès
+      }
+      return result.failure?.message ?? 'Erreur lors de la mise à jour';
+    } catch (e) {
+      return 'Erreur: ${e.toString()}';
+    }
+  }
+
+  /// Change le mot de passe
+  Future<String?> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final result = await _authRepository.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      if (result.isSuccess) {
+        return null; // Succès
+      }
+      return result.failure?.message ?? 'Erreur lors du changement de mot de passe';
+    } catch (e) {
+      return 'Erreur: ${e.toString()}';
+    }
+  }
 }

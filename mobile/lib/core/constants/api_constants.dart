@@ -12,6 +12,10 @@ class ApiConstants {
   static const String registerEndpoint = '$authBase/register';
   static const String logoutEndpoint = '$authBase/logout';
   static const String verifyTokenEndpoint = '$authBase/verify';
+
+  // Endpoints utilisateur
+  static const String userBase = '/api/users';
+  static const String meEndpoint = '$userBase/me';
   
   // Headers
   static const Map<String, String> jsonHeaders = {
