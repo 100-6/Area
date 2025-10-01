@@ -195,6 +195,7 @@ export class AuthController {
     public googleLogin = async (req: Request, res: Response): Promise<void> => {
         try {
             const authUrl = this.authService.getGoogleAuthUrl();
+
             res.redirect(authUrl);
         } catch (error) {
             console.error('Google OAuth redirect error:'.red, error);
@@ -225,7 +226,7 @@ export class AuthController {
                 return;
             }
             const result = await this.authService.handleGoogleCallback(code as string);
-            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&refresh=${result.refreshToken}`);
+            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=google&refresh=${result.refreshToken}`);
         } catch (error) {
             console.error('Google OAuth callback error:'.red, error);
             const isMobile = this.isMobileRequest(req);
@@ -285,13 +286,12 @@ export class AuthController {
                 return;
             }
             const result = await this.authService.handleGitHubCallback(code as string);
-            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&refresh=${result.refreshToken}`);
+            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=github&refresh=${result.refreshToken}`);
         } catch (error) {
             console.error('GitHub OAuth callback error:'.red, error);
             const isMobile = this.isMobileRequest(req);
             const redirectUrl = this.getRedirectUrl(isMobile);
             let errorMessage = 'Authentication failed';
-            
             if (error instanceof Error) {
                 switch (error.message) {
                     case 'INVALID_OAUTH_USER_DATA':
@@ -316,6 +316,7 @@ export class AuthController {
     public gitLabLogin = async (req: Request, res: Response): Promise<void> => {
         try {
             const authUrl = this.authService.getGitLabAuthUrl();
+
             res.redirect(authUrl);
         } catch (error) {
             console.error('GitLab OAuth redirect error:'.red, error);
@@ -345,15 +346,13 @@ export class AuthController {
                 res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
                 return;
             }
-
             const result = await this.authService.handleGitLabCallback(code as string);
-            res.redirect(`${redirectUrl}/auth/success?token=${result.token}`);
+            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=gitlab&refresh=${result.refreshToken}`);
         } catch (error) {
             console.error('GitLab OAuth callback error:'.red, error);
             const isMobile = this.isMobileRequest(req);
             const redirectUrl = this.getRedirectUrl(isMobile);
             let errorMessage = 'Authentication failed';
-            
             if (error instanceof Error) {
                 switch (error.message) {
                     case 'INVALID_OAUTH_USER_DATA':
@@ -372,38 +371,13 @@ export class AuthController {
     };
 
     /**
-     * Détecter si la requête provient d'un device mobile
-     */
-    private isMobileRequest(req: Request): boolean {
-        const userAgent = req.headers['user-agent'] || '';
-        const isMobileUA = /Mobile|Android|iPhone|iPad|iPod|Windows Phone/i.test(userAgent);
-
-        // Vérifier aussi les paramètres de query pour forcer le mode mobile
-        const mobileParam = req.query.mobile === 'true';
-
-        return isMobileUA || mobileParam;
-    }
-
-    /**
-     * Obtenir l'URL de redirection appropriée selon le type de client
-     */
-    private getRedirectUrl(isMobile: boolean): string {
-        if (isMobile) {
-            // Utiliser le custom URL scheme pour l'app mobile
-            return 'autoarea://oauth';
-        } else {
-            // Utiliser l'URL frontend classique pour le web
-            return process.env.FRONTEND_URL || 'http://localhost:3000';
-        }
-    }
-
-    /**
      * Initiate Dropbox OAuth
      * GET /api/auth/dropbox
      */
     public dropboxLogin = async (req: Request, res: Response): Promise<void> => {
         try {
             const authUrl = this.authService.getDropboxAuthUrl();
+
             res.redirect(authUrl);
         } catch (error) {
             console.error('Dropbox OAuth redirect error:'.red, error);
@@ -422,7 +396,7 @@ export class AuthController {
         try {
             const { code, error } = req.query;
             const isMobile = this.isMobileRequest(req);
-            const redirectUrl = this.getRedirectUrl(isMobile);œ
+            const redirectUrl = this.getRedirectUrl(isMobile);
 
             if (error) {
                 console.error('Dropbox OAuth error:', error);
@@ -433,15 +407,13 @@ export class AuthController {
                 res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
                 return;
             }
-
             const result = await this.authService.handleDropboxCallback(code as string);
-            res.redirect(`${redirectUrl}/auth/success?token=${result.token}`);
+            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=dropbox&refresh=${result.refreshToken}`);
         } catch (error) {
             console.error('Dropbox OAuth callback error:'.red, error);
             const isMobile = this.isMobileRequest(req);
             const redirectUrl = this.getRedirectUrl(isMobile);
             let errorMessage = 'Authentication failed';
-            
             if (error instanceof Error) {
                 switch (error.message) {
                     case 'INVALID_OAUTH_USER_DATA':
@@ -459,29 +431,28 @@ export class AuthController {
         }
     };
 
+    /*                                   ^                                    */
+    /*                                   |                                    */
+    /* =============================   OAuth    ============================= */
+
     /**
-     * Gérer les erreurs du service
+     * Détecter si la requête provient d'un device mobile
      */
-    private handleServiceError(error: any, res: Response): void {
-        if (!(error instanceof Error)) {
-            res.status(500).json({error: 'Internal server error', message: 'Une erreur inconnue est survenue'});
-            return;
-        }
-        switch (error.message) {
-            case 'USER_ALREADY_EXISTS':
-                res.status(409).json({error: 'User already exists', message: 'Un compte existe déjà avec cet email'});
-                break;
-            case 'INVALID_CREDENTIALS':
-                res.status(401).json({error: 'Invalid credentials', message: 'Email ou mot de passe incorrect'});
-                break;
-            case 'ACCOUNT_INACTIVE':
-                res.status(403).json({error: 'Account inactive', message: 'Ce compte est inactif'});
-                break;
-            case 'VALIDATION_FAILED':
-                res.status(400).json({error: 'Validation failed', details: (error as any).validationErrors || []});
-                break;
-            default:
-                res.status(500).json({error: 'Internal server error', message: 'Une erreur est survenue'});
-        }
+    private isMobileRequest(req: Request): boolean {
+        const userAgent = req.headers['user-agent'] || '';
+        const isMobileUA = /Mobile|Android|iPhone|iPad|iPod|Windows Phone/i.test(userAgent);
+        const mobileParam = req.query.mobile === 'true';
+
+        return isMobileUA || mobileParam;
+    }
+
+    /**
+     * Obtenir l'URL de redirection appropriée selon le type de client
+     */
+    private getRedirectUrl(isMobile: boolean): string {
+        if (isMobile)
+            return 'autoarea://oauth';
+        else
+            return process.env.FRONTEND_URL || 'http://localhost:3000';
     }
 }

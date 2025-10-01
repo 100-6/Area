@@ -1,0 +1,7 @@
+tunnel: 92381b8e-6b7f-4c2a-a685-57070c0c07cd
+credentials-file: /home/eric/.cloudflared/92381b8e-6b7f-4c2a-a685-57070c0c07cd.json
+
+ingress:
+  - hostname: area-eric.eliasdrissi.dev
+    service: http://localhost:8080
+  - service: http_status:404
