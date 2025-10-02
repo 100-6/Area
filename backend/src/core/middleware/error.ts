@@ -49,7 +49,6 @@ export const errorHandler = (error: CustomError, req: Request, res: Response, ne
             errorCode = 'USER_NOT_FOUND';
             break;
         case 'NO_TOKEN_PROVIDED':
-        case 'AUTHORIZATION_HEADER_MISSING':
             statusCode = 401;
             message = 'Token d\'authentification requis';
             errorCode = 'NO_TOKEN';
@@ -120,6 +119,76 @@ export const errorHandler = (error: CustomError, req: Request, res: Response, ne
             statusCode = 400;
             message = 'Certains champs ne peuvent pas être modifiés';
             errorCode = 'UNALLOWED_UPDATE_FIELDS';
+            break;
+        case 'AREA_NOT_FOUND':
+            statusCode = 404;
+            message = 'AREA introuvable ou accès refusé';
+            errorCode = 'AREA_NOT_FOUND';
+            break;
+        case 'NODE_NOT_FOUND':
+            statusCode = 404;
+            message = 'Nœud introuvable';
+            errorCode = 'NODE_NOT_FOUND';
+            break;
+        case 'CONNECTION_NOT_FOUND':
+            statusCode = 404;
+            message = 'Connexion introuvable';
+            errorCode = 'CONNECTION_NOT_FOUND';
+            break;
+        case 'MISSING_NODE_TYPE':
+            statusCode = 400;
+            message = 'Le type de nœud est requis';
+            errorCode = 'MISSING_NODE_TYPE';
+            break;
+        case 'INVALID_NODE_TYPE':
+            statusCode = 400;
+            message = 'Type de nœud invalide. Types valides: trigger, action, condition, delay, filter';
+            errorCode = 'INVALID_NODE_TYPE';
+            break;
+        case 'MISSING_SERVICE_OR_ACTION':
+            statusCode = 400;
+            message = 'serviceId et actionId sont requis pour les nœuds trigger et action';
+            errorCode = 'MISSING_SERVICE_OR_ACTION';
+            break;
+        case 'NODES_NOT_IN_SAME_AREA':
+            statusCode = 400;
+            message = 'Les nœuds doivent appartenir à la même AREA';
+            errorCode = 'NODES_NOT_IN_SAME_AREA';
+            break;
+        case 'INVALID_CONNECTION':
+            statusCode = 400;
+            message = 'Connexion invalide entre les nœuds';
+            errorCode = 'INVALID_CONNECTION';
+            break;
+        case 'CONNECTION_NOT_FOUND':
+            statusCode = 404;
+            message = 'Connexion introuvable';
+            errorCode = 'CONNECTION_NOT_FOUND';
+            break;
+        case 'MISSING_NODE_TYPE':
+            statusCode = 400;
+            message = 'Le type de nœud est requis';
+            errorCode = 'MISSING_NODE_TYPE';
+            break;
+        case 'INVALID_NODE_TYPE':
+            statusCode = 400;
+            message = 'Type de nœud invalide';
+            errorCode = 'INVALID_NODE_TYPE';
+            break;
+        case 'MISSING_SERVICE_OR_ACTION':
+            statusCode = 400;
+            message = 'serviceId et actionId requis pour trigger/action';
+            errorCode = 'MISSING_SERVICE_OR_ACTION';
+            break;
+        case 'NODES_NOT_IN_SAME_AREA':
+            statusCode = 400;
+            message = 'Les nœuds doivent appartenir à la même AREA';
+            errorCode = 'NODES_NOT_IN_SAME_AREA';
+            break;
+        case 'INVALID_CONNECTION':
+            statusCode = 400;
+            message = 'Connexion invalide entre les nœuds';
+            errorCode = 'INVALID_CONNECTION';
             break;
     }
     console.error('Error details:'.cyan,
