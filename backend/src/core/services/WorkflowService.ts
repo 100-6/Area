@@ -1,5 +1,6 @@
 import { WorkflowModel } from '../models/WorkflowModel';
 import { Area } from '../models/Area';
+import { AreaService } from './AreaService';
 import 'colors';
 
 interface CustomError extends Error {
@@ -183,7 +184,37 @@ export class WorkflowService {
         }
         const connection = await this.workflowModel.createConnection(areaId, data);
         console.log(`[WorkflowService] Connection created: ${connection.id}`.green);
+        
+        // Vérifier si l'AREA est active et si le nœud source est un trigger
+        // Si oui, démarrer le trigger automatiquement
+        await this.checkAndStartTrigger(areaId, sourceNode);
+        
         return connection;
+    }
+
+    private async checkAndStartTrigger(areaId: string, sourceNode: WorkflowNode): Promise<void> {
+        try {
+            // Vérifier si le nœud est un trigger
+            if (sourceNode.nodeType !== 'trigger') {
+                return;
+            }
+
+            // Vérifier si l'AREA est active
+            const area = await Area.findById(areaId);
+            if (!area || !area.is_active) {
+                console.log(`[WorkflowService] AREA ${areaId} is not active, trigger will not start`.yellow);
+                return;
+            }
+
+            // Démarrer le trigger directement via AreaService
+            console.log(`[WorkflowService] AREA ${areaId} is active, starting trigger...`.cyan);
+            const areaService = new AreaService();
+            await areaService.startTriggerForArea(areaId);
+            console.log(`[WorkflowService] Trigger started for AREA ${areaId}`.green);
+        } catch (error) {
+            console.error(`[WorkflowService] Failed to start trigger for AREA ${areaId}:`.red, error);
+            // Ne pas throw l'erreur pour ne pas bloquer la création de la connection
+        }
     }
 
     async deleteConnection(connectionId: string): Promise<void> {

@@ -126,6 +126,20 @@ export class AreaService {
         }
     }
 
+    /**
+     * Démarrer le trigger d'une AREA (méthode publique)
+     */
+    async startTriggerForArea(areaId: string): Promise<void> {
+        const nodes = await this.workflowModel.getNodesByArea(areaId);
+        const triggerNode = nodes.find(n => n.nodeType === 'trigger');
+        
+        if (!triggerNode) {
+            throw new Error(`No trigger node found for AREA ${areaId}`);
+        }
+        
+        await this.startAreaTrigger(areaId, triggerNode);
+    }
+
     private async startAreaTrigger(areaId: string, triggerNode: any): Promise<void> {
         try {
             const serviceName = await this.workflowModel.getServiceNameById(triggerNode.serviceId);
