@@ -46,19 +46,56 @@ export class WorkflowExecutor {
             if (!triggerNode) return;
             
             const connections = await this.workflowModel.getConnectionsByArea(areaId);
-            const connectedNodeIds = connections
-                .filter(c => c.sourceNodeId === triggerNode.id)
-                .map(c => c.targetNodeId);
             
-            for (const nodeId of connectedNodeIds) {
-                const actionNode = nodes.find(n => n.id === nodeId);
-                if (actionNode?.nodeType === 'action') {
-                    await this.executeAction(actionNode, triggerData);
-                }
-            }
+            // Exécuter toutes les actions connectées au trigger
+            await this.executeConnectedActions(triggerNode.id, nodes, connections, triggerData);
             
         } catch (error) {
             console.error('[WorkflowExecutor] Error:'.red, error);
+        }
+    }
+
+    /**
+     * Exécute récursivement toutes les actions connectées à un nœud
+     */
+    private async executeConnectedActions(
+        sourceNodeId: string,
+        nodes: any[],
+        connections: any[],
+        triggerData: any,
+        executedNodes: Set<string> = new Set()
+    ): Promise<void> {
+        // Éviter les boucles infinies
+        if (executedNodes.has(sourceNodeId)) {
+            console.log(`[WorkflowExecutor] Node ${sourceNodeId} already executed, skipping to prevent loop`.yellow);
+            return;
+        }
+        
+        executedNodes.add(sourceNodeId);
+        
+        // Trouver tous les nœuds connectés à ce nœud source
+        const connectedNodeIds = connections
+            .filter(c => c.sourceNodeId === sourceNodeId)
+            .map(c => c.targetNodeId);
+        
+        console.log(`[WorkflowExecutor] Found ${connectedNodeIds.length} connected nodes from ${sourceNodeId}`.blue);
+        
+        // Exécuter chaque action connectée
+        for (const nodeId of connectedNodeIds) {
+            const actionNode = nodes.find(n => n.id === nodeId);
+            
+            if (!actionNode) {
+                console.log(`[WorkflowExecutor] Node ${nodeId} not found`.yellow);
+                continue;
+            }
+            
+            if (actionNode.nodeType === 'action') {
+                console.log(`[WorkflowExecutor] Executing action node ${nodeId}`.cyan);
+                await this.executeAction(actionNode, triggerData);
+                
+                // Continuer l'exécution avec les actions connectées à celle-ci
+                await this.executeConnectedActions(nodeId, nodes, connections, triggerData, executedNodes);
+            }
         }
     }
 
