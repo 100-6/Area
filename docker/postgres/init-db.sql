@@ -43,6 +43,21 @@ CREATE INDEX idx_user_auth_providers_provider ON user_auth_providers(provider);
 CREATE INDEX idx_user_auth_providers_provider_user_id ON user_auth_providers(provider, provider_user_id);
 CREATE INDEX idx_user_auth_providers_primary ON user_auth_providers(user_id, is_primary);
 
+CREATE TABLE user_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    session_token TEXT UNIQUE NOT NULL,
+    device_info JSONB,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_sessions_user_id ON user_sessions(user_id);
+CREATE INDEX idx_sessions_token ON user_sessions(session_token);
+CREATE INDEX idx_sessions_expires_at ON user_sessions(expires_at);
+
 CREATE TABLE services (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(50) UNIQUE NOT NULL,
@@ -50,7 +65,7 @@ CREATE TABLE services (
     description TEXT,
     icon_url VARCHAR(500),
     base_url VARCHAR(255),
-    auth_type VARCHAR(20) NOT NULL CHECK (auth_type IN ('oauth2', 'api_key', 'basic')),
+    auth_type VARCHAR(20) NOT NULL CHECK (auth_type IN ('oauth2', 'api_key', 'basic', 'none')),
     oauth_client_id VARCHAR(255),
     oauth_client_secret VARCHAR(255),
     oauth_scopes TEXT,
@@ -77,7 +92,6 @@ CREATE TABLE user_service_connections (
     last_used_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
     UNIQUE(user_id, service_id)
 );
 
@@ -91,7 +105,7 @@ CREATE TABLE service_actions (
     name VARCHAR(100) NOT NULL,
     display_name VARCHAR(200) NOT NULL,
     description TEXT,
-    trigger_type VARCHAR(20) NOT NULL CHECK (trigger_type IN ('webhook', 'polling', 'schedule')),
+    trigger_type VARCHAR(20) NOT NULL CHECK (trigger_type IN ('webhook', 'polling', 'schedule', 'manual')),
     webhook_path VARCHAR(255),
     polling_interval INTEGER,
     config_schema JSONB,
@@ -100,7 +114,6 @@ CREATE TABLE service_actions (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
     UNIQUE(service_id, name)
 );
 
@@ -130,14 +143,6 @@ CREATE TABLE areas (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(200) NOT NULL,
     description TEXT,
-    trigger_service_id UUID NOT NULL REFERENCES services(id),
-    trigger_action_id UUID NOT NULL REFERENCES service_actions(id),
-    trigger_connection_id UUID NOT NULL REFERENCES user_service_connections(id),
-    trigger_config JSONB NOT NULL,
-    reaction_service_id UUID NOT NULL REFERENCES services(id),
-    reaction_action_id UUID NOT NULL REFERENCES service_reactions(id),
-    reaction_connection_id UUID NOT NULL REFERENCES user_service_connections(id),
-    reaction_config JSONB NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     execution_count INTEGER DEFAULT 0,
     last_triggered_at TIMESTAMP WITH TIME ZONE,
@@ -147,25 +152,59 @@ CREATE TABLE areas (
 );
 
 CREATE INDEX idx_areas_user_id ON areas(user_id);
-CREATE INDEX idx_areas_trigger_service ON areas(trigger_service_id);
-CREATE INDEX idx_areas_reaction_service ON areas(reaction_service_id);
 CREATE INDEX idx_areas_active ON areas(is_active);
-CREATE INDEX idx_areas_trigger_action ON areas(trigger_action_id);
+
+CREATE TABLE workflow_nodes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    area_id UUID NOT NULL REFERENCES areas(id) ON DELETE CASCADE,
+    node_type VARCHAR(50) NOT NULL CHECK (node_type IN ('trigger', 'action', 'condition', 'delay', 'filter')),
+    service_id UUID REFERENCES services(id),
+    action_id UUID REFERENCES service_actions(id),
+    reaction_id UUID REFERENCES service_reactions(id),
+    connection_id UUID REFERENCES user_service_connections(id),
+    config JSONB NOT NULL DEFAULT '{}',
+    position_x INTEGER DEFAULT 0,
+    position_y INTEGER DEFAULT 0,
+    label VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_workflow_nodes_area ON workflow_nodes(area_id);
+CREATE INDEX idx_workflow_nodes_type ON workflow_nodes(node_type);
+CREATE INDEX idx_workflow_nodes_service ON workflow_nodes(service_id);
+CREATE INDEX idx_workflow_nodes_action ON workflow_nodes(action_id);
+CREATE INDEX idx_workflow_nodes_reaction ON workflow_nodes(reaction_id);
+
+CREATE TABLE workflow_connections (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    area_id UUID NOT NULL REFERENCES areas(id) ON DELETE CASCADE,
+    source_node_id UUID NOT NULL REFERENCES workflow_nodes(id) ON DELETE CASCADE,
+    target_node_id UUID NOT NULL REFERENCES workflow_nodes(id) ON DELETE CASCADE,
+    condition JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_workflow_connections_area ON workflow_connections(area_id);
+CREATE INDEX idx_workflow_connections_source ON workflow_connections(source_node_id);
+CREATE INDEX idx_workflow_connections_target ON workflow_connections(target_node_id);
 
 CREATE TABLE area_executions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     area_id UUID NOT NULL REFERENCES areas(id) ON DELETE CASCADE,
     execution_id VARCHAR(100) NOT NULL,
+    trigger_node_id UUID REFERENCES workflow_nodes(id),
     trigger_data JSONB,
     trigger_timestamp TIMESTAMP WITH TIME ZONE,
     status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'running', 'success', 'failed', 'cancelled')),
-    reaction_data JSONB,
-    reaction_response JSONB,
+    execution_path JSONB,
+    nodes_executed JSONB,
     started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP WITH TIME ZONE,
     execution_duration_ms INTEGER,
     error_message TEXT,
     error_code VARCHAR(50),
+    error_node_id UUID REFERENCES workflow_nodes(id),
     retry_count INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -174,21 +213,6 @@ CREATE INDEX idx_executions_area_id ON area_executions(area_id);
 CREATE INDEX idx_executions_status ON area_executions(status);
 CREATE INDEX idx_executions_created_at ON area_executions(created_at);
 CREATE INDEX idx_executions_area_status ON area_executions(area_id, status);
-
-CREATE TABLE user_sessions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    session_token TEXT UNIQUE NOT NULL,
-    device_info JSONB,
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_used_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_sessions_user_id ON user_sessions(user_id);
-CREATE INDEX idx_sessions_token ON user_sessions(session_token);
-CREATE INDEX idx_sessions_expires_at ON user_sessions(expires_at);
 
 CREATE TABLE webhook_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -233,4 +257,17 @@ CREATE TRIGGER update_connections_updated_at BEFORE UPDATE ON user_service_conne
 CREATE TRIGGER update_actions_updated_at BEFORE UPDATE ON service_actions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_reactions_updated_at BEFORE UPDATE ON service_reactions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_areas_updated_at BEFORE UPDATE ON areas FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_workflow_nodes_updated_at BEFORE UPDATE ON workflow_nodes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_config_updated_at BEFORE UPDATE ON system_config FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON TABLE areas IS 'Conteneur pour un workflow. Chaque AREA contient des nœuds connectés';
+COMMENT ON TABLE workflow_nodes IS 'Nœuds du workflow (trigger, action, condition, delay, filter)';
+COMMENT ON TABLE workflow_connections IS 'Connexions entre nœuds - définit le flux d''exécution';
+COMMENT ON TABLE area_executions IS 'Historique des exécutions pour debugging et monitoring';
+
+COMMENT ON COLUMN workflow_nodes.node_type IS 'trigger: déclencheur | action: action | condition: IF/ELSE | delay: pause | filter: filtre';
+COMMENT ON COLUMN workflow_nodes.action_id IS 'Pour les nœuds de type trigger';
+COMMENT ON COLUMN workflow_nodes.reaction_id IS 'Pour les nœuds de type action';
+COMMENT ON COLUMN workflow_nodes.position_x IS 'Position X du nœud dans l''éditeur de workflow';
+COMMENT ON COLUMN workflow_nodes.position_y IS 'Position Y du nœud dans l''éditeur de workflow';
+COMMENT ON COLUMN area_executions.execution_path IS 'Chemin d''exécution: liste des node_ids parcourus';

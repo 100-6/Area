@@ -1,7 +1,10 @@
 import { RedisManager } from '../queue/RedisManager';
 import { EventBus } from '../queue/EventBus';
-import Database from '../database/connection';
+import { AreaService } from '../../core/services/AreaService';
 import { moduleRegistry } from '../../modules/registry';
+import { ModuleSync } from './ModuleSync';
+import { WorkflowExecutor } from '../../workflow-engine/executor/WorkflowExecutor';
+import Database from '../database/connection';
 import 'colors';
 
 /**
@@ -16,6 +19,7 @@ export class ApplicationBootstrap {
     private redis?: RedisManager;
     private eventBus?: EventBus;
     private database?: Database;
+    private workflowExecutor?: WorkflowExecutor;
 
     private constructor() {}
 
@@ -40,10 +44,13 @@ export class ApplicationBootstrap {
         console.log('  Starting AREA Backend'.cyan.bold);
         console.log('========================================\n'.cyan);
         try {
+            // Here to initialize all services
             await this.initializeDatabase();
             await this.initializeRedis();
             await this.initializeEventBus();
             await this.initializeModules();
+            await this.initializeActiveAreas();
+            await this.initializeWorkflowExecutor();
             this.isInitialized = true;
             console.log('\n========================================'.green);
             console.log('  AREA Backend Ready'.green.bold);
@@ -118,6 +125,8 @@ export class ApplicationBootstrap {
         console.log('📦 Loading modules...'.cyan);
         try {
             await moduleRegistry.initialize();
+            const moduleSync = new ModuleSync();
+            await moduleSync.syncModulesToDatabase();
             const modules = moduleRegistry.getAllModules();
             console.log(`✓ ${modules.length} module(s) loaded:`.green);
             modules.forEach(module => {
@@ -127,6 +136,33 @@ export class ApplicationBootstrap {
             });
         } catch (error) {
             console.error('✗ Module loading failed:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Initialiser les AREAs actives au démarrage
+     * Redémarre tous les triggers des AREAs actives en BDD
+     */
+    private async initializeActiveAreas(): Promise<void> {
+        console.log('  Loading active AREAs...'.cyan);
+        try {
+            const areaService = new AreaService();
+            await areaService.initializeActiveAreas();
+            console.log('✓ Active AREAs initialized'.green);
+        } catch (error) {
+            console.error('✗ Failed to initialize active AREAs:'.red, error);
+        }
+    }
+
+    private async initializeWorkflowExecutor(): Promise<void> {
+        console.log('   Initializing Workflow Executor...'.cyan);
+        try {
+            this.workflowExecutor = new WorkflowExecutor();
+            await this.workflowExecutor.initialize();
+            console.log('✓ Workflow Executor ready'.green);
+        } catch (error) {
+            console.error('✗ Workflow Executor failed:'.red, error);
             throw error;
         }
     }

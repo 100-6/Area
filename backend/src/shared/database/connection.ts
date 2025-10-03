@@ -69,15 +69,7 @@ class Database {
      */
     public async query(text: string, params?: any[]): Promise<any> {
         try {
-            const start = Date.now();
             const result = await this.pool.query(text, params);
-            const duration = Date.now() - start;
-
-            console.log('Query executed:'.blue, {
-                text: text.substring(0, 100),
-                duration: `${duration}ms`,
-                rows: result.rowCount
-            });
             return result;
         } catch (error) {
             console.error('Database query error:'.red, error);
