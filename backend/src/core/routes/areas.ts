@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AreaController } from '../controllers/AreaController';
 import { requireAuth } from '../middleware/auth';
+import { validateIdParam } from '../middleware/urlParamValidation';
 
 const router = Router();
 const areaController = new AreaController();
@@ -14,12 +15,14 @@ router
 
 router
     .route('/:id')
+    .all(validateIdParam())
     .get(areaController.getAreaById)
     .patch(areaController.updateArea)
     .delete(areaController.deleteArea);
 
 router
     .route('/:id/toggle')
+    .all(validateIdParam())
     .patch(areaController.toggleArea);
 
 export default router;
