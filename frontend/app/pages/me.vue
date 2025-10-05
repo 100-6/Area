@@ -4,24 +4,12 @@
     <div class="relative h-64 overflow-hidden" style="background: linear-gradient(135deg, var(--color-secondary), var(--color-tertiary));">
       <div class="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent"></div>
 
-      <!-- Cercles décoratifs -->
       <div class="absolute inset-0 overflow-hidden">
-        <!-- Grand cercle en haut à droite -->
         <div class="absolute -top-16 -right-16 w-40 h-40 rounded-full opacity-10" style="background: var(--color-primary);"></div>
-
-        <!-- Cercle moyen en haut à gauche -->
         <div class="absolute -top-8 -left-8 w-24 h-24 rounded-full opacity-15" style="background: white;"></div>
-
-        <!-- Petit cercle au centre droit -->
         <div class="absolute top-12 -right-6 w-16 h-16 rounded-full opacity-10" style="background: var(--color-primary);"></div>
-
-        <!-- Cercle moyen en bas à gauche -->
         <div class="absolute -bottom-12 left-1/4 w-32 h-32 rounded-full opacity-8" style="background: white;"></div>
-
-        <!-- Petit cercle en haut centre -->
         <div class="absolute top-6 left-1/3 w-12 h-12 rounded-full opacity-12" style="background: var(--color-primary);"></div>
-
-        <!-- Cercle moyen en bas à droite -->
         <div class="absolute -bottom-8 right-1/3 w-20 h-20 rounded-full opacity-10" style="background: white;"></div>
       </div>
 
@@ -128,34 +116,29 @@
 
         <!-- Contenu des onglets -->
         <div class="space-y-6">
-          <!-- Onglet Vue d'ensemble -->
           <div v-if="activeTab === 'overview'">
-            <!-- Statistiques en cartes -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <InfoCard
+              <UiInfoCard
                 title="Workflows actifs"
-                value="0"
+                :value="0"
                 icon="i-heroicons-bolt"
                 layout="stat"
-                class="bg-white rounded-xl shadow-sm"
                 :hoverable="false"
               />
 
-              <InfoCard
+              <UiInfoCard
                 title="Exécutions ce mois"
-                value="0"
+                :value="0"
                 icon="i-heroicons-chart-bar"
                 layout="stat"
-                class="bg-white rounded-xl shadow-sm"
                 :hoverable="false"
               />
 
-              <InfoCard
+              <UiInfoCard
                 title="Services connectés"
-                value="0"
+                :value="0"
                 icon="i-heroicons-puzzle-piece"
                 layout="stat"
-                class="bg-white rounded-xl shadow-sm"
                 :hoverable="false"
               />
             </div>
@@ -167,7 +150,6 @@
                 Actions rapides
               </h3>
               <div class="space-y-4">
-                <!-- Paramètres -->
                 <InfoCard
                   title="Paramètres du compte"
                   subtitle="Gérer vos préférences"
@@ -180,30 +162,25 @@
                   </template>
                 </InfoCard>
 
-                <!-- Déconnexion -->
                 <div
                   @click="handleLogout"
                   class="group relative overflow-hidden rounded-xl border border-red-200 p-6 transition-all duration-300 hover:border-red-300 hover:shadow-lg cursor-pointer transform hover:scale-[1.02]"
                   style="background: linear-gradient(135deg, #fef2f2, #fee2e2);"
                 >
-                  <!-- Effet subtil de survol -->
                   <div class="absolute inset-0 bg-gradient-to-r from-red-500/5 to-red-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                   <div class="relative flex items-center justify-between">
                     <div class="flex items-center space-x-4">
-                      <!-- Icône avec animation -->
                       <div class="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 group-hover:bg-red-200 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3">
                         <UIcon name="i-heroicons-arrow-right-on-rectangle" class="w-6 h-6 text-red-600 group-hover:text-red-700 transition-colors" />
                       </div>
 
-                      <!-- Texte -->
                       <div>
                         <h4 class="font-semibold text-red-800 group-hover:text-red-900 transition-colors">Se déconnecter</h4>
                         <p class="text-sm text-red-600 group-hover:text-red-700 transition-colors">Fermer votre session en toute sécurité</p>
                       </div>
                     </div>
 
-                    <!-- Flèche avec animation -->
                     <div class="flex items-center space-x-2">
                       <div class="w-8 h-8 rounded-full bg-red-100 group-hover:bg-red-200 flex items-center justify-center transition-all duration-200 group-hover:translate-x-1">
                         <UIcon name="i-heroicons-arrow-right" class="w-4 h-4 text-red-600 group-hover:text-red-700 transition-colors" />
@@ -211,7 +188,6 @@
                     </div>
                   </div>
 
-                  <!-- Indicateur de sécurité -->
                   <div class="mt-3 pt-3 border-t border-red-100 group-hover:border-red-200 transition-colors">
                     <div class="flex items-center text-xs text-red-500 group-hover:text-red-600 transition-colors">
                       <UIcon name="i-heroicons-shield-check" class="w-3 h-3 mr-1" />
@@ -223,7 +199,6 @@
             </div>
           </div>
 
-          <!-- Onglet Informations -->
           <div v-if="activeTab === 'info'" class="space-y-6">
             <div class="bg-white rounded-xl border border-gray-100 p-8 shadow-sm">
               <h3 class="text-xl font-bold mb-6 text-gray-900 flex items-center">
@@ -232,7 +207,6 @@
               </h3>
 
               <div class="grid md:grid-cols-2 gap-6">
-                <!-- Prénom -->
                 <InfoCard
                   icon="i-heroicons-identification"
                 >
@@ -244,7 +218,6 @@
                   </template>
                 </InfoCard>
 
-                <!-- Nom -->
                 <InfoCard
                   icon="i-heroicons-tag"
                 >
@@ -257,11 +230,9 @@
                 </InfoCard>
               </div>
 
-              <!-- Email - Section spéciale -->
               <div class="mt-6">
                 <InfoCard
                   icon="i-heroicons-envelope"
-                  variant="success"
                   class="bg-gradient-to-r from-gray-50 via-white to-gray-50 hover:from-green-50 hover:via-white hover:to-green-50"
                 >
                   <template #header-actions>
@@ -281,7 +252,6 @@
 
           <!-- Onglet Sécurité -->
           <div v-if="activeTab === 'security'" class="space-y-6">
-            <!-- Section Mot de passe -->
             <div class="bg-white rounded-xl border border-gray-100 p-8 shadow-sm">
               <h3 class="text-xl font-bold mb-6 text-gray-900 flex items-center">
                 <UIcon name="i-heroicons-shield-check" class="w-5 h-5 mr-2" style="color: var(--color-secondary);" />
