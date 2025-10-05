@@ -1,9 +1,10 @@
 <template>
   <div
     :class="[
-      'group p-6 rounded-lg border border-gray-100 transition-all duration-200',
-      'bg-gradient-to-br from-gray-50 to-white',
-      hoverable && 'hover:from-green-50 hover:to-white hover:border-green-200 hover:shadow-md',
+      'group rounded-lg border border-gray-100 bg-white',
+      layout === 'stat' ? 'p-6 transition-all duration-300 cubic-bezier-smooth shadow-sm' : 'p-6 bg-gradient-to-br from-gray-50 to-white transition-all duration-200',
+      layout === 'stat' && hoverable && 'hover:translate-y-[-3px] hover:shadow-lg hover:border-gray-200',
+      layout !== 'stat' && hoverable && 'hover:from-green-50 hover:to-white hover:border-green-200 hover:shadow-md',
       clickable && 'cursor-pointer',
       variant === 'danger' && 'border-red-200 bg-gradient-to-r from-red-50 to-white',
       variant === 'warning' && 'border-yellow-200 bg-gradient-to-r from-yellow-50 to-white',
@@ -11,29 +12,31 @@
     ]"
     @click="clickable && $emit('click')"
   >
-    <!-- Layout pour les cartes de stats (layout horizontal) -->
+    <!-- Layout pour les cartes de stats -->
     <div v-if="layout === 'stat'" class="flex items-center justify-between">
-      <div>
-        <p v-if="title" class="text-sm text-gray-600 font-medium">{{ title }}</p>
-        <p v-if="value" class="text-3xl font-bold text-gray-900 mt-1">{{ value }}</p>
+      <div class="flex-1">
+        <p v-if="title" class="text-sm font-medium mb-1 leading-normal" style="color: var(--text-secondary)">{{ title }}</p>
+        <p v-if="value !== undefined && value !== null" class="text-3xl font-bold leading-tight tracking-tight" style="color: var(--text-primary); letter-spacing: -0.025em;">{{ formattedValue }}</p>
       </div>
       <div
         v-if="icon"
         :class="[
-          'p-3 rounded-full',
-          iconSize === 'sm' && 'p-2',
-          iconSize === 'lg' && 'p-4',
-          iconSize === 'xl' && 'p-5'
+          'flex items-center justify-center flex-shrink-0 rounded-xl transition-all duration-300 ease-out group-hover:scale-105',
+          iconSize === 'sm' && 'w-10 h-10',
+          iconSize === 'md' && 'w-12 h-12',
+          iconSize === 'lg' && 'w-14 h-14',
+          iconSize === 'xl' && 'w-16 h-16'
         ]"
         :style="iconBackground"
       >
         <UIcon
           :name="icon"
           :class="[
-            'w-6 h-6',
-            iconSize === 'sm' && 'w-4 h-4',
-            iconSize === 'lg' && 'w-8 h-8',
-            iconSize === 'xl' && 'w-10 h-10'
+            'transition-all duration-300 ease-out group-hover:scale-110',
+            iconSize === 'sm' && 'w-5 h-5',
+            iconSize === 'md' && 'w-6 h-6',
+            iconSize === 'lg' && 'w-7 h-7',
+            iconSize === 'xl' && 'w-8 h-8'
           ]"
           :style="iconColor"
         />
@@ -89,16 +92,13 @@
       <div class="space-y-3">
         <slot name="default" />
 
-        <!-- Contenu simple avec value -->
-        <div v-if="value && !slots.default" class="text-xl font-bold text-gray-900">
+        <div v-if="(value !== undefined && value !== null) && !slots.default" class="text-xl font-bold text-gray-900">
           {{ value }}
         </div>
 
-        <!-- Description -->
         <p v-if="description" class="text-sm text-gray-500">{{ description }}</p>
       </div>
 
-      <!-- Footer avec actions -->
       <div v-if="slots.footer" class="mt-4 pt-4 border-t border-gray-100">
         <slot name="footer" />
       </div>
@@ -120,6 +120,7 @@ interface Props {
   layout?: 'default' | 'stat'
   hoverable?: boolean
   clickable?: boolean
+  formatValue?: boolean
   className?: string
 }
 
@@ -128,12 +129,31 @@ const props = withDefaults(defineProps<Props>(), {
   variant: 'default',
   layout: 'default',
   hoverable: true,
-  clickable: false
+  clickable: false,
+  formatValue: true
 })
 
 const emit = defineEmits<{
   click: []
 }>()
+
+// Formatage des valeurs (repris de StatCard)
+const formattedValue = computed(() => {
+  if (props.value === undefined || props.value === null) return ''
+
+  if (!props.formatValue || typeof props.value === 'string') {
+    return props.value
+  }
+
+  const num = Number(props.value)
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M'
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'k'
+  }
+  return num.toString()
+})
 
 // Classes dynamiques
 const titleClass = computed(() => [
@@ -159,13 +179,13 @@ const subtitleClass = computed(() => [
 const iconBackground = computed(() => {
   switch (props.variant) {
     case 'danger':
-      return 'background: rgba(239, 68, 68, 0.1);'
+      return 'background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2);'
     case 'warning':
-      return 'background: rgba(245, 158, 11, 0.1);'
+      return 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2);'
     case 'success':
-      return 'background: var(--color-secondary);'
+      return 'background: var(--color-secondary); border: 1px solid var(--color-secondary);'
     default:
-      return 'background: rgba(72, 199, 116, 0.1);'
+      return 'background: rgba(255, 255, 255, 0.1); border: 1px solid var(--color-primary);'
   }
 })
 
@@ -178,7 +198,30 @@ const iconColor = computed(() => {
     case 'success':
       return 'color: white;'
     default:
-      return 'color: var(--color-secondary);'
+      return 'color: black;'
   }
 })
 </script>
+
+<style scoped>
+.cubic-bezier-smooth {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Responsive pour le layout stat */
+@media (max-width: 768px) {
+  .group[class*="layout"] .text-3xl {
+    font-size: 1.5rem;
+  }
+
+  .group[class*="layout"] .w-12 {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .group[class*="layout"] .w-6 {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+</style>

@@ -118,28 +118,28 @@
         <div class="space-y-6">
           <div v-if="activeTab === 'overview'">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <UiStatCard
-                label="Workflows actifs"
+              <UiInfoCard
+                title="Workflows actifs"
                 :value="0"
                 icon="i-heroicons-bolt"
-                icon-color="var(--color-secondary)"
-                icon-background="rgba(72, 199, 116, 0.1)"
+                layout="stat"
+                :hoverable="false"
               />
 
-              <UiStatCard
-                label="Exécutions ce mois"
+              <UiInfoCard
+                title="Exécutions ce mois"
                 :value="0"
                 icon="i-heroicons-chart-bar"
-                icon-color="var(--color-secondary)"
-                icon-background="rgba(72, 199, 116, 0.1)"
+                layout="stat"
+                :hoverable="false"
               />
 
-              <UiStatCard
-                label="Services connectés"
+              <UiInfoCard
+                title="Services connectés"
                 :value="0"
                 icon="i-heroicons-puzzle-piece"
-                icon-color="var(--color-secondary)"
-                icon-background="rgba(72, 199, 116, 0.1)"
+                layout="stat"
+                :hoverable="false"
               />
             </div>
 

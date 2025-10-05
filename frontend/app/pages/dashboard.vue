@@ -2,7 +2,7 @@
   <div class="min-h-screen" style="font-family: var(--font-family-sans); background: var(--bg-primary);">
 
     <!-- Dashboard Header -->
-    <section class="border-b" style="background: var(--bg-card); border-color: var(--border-color);">
+    <section style="background: var(--bg-card);">
       <UContainer class="py-6">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div class="space-y-2">
@@ -33,37 +33,36 @@
     <section class="py-8 stats-overview" style="background: var(--bg-primary);">
       <UContainer>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <UiStatCard
-            label="Total automatisations"
+          <UiInfoCard
+            title="Total automatisations"
             :value="stats.totalWorkflows"
             icon="i-heroicons-cog-6-tooth"
-            icon-color="var(--color-secondary)"
-            icon-background="rgba(72, 199, 116, 0.1)"
+            layout="stat"
+            :hoverable="false"
           />
 
-          <UiStatCard
-            label="Actives"
+          <UiInfoCard
+            title="Actives"
             :value="stats.activeWorkflows"
             icon="i-heroicons-play-circle"
-            icon-color="var(--color-secondary)"
-            icon-background="rgba(72, 199, 116, 0.1)"
+            layout="stat"
+            :hoverable="false"
           />
 
-          <UiStatCard
-            label="Exécutions ce mois"
+          <UiInfoCard
+            title="Exécutions ce mois"
             :value="stats.monthlyExecutions"
             icon="i-heroicons-chart-bar"
-            icon-color="var(--color-secondary)"
-            icon-background="rgba(72, 199, 116, 0.1)"
+            layout="stat"
+            :hoverable="false"
           />
 
-          <UiStatCard
-            label="Temps économisé"
+          <UiInfoCard
+            title="Temps économisé"
             :value="`${stats.timeSaved}h`"
             icon="i-heroicons-clock"
-            icon-color="var(--color-secondary)"
-            icon-background="rgba(72, 199, 116, 0.1)"
-            :format-value="false"
+            layout="stat"
+            :hoverable="false"
           />
         </div>
       </UContainer>
@@ -142,7 +141,7 @@
           <!-- Bouton d'ajout en bas -->
           <div
             class="glass-bar add-workflow-bar group cursor-pointer"
-            @click="createNewWorkflow"
+            @click="openServiceSelectionModal"
           >
             <div class="add-bar-content">
               <div class="add-icon-circle">
@@ -157,14 +156,18 @@
         </div>
       </UContainer>
     </section>
+
   </div>
 </template>
 
 <script setup lang="ts">
+import type { Service } from '~/types'
+
 definePageMeta({
   middleware: 'auth',
   layout: 'default'
 })
+
 
 // Fake data pour les statistiques
 const stats = {
@@ -372,6 +375,17 @@ const editWorkflow = (workflowId: number) => {
 
 const createNewWorkflow = () => {
   navigateTo('/workflow/create')
+}
+
+const openServiceSelectionModal = () => {
+  navigateTo('/workflow/create')
+}
+
+const onServiceSelected = (service: Service) => {
+  console.log('Service sélectionné:', service)
+  // Ici vous pouvez naviguer vers la page de création d'automatisation
+  // avec le service pré-sélectionné ou déclencher la création
+  navigateTo(`/workflow/create?service=${service.slug}`)
 }
 
 const getWorkflowActions = (workflow: any) => [

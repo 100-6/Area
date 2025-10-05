@@ -1,5 +1,5 @@
 <template>
-  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+  <header class="sticky top-0 z-50 backdrop-blur-md" style="background: var(--bg-primary)/80;">
     <UContainer>
       <div class="flex items-center justify-between h-16">
         <!-- Logo -->
@@ -12,23 +12,35 @@
         </NuxtLink>
 
         <!-- Desktop Navigation - Absolument centré -->
-        <nav class="hidden md:flex items-center space-x-8 absolute left-1/2 transform -translate-x-1/2">
-          <NuxtLink to="/" class="text-gray-700 hover:text-brand-tertiary transition-colors duration-200">
-            Accueil
-          </NuxtLink>
-          <NuxtLink to="/services" class="text-gray-700 hover:text-brand-tertiary transition-colors duration-200">
-            Services
-          </NuxtLink>
-          <NuxtLink to="/pricing" class="text-gray-700 hover:text-brand-tertiary transition-colors duration-200">
-            Tarifs
-          </NuxtLink>
-          <NuxtLink to="/docs" class="text-gray-700 hover:text-brand-tertiary transition-colors duration-200">
-            Documentation
-          </NuxtLink>
+        <nav class="hidden md:flex items-center space-x-6 absolute left-1/2 transform -translate-x-1/2">
+          <UiNavButton
+            label="Accueil"
+            icon="i-heroicons-home"
+            to="/"
+            :is-active="route.path === '/'"
+          />
+          <UiNavButton
+            label="Services"
+            icon="i-heroicons-cog-6-tooth"
+            to="/services"
+            :is-active="route.path === '/services'"
+          />
+          <UiNavButton
+            label="Tarifs"
+            icon="i-heroicons-currency-dollar"
+            to="/pricing"
+            :is-active="route.path === '/pricing'"
+          />
+          <UiNavButton
+            label="Documentation"
+            icon="i-heroicons-document-text"
+            to="/docs"
+            :is-active="route.path === '/docs'"
+          />
         </nav>
 
         <!-- Desktop CTA -->
-        <div class="hidden md:flex items-center space-x-4">
+        <div class="hidden md:flex items-center space-x-6">
           <!-- Utilisateur non connecté -->
           <template v-if="!isLoggedIn">
             <NuxtLink to="/login">
@@ -48,22 +60,30 @@
 
           <!-- Utilisateur connecté -->
           <template v-else>
-            <NuxtLink to="/dashboard">
-              <UButton variant="ghost" color="gray">
-                <UIcon name="i-heroicons-squares-2x2" class="w-4 h-4 mr-2" />
-                Dashboard
-              </UButton>
-            </NuxtLink>
+            <UiNavButton
+              label="Dashboard"
+              icon="i-heroicons-squares-2x2"
+              to="/dashboard"
+              :is-active="isDashboardActive"
+            />
 
             <!-- Menu utilisateur -->
             <div class="relative">
-              <UButton variant="ghost" color="gray" class="flex items-center space-x-2" @click="isProfileMenuOpen = !isProfileMenuOpen">
-                <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
-                     style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color: var(--color-tertiary);">
-                  {{ getUserInitials() }}
-                </div>
-                <UIcon name="i-heroicons-chevron-down" class="w-4 h-4" />
-              </UButton>
+              <UiNavButton
+                label="Profil"
+                :is-active="isProfileActive"
+                @click="isProfileMenuOpen = !isProfileMenuOpen"
+              >
+                <template #icon>
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium mr-1"
+                       style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); color: var(--color-tertiary);">
+                    {{ getUserInitials() }}
+                  </div>
+                </template>
+                <template #suffix>
+                  <UIcon name="i-heroicons-chevron-down" class="w-3 h-3 ml-1" />
+                </template>
+              </UiNavButton>
 
               <!-- Menu dropdown manuel -->
               <div v-if="isProfileMenuOpen" class="absolute right-0 top-full mt-2 w-48 rounded-lg border shadow-lg z-50" style="background: var(--bg-card); border-color: var(--border-color);">
@@ -100,35 +120,43 @@
       </div>
 
       <!-- Mobile Navigation -->
-      <div v-show="isMenuOpen" class="md:hidden py-4 border-t border-gray-100">
-        <nav class="flex flex-col space-y-4">
+      <div v-show="isMenuOpen" class="md:hidden py-4 border-t" style="border-color: var(--border-color);">
+        <nav class="flex flex-col space-y-2">
           <NuxtLink
             to="/"
-            class="text-gray-700 hover:text-brand-tertiary transition-colors duration-200 py-2"
+            class="nav-item-mobile group flex items-center px-3 py-3 rounded-lg transition-all duration-200"
+            :class="{ 'nav-active-mobile': $route.path === '/' }"
             @click="isMenuOpen = false"
           >
-            Accueil
+            <UIcon name="i-heroicons-home" class="w-5 h-5 mr-3" />
+            <span>Accueil</span>
           </NuxtLink>
           <NuxtLink
             to="/services"
-            class="text-gray-700 hover:text-brand-tertiary transition-colors duration-200 py-2"
+            class="nav-item-mobile group flex items-center px-3 py-3 rounded-lg transition-all duration-200"
+            :class="{ 'nav-active-mobile': $route.path === '/services' }"
             @click="isMenuOpen = false"
           >
-            Services
+            <UIcon name="i-heroicons-cog-6-tooth" class="w-5 h-5 mr-3" />
+            <span>Services</span>
           </NuxtLink>
           <NuxtLink
             to="/pricing"
-            class="text-gray-700 hover:text-brand-tertiary transition-colors duration-200 py-2"
+            class="nav-item-mobile group flex items-center px-3 py-3 rounded-lg transition-all duration-200"
+            :class="{ 'nav-active-mobile': $route.path === '/pricing' }"
             @click="isMenuOpen = false"
           >
-            Tarifs
+            <UIcon name="i-heroicons-currency-dollar" class="w-5 h-5 mr-3" />
+            <span>Tarifs</span>
           </NuxtLink>
           <NuxtLink
             to="/docs"
-            class="text-gray-700 hover:text-brand-tertiary transition-colors duration-200 py-2"
+            class="nav-item-mobile group flex items-center px-3 py-3 rounded-lg transition-all duration-200"
+            :class="{ 'nav-active-mobile': $route.path === '/docs' }"
             @click="isMenuOpen = false"
           >
-            Documentation
+            <UIcon name="i-heroicons-document-text" class="w-5 h-5 mr-3" />
+            <span>Documentation</span>
           </NuxtLink>
 
           <div class="flex flex-col space-y-2 pt-4 border-t border-gray-100">
@@ -214,7 +242,32 @@ const handleLogout = async () => {
 }
 
 const route = useRoute()
+
+// Computed properties for active states to ensure reactivity
+const isDashboardActive = computed(() => route.path === '/dashboard')
+const isProfileActive = computed(() => route.path === '/me')
+
 watch(() => route.path, () => {
   isMenuOpen.value = false
 })
 </script>
+
+<style scoped>
+/* Mobile navigation styles */
+.nav-item-mobile {
+  color: var(--text-primary);
+  border-radius: var(--border-radius-md);
+  transition: var(--transition-normal);
+}
+
+.nav-item-mobile:hover {
+  background: var(--color-primary);
+  color: var(--color-tertiary);
+}
+
+.nav-item-mobile.nav-active-mobile {
+  background: var(--color-tertiary);
+  color: var(--text-white);
+  font-weight: var(--font-weight-medium);
+}
+</style>
