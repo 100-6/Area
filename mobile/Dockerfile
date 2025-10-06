@@ -64,7 +64,7 @@ RUN flutter pub get
 COPY . .
 
 # Configuration de l'URL de l'API pour la production
-ARG API_URL=http://10.0.2.2:8080
+ARG API_URL=https://area-eric.eliasdrissi.dev
 ENV API_URL=$API_URL
 
 # Build de l'APK en mode release
