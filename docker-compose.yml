@@ -228,7 +228,7 @@ services:
       dockerfile: Dockerfile
       target: build
       args:
-        - API_URL=${MOBILE_API_URL:-http://10.0.2.2:8080}
+        - API_URL=${MOBILE_API_URL:-https://area-eric.eliasdrissi.dev}
     container_name: area_mobile_apk_builder
     volumes:
       - mobile_builds:/app/build/app/outputs/flutter-apk
@@ -242,7 +242,7 @@ services:
       dockerfile: Dockerfile
       target: export
       args:
-        - API_URL=${MOBILE_API_URL:-http://10.0.2.2:8080}
+        - API_URL=${MOBILE_API_URL:-https://area-eric.eliasdrissi.dev}
     container_name: area_mobile_apk_export
     volumes:
       - mobile_builds:/output
