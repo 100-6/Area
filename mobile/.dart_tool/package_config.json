@@ -33,7 +33,7 @@
     },
     {
       "name": "async",
-      "rootUri": "file:///home/eric/.pub-cache/hosted/pub.dev/async-2.12.0",
+      "rootUri": "file:///home/eric/.pub-cache/hosted/pub.dev/async-2.13.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -267,7 +267,7 @@
     },
     {
       "name": "shared_preferences_android",
-      "rootUri": "file:///home/eric/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.12",
+      "rootUri": "file:///home/eric/.pub-cache/hosted/pub.dev/shared_preferences_android-2.4.13",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
@@ -423,9 +423,9 @@
     },
     {
       "name": "vm_service",
-      "rootUri": "file:///home/eric/.pub-cache/hosted/pub.dev/vm_service-14.3.1",
+      "rootUri": "file:///home/eric/.pub-cache/hosted/pub.dev/vm_service-15.0.2",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.5"
     },
     {
       "name": "web",

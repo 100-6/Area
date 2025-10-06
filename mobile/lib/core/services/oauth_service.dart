@@ -9,6 +9,7 @@ class OAuthService {
     OAuthProvider.github,
     OAuthProvider.gitlab,
     OAuthProvider.discord,
+    OAuthProvider.dropbox,
   ];
 
   /// Lance le flux OAuth pour un provider
@@ -38,7 +39,7 @@ class OAuthService {
   /// Obtient l'URL d'authentification pour un provider
   String _getAuthUrl(OAuthProvider provider) {
     final baseUrl = ApiConstants.baseUrl;
-    
+
     switch (provider) {
       case OAuthProvider.google:
         return '$baseUrl/api/auth/google';
@@ -48,6 +49,8 @@ class OAuthService {
         return '$baseUrl/api/auth/gitlab';
       case OAuthProvider.discord:
         return '$baseUrl/api/auth/discord';
+      case OAuthProvider.dropbox:
+        return '$baseUrl/api/auth/dropbox';
     }
   }
 
@@ -58,7 +61,8 @@ enum OAuthProvider {
   google,
   github,
   gitlab,
-  discord;
+  discord,
+  dropbox;
 
   /// Nom affiché du provider
   String get displayName {
@@ -71,6 +75,8 @@ enum OAuthProvider {
         return 'GitLab';
       case OAuthProvider.discord:
         return 'Discord';
+      case OAuthProvider.dropbox:
+        return 'Dropbox';
     }
   }
 
@@ -85,6 +91,8 @@ enum OAuthProvider {
         return 'gitlab';
       case OAuthProvider.discord:
         return 'discord';
+      case OAuthProvider.dropbox:
+        return 'dropbox';
     }
   }
 
@@ -99,6 +107,8 @@ enum OAuthProvider {
         return 0xFFFC6D26; // Orange GitLab
       case OAuthProvider.discord:
         return 0xFF5865F2; // Violet Discord
+      case OAuthProvider.dropbox:
+        return 0xFF0061FF; // Bleu Dropbox
     }
   }
 }
