@@ -1,4 +1,5 @@
 import { IOAuthProvider, OAuthUserProfile } from '../IOAuthProvider';
+import * as crypto from 'crypto';
 
 interface DropboxTokenResponse {
     access_token: string;
@@ -58,11 +59,12 @@ export class DropboxProvider implements IOAuthProvider {
     }
 
     getAuthUrl(): string {
+        const state = crypto.randomBytes(32).toString('hex');
         const params = new URLSearchParams({
             client_id: this.clientId,
             redirect_uri: this.redirectUri,
             response_type: 'code',
-            state: 'dropbox-oauth',
+            state: state,
             token_access_type: 'offline' // Pour obtenir un refresh token
         });
 
