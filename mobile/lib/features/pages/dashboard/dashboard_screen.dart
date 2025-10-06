@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -92,41 +91,21 @@ class DashboardScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icône et titre
-                Row(
-                  children: [
-                    Image.asset(
-                      'assets/images/hello-robot.png',
-                      width: 48,
-                      height: 48,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.home_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 16),
-                    const Expanded(
-                      child: Text(
-                        'Bienvenue sur votre espace',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
+                // Titre
+                const Text(
+                  'Bienvenue sur votre espace',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
 
                 const SizedBox(height: 20),
 
                 // Message de bienvenue
                 const Text(
-                  'Votre tableau de bord personnel vous attend. Explorez vos fonctionnalités et gérez votre compte en toute simplicité.',
+                  'Explorez vos fonctionnalités\net gérez votre compte\nen toute simplicité.',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -136,57 +115,22 @@ class DashboardScreen extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 24),
-
-                // Bouton d'action avec glassmorphisme
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.4),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                          BoxShadow(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            blurRadius: 6,
-                            offset: const Offset(0, -1),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.explore_rounded,
-                            color: theme.colorScheme.primary,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Explorer',
-                            style: TextStyle(
-                              color: theme.colorScheme.primary,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               ],
+            ),
+          ),
+
+          // Robot en bas à droite (au-dessus du contenu)
+          Positioned(
+            bottom: -10,
+            right: 0,
+            child: Image.asset(
+              'assets/images/retro-robot-jumping.png',
+              width: 120,
+              height: 120,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return const SizedBox.shrink();
+              },
             ),
           ),
         ],

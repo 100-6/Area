@@ -59,7 +59,7 @@ class OAuthButton extends StatelessWidget {
   /// Récupère l'icône du provider
   Widget _getProviderIcon(OAuthProvider provider) {
     IconData icon;
-    
+
     switch (provider) {
       case OAuthProvider.google:
         icon = Icons.g_mobiledata;
@@ -72,6 +72,9 @@ class OAuthButton extends StatelessWidget {
         break;
       case OAuthProvider.discord:
         icon = Icons.discord;
+        break;
+      case OAuthProvider.dropbox:
+        icon = Icons.cloud; // Dropbox icon
         break;
     }
 
@@ -199,7 +202,7 @@ class CompactOAuthButton extends StatelessWidget {
 
   Widget _getProviderIcon(OAuthProvider provider) {
     IconData icon;
-    
+
     switch (provider) {
       case OAuthProvider.google:
         icon = Icons.g_mobiledata;
@@ -212,6 +215,9 @@ class CompactOAuthButton extends StatelessWidget {
         break;
       case OAuthProvider.discord:
         icon = Icons.discord;
+        break;
+      case OAuthProvider.dropbox:
+        icon = Icons.cloud; // Dropbox icon
         break;
     }
 

@@ -84,6 +84,30 @@ class ApiService {
     }
   }
 
+  /// Effectue une requête DELETE
+  Future<Map<String, dynamic>> delete(
+    String endpoint, {
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+
+      final response = await _client
+          .delete(
+            url,
+            headers: {
+              ...ApiConstants.jsonHeaders,
+              if (headers != null) ...headers,
+            },
+          )
+          .timeout(ApiConstants.timeoutDuration);
+
+      return _handleResponse(response);
+    } catch (e) {
+      throw ApiException('Erreur de connexion: ${e.toString()}');
+    }
+  }
+
   /// Gère la réponse HTTP
   Map<String, dynamic> _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -119,3 +143,4 @@ class ApiException implements Exception {
   @override
   String toString() => message;
 }
+
