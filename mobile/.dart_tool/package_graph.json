@@ -311,7 +311,7 @@
     },
     {
       "name": "shared_preferences_android",
-      "version": "2.4.12",
+      "version": "2.4.13",
       "dependencies": [
         "flutter",
         "shared_preferences_platform_interface"
@@ -473,7 +473,7 @@
     },
     {
       "name": "async",
-      "version": "2.12.0",
+      "version": "2.13.0",
       "dependencies": [
         "collection",
         "meta"
@@ -649,7 +649,7 @@
     },
     {
       "name": "vm_service",
-      "version": "14.3.1",
+      "version": "15.0.2",
       "dependencies": []
     },
     {
