@@ -6,26 +6,33 @@ export interface Service {
   icon: string
   color: string
   isActive: boolean
-  category: 'communication' | 'productivity' | 'social' | 'storage' | 'development' | 'other'
-  authType: 'oauth' | 'api_key' | 'webhook'
+  category: 'communication' | 'productivity' | 'social' | 'storage' | 'development' | 'automation' | 'other'
+  authType: 'oauth' | 'api_key' | 'webhook' | 'none'
+  // AREA Concepts:
+  // - actions: Things this service can DO (triggers that initiate workflows)
+  // - reactions: Things this service can RESPOND TO (actions performed when triggered)
   actions: ServiceAction[]
   reactions: ServiceReaction[]
 }
 
+// ServiceAction: A trigger that can initiate an AREA workflow
+// Example: Timer triggers (daily_at_time, every_weekday, etc.)
 export interface ServiceAction {
   id: string
   name: string
   description: string
   parameters: ActionParameter[]
-  triggers: string[]
+  triggers: string[] // Events this action can trigger
 }
 
+// ServiceReaction: An action that can be performed in response to a trigger
+// Example: Console log action, Send email action, etc.
 export interface ServiceReaction {
   id: string
   name: string
   description: string
   parameters: ActionParameter[]
-  requiredData: string[]
+  requiredData: string[] // Data fields required from the trigger
 }
 
 export interface ActionParameter {

@@ -60,12 +60,13 @@
           <UButton
             variant="solid"
             icon="i-heroicons-check"
-            :disabled="workflowBlocks.length === 0"
-            @click="saveWorkflow"
+            :disabled="workflowBlocks.length === 0 || isSaving"
+            :loading="isSaving"
+            @click="openSaveModal"
             style="background: var(--color-tertiary); color: var(--text-white); border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; transition: all 0.2s ease; box-shadow: var(--shadow-md);"
-            :class="workflowBlocks.length === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'"
+            :class="(workflowBlocks.length === 0 || isSaving) ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'"
           >
-            Sauvegarder
+            {{ isSaving ? 'Sauvegarde...' : 'Sauvegarder' }}
           </UButton>
         </div>
       </div>
@@ -186,6 +187,105 @@
       v-model:open="showServiceModal"
       @service-selected="onServiceSelected"
     />
+
+    <!-- Save Workflow Modal -->
+    <UModal
+      v-model:open="showSaveModal"
+      :ui="{
+        content: 'fixed bg-white divide-y divide-gray-200 flex flex-col focus:outline-none border-0 ring-0 shadow-xl',
+        overlay: 'fixed inset-0 bg-gray-900/50',
+        header: 'flex items-center gap-1.5 p-4 sm:px-6 min-h-16 bg-white',
+        body: 'flex-1 overflow-y-auto p-4 sm:p-6 bg-white',
+        footer: 'flex items-center gap-1.5 p-4 sm:px-6 bg-white'
+      }"
+    >
+      <!-- Header personnalisé -->
+      <template #header>
+        <div style="padding: 1.5rem;">
+          <h3 style="color: var(--text-primary); font-size: 1.25rem; font-weight: 600; margin: 0;">
+            {{ currentAreaId ? 'Mettre à jour l\'automatisation' : 'Sauvegarder l\'automatisation' }}
+          </h3>
+          <p style="color: var(--text-secondary); font-size: 0.875rem; margin: 0.25rem 0 0 0;">
+            {{ currentAreaId ? 'Les modifications seront appliquées à votre automatisation existante' : 'Donnez un nom à votre nouvelle automatisation' }}
+          </p>
+        </div>
+      </template>
+
+      <template #body>
+        <div class="space-y-4">
+          <!-- Nom de l'automatisation (seulement pour nouveau workflow) -->
+          <div v-if="!currentAreaId">
+            <label style="color: var(--text-primary); font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.5rem;">
+              Nom de l'automatisation *
+            </label>
+            <UInput
+              v-model="workflowName"
+              placeholder="Ex: Timer vers Console Log"
+              size="lg"
+              class="w-full"
+              style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);"
+              :disabled="isSaving"
+            />
+            <p v-if="nameError" style="color: var(--color-error); font-size: 0.75rem; margin-top: 0.25rem;">
+              {{ nameError }}
+            </p>
+          </div>
+
+          <!-- Description (seulement pour nouveau workflow) -->
+          <div v-if="!currentAreaId">
+            <label style="color: var(--text-primary); font-size: 0.875rem; font-weight: 500; display: block; margin-bottom: 0.5rem;">
+              Description (optionnelle)
+            </label>
+            <UTextarea
+              v-model="workflowDescription"
+              placeholder="Décrivez brièvement ce que fait cette automatisation..."
+              :rows="3"
+              class="w-full"
+              style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);"
+              :disabled="isSaving"
+            />
+          </div>
+
+          <!-- Message pour workflow existant -->
+          <div v-else class="text-center" style="padding: var(--spacing-xl);">
+            <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 mx-auto mb-2" style="color: var(--color-tertiary);" />
+            <p style="color: var(--text-secondary); font-size: 0.875rem;">
+              Vos modifications seront sauvegardées dans l'automatisation existante.
+            </p>
+          </div>
+
+          <!-- Zone d'erreur -->
+          <div v-if="saveError" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--border-radius-lg); padding: var(--spacing-md);">
+            <div class="flex items-center">
+              <UIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4 mr-2" style="color: var(--color-error);" />
+              <span style="color: var(--color-error); font-size: 0.875rem;">{{ saveError }}</span>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <template #footer>
+        <div class="flex justify-end gap-3" style="padding: var(--spacing-lg);">
+          <UButton
+            variant="outline"
+            @click="closeSaveModal"
+            :disabled="isSaving"
+            style="background: var(--bg-card); color: var(--text-secondary); border-color: var(--border-color);"
+          >
+            Annuler
+          </UButton>
+          <UButton
+            :loading="isSaving"
+            @click="handleSaveWorkflow"
+            :disabled="(!currentAreaId && !workflowName.trim()) || isSaving"
+            style="background: var(--color-tertiary); color: var(--text-white); border-color: var(--color-tertiary);"
+          >
+            {{ isSaving ? 'Sauvegarde...' : (currentAreaId ? 'Mettre à jour' : 'Sauvegarder') }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
+
   </div>
 </template>
 
@@ -216,6 +316,9 @@ const {
 const {
   workflowBlocks,
   connections,
+  currentAreaId,
+  isSaving,
+  saveError,
   nextCardPosition,
   addServiceBlock,
   updateBlockPosition,
@@ -223,7 +326,8 @@ const {
   configureBlock,
   getBlockConnectionState,
   getConnectionPath,
-  saveWorkflow: saveWorkflowData
+  saveWorkflow: saveWorkflowData,
+  loadWorkflow
 } = useWorkflowManagement(canvas, zoom)
 
 const {
@@ -234,25 +338,69 @@ const {
 
 const route = useRoute()
 
-// Service selection handler
+// Save modal state
+const showSaveModal = ref(false)
+const workflowName = ref('')
+const workflowDescription = ref('')
+const nameError = ref('')
+
+// Service selection handler - let the composable handle positioning
 const onServiceSelected = (service: Service) => {
+  // Don't pass a position - let useWorkflowManagement use its default positioning
   handleServiceSelection(service, addServiceBlock)
 }
 
+// Save modal functions
+const openSaveModal = () => {
+  if (workflowBlocks.value.length === 0) {
+    return
+  }
+  nameError.value = ''
+  showSaveModal.value = true
+}
+
+const closeSaveModal = () => {
+  showSaveModal.value = false
+  nameError.value = ''
+}
+
+// Save workflow function
+const handleSaveWorkflow = async () => {
+  try {
+    nameError.value = ''
+
+    // Check if we're editing an existing workflow
+    if (currentAreaId.value) {
+      // Save existing workflow
+      await saveWorkflowData()
+    } else {
+      // Validate new workflow name
+      if (!workflowName.value.trim()) {
+        nameError.value = 'Le nom est obligatoire'
+        return
+      }
+
+      const areaData = {
+        name: workflowName.value.trim(),
+        description: workflowDescription.value.trim() || undefined
+      }
+
+      await saveWorkflowData(areaData)
+    }
+
+    // Close modal and redirect to dashboard
+    showSaveModal.value = false
+    await navigateTo('/dashboard')
+
+  } catch (error) {
+    console.error('Failed to save workflow:', error)
+    // Error is already handled in saveError reactive ref
+  }
+}
 
 // Actions
 const goBack = () => {
   navigateTo('/dashboard')
-}
-
-const saveWorkflow = async () => {
-  try {
-    await saveWorkflowData()
-    // TODO: Show success notification
-  } catch (error) {
-    console.error('Failed to save workflow:', error)
-    // TODO: Show error notification
-  }
 }
 
 // Keyboard shortcuts
@@ -260,22 +408,40 @@ const { handlePreSelectedService } = useServiceManagement()
 
 useKeyboardShortcuts({
   onEscape: () => {
-    if (showServiceModal.value) {
+    if (showSaveModal.value) {
+      closeSaveModal()
+    } else if (showServiceModal.value) {
       showServiceModal.value = false
     }
   },
   onSpace: () => {
-    if (!showServiceModal.value) {
+    if (!showServiceModal.value && !showSaveModal.value) {
       openServiceModal()
     }
   },
-  onSave: saveWorkflow
+  onSave: openSaveModal
 })
 
 // Lifecycle
-onMounted(() => {
-  // Handle pre-selected service from URL
-  handlePreSelectedService(route, addServiceBlock)
+onMounted(async () => {
+  // Check if we're editing an existing workflow
+  const areaId = route.query.areaId as string
+
+  if (areaId) {
+    try {
+      // Load existing workflow
+      await loadWorkflow(areaId)
+      // Pre-populate form fields if we have area data
+      // TODO: Get area name/description from loaded workflow
+    } catch (error) {
+      console.error('Failed to load workflow:', error)
+      // Redirect to create mode if loading fails
+      await navigateTo('/workflow/create')
+    }
+  } else {
+    // Handle pre-selected service from URL for new workflows
+    handlePreSelectedService(route, addServiceBlock)
+  }
 })
 
 useHead({

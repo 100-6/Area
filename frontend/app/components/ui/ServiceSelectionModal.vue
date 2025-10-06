@@ -148,146 +148,17 @@ const categories = [
   { value: 'all', label: 'Tous' },
   { value: 'communication', label: 'Communication' },
   { value: 'productivity', label: 'Productivité' },
-  { value: 'social', label: 'Réseaux sociaux' },
-  { value: 'storage', label: 'Stockage' },
+  { value: 'automation', label: 'Automation' },
   { value: 'development', label: 'Développement' },
+  { value: 'storage', label: 'Stockage' },
   { value: 'other', label: 'Autres' }
 ]
 
-// Services disponibles (fake data pour l'exemple)
-const availableServices: Service[] = [
-  {
-    id: 'gmail',
-    name: 'Gmail',
-    slug: 'gmail',
-    description: 'Gérez vos emails automatiquement',
-    icon: 'i-logos-google-gmail',
-    color: '#EA4335',
-    isActive: true,
-    category: 'communication',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'slack',
-    name: 'Slack',
-    slug: 'slack',
-    description: 'Notifications et messages d\'équipe',
-    icon: 'i-logos-slack-icon',
-    color: '#4A154B',
-    isActive: true,
-    category: 'communication',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'discord',
-    name: 'Discord',
-    slug: 'discord',
-    description: 'Messages et notifications Discord',
-    icon: 'i-logos-discord-icon',
-    color: '#5865F2',
-    isActive: true,
-    category: 'communication',
-    authType: 'webhook',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'github',
-    name: 'GitHub',
-    slug: 'github',
-    description: 'Automatisez vos workflows Git',
-    icon: 'i-logos-github-icon',
-    color: '#181717',
-    isActive: true,
-    category: 'development',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'google-drive',
-    name: 'Google Drive',
-    slug: 'google-drive',
-    description: 'Gestion de fichiers cloud',
-    icon: 'i-logos-google-drive',
-    color: '#4285F4',
-    isActive: true,
-    category: 'storage',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'dropbox',
-    name: 'Dropbox',
-    slug: 'dropbox',
-    description: 'Synchronisation de fichiers',
-    icon: 'i-logos-dropbox',
-    color: '#0061FF',
-    isActive: false,
-    category: 'storage',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'spotify',
-    name: 'Spotify',
-    slug: 'spotify',
-    description: 'Automatisations musicales',
-    icon: 'i-logos-spotify-icon',
-    color: '#1DB954',
-    isActive: true,
-    category: 'social',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'twitter',
-    name: 'Twitter',
-    slug: 'twitter',
-    description: 'Publications automatiques',
-    icon: 'i-logos-twitter',
-    color: '#1DA1F2',
-    isActive: false,
-    category: 'social',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'trello',
-    name: 'Trello',
-    slug: 'trello',
-    description: 'Gestion de projets et tâches',
-    icon: 'i-logos-trello',
-    color: '#0079BF',
-    isActive: true,
-    category: 'productivity',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'notion',
-    name: 'Notion',
-    slug: 'notion',
-    description: 'Base de données et documentation',
-    icon: 'i-logos-notion-icon',
-    color: '#000000',
-    isActive: true,
-    category: 'productivity',
-    authType: 'api_key',
-    actions: [],
-    reactions: []
-  }
-]
+// Utiliser les services du composable
+const { getAvailableServices } = useServiceManagement()
+const availableServices: Service[] = getAvailableServices()
 
+// Old hardcoded services removed - now using composable
 // Services filtrés
 const filteredServices = computed(() => {
   let services = availableServices

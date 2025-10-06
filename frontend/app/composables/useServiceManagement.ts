@@ -41,69 +41,140 @@ export const useServiceManagement = () => {
   const getAvailableServices = (): Service[] => {
     return [
       {
-        id: 'gmail',
-        name: 'Gmail',
-        slug: 'gmail',
-        description: 'Gérez vos emails automatiquement',
-        icon: 'i-logos-google-gmail',
-        color: '#EA4335',
+        id: 'timer',
+        name: 'Timer / Scheduler',
+        slug: 'timer',
+        description: 'Déclenche des actions selon un horaire (TRIGGER)',
+        icon: 'i-heroicons-clock',
+        color: '#FF6B6B',
         isActive: true,
-        category: 'communication',
-        authType: 'oauth',
-        actions: [],
+        category: 'automation',
+        authType: 'none',
+        actions: [
+          {
+            id: 'daily_at_time',
+            name: 'Tous les jours à X heures',
+            description: 'Se déclenche tous les jours à une heure précise',
+            parameters: [
+              {
+                name: 'time',
+                type: 'string',
+                required: true,
+                description: 'Heure de déclenchement (format HH:mm)',
+                placeholder: '09:00',
+                validation: { pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$' }
+              },
+              {
+                name: 'timezone',
+                type: 'select',
+                required: false,
+                description: 'Fuseau horaire',
+                options: ['Europe/Paris', 'America/New_York', 'Asia/Tokyo', 'UTC']
+              }
+            ],
+            triggers: ['schedule']
+          },
+          {
+            id: 'every_weekday',
+            name: 'Tous les jours de la semaine',
+            description: 'Lundi à vendredi à une heure donnée',
+            parameters: [
+              {
+                name: 'time',
+                type: 'string',
+                required: true,
+                description: 'Heure de déclenchement (format HH:mm)',
+                placeholder: '09:00',
+                validation: { pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$' }
+              }
+            ],
+            triggers: ['schedule']
+          },
+          {
+            id: 'every_x_minutes',
+            name: 'Toutes les X minutes',
+            description: 'Se répète à interval régulier',
+            parameters: [
+              {
+                name: 'interval',
+                type: 'number',
+                required: true,
+                description: 'Intervalle en minutes',
+                placeholder: '30',
+                validation: { min: 1, max: 1440 }
+              }
+            ],
+            triggers: ['schedule']
+          },
+          {
+            id: 'specific_date',
+            name: 'À une date précise',
+            description: 'Se déclenche une seule fois à une date et heure précises',
+            parameters: [
+              {
+                name: 'datetime',
+                type: 'date',
+                required: true,
+                description: 'Date et heure de déclenchement',
+                placeholder: '2025-12-31T23:59:00'
+              }
+            ],
+            triggers: ['schedule']
+          },
+          {
+            id: 'custom_cron',
+            name: 'Expression cron personnalisée',
+            description: 'Pour les utilisateurs avancés : définir une expression cron',
+            parameters: [
+              {
+                name: 'cronExpression',
+                type: 'string',
+                required: true,
+                description: 'Expression cron (format: minute hour day month weekday)',
+                placeholder: '0 9 * * 1-5',
+                validation: { pattern: '^(\\*|([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])|\\*/[0-9]+)\\s+(\\*|([0-9]|1[0-9]|2[0-3])|\\*/[0-9]+)\\s+(\\*|([1-9]|1[0-9]|2[0-9]|3[0-1])|\\*/[0-9]+)\\s+(\\*|([1-9]|1[0-2])|\\*/[0-9]+)\\s+(\\*|([0-6])|\\*/[0-9]+)$' }
+              }
+            ],
+            triggers: ['schedule']
+          }
+        ],
         reactions: []
       },
       {
-        id: 'slack',
-        name: 'Slack',
-        slug: 'slack',
-        description: 'Notifications et messages d\'équipe',
-        icon: 'i-logos-slack-icon',
-        color: '#4A154B',
-        isActive: true,
-        category: 'communication',
-        authType: 'oauth',
-        actions: [],
-        reactions: []
-      },
-      {
-        id: 'github',
-        name: 'GitHub',
-        slug: 'github',
-        description: 'Automatisez vos workflows Git',
-        icon: 'i-logos-github-icon',
-        color: '#181717',
+        id: 'console',
+        name: 'Console Logger',
+        slug: 'console',
+        description: 'Service pour logger des messages (ACTION)',
+        icon: 'i-heroicons-computer-desktop',
+        color: '#6C757D',
         isActive: true,
         category: 'development',
-        authType: 'oauth',
+        authType: 'none',
         actions: [],
-        reactions: []
-      },
-      {
-        id: 'trello',
-        name: 'Trello',
-        slug: 'trello',
-        description: 'Gestion de projets et tâches',
-        icon: 'i-logos-trello',
-        color: '#0079BF',
-        isActive: true,
-        category: 'productivity',
-        authType: 'oauth',
-        actions: [],
-        reactions: []
-      },
-      {
-        id: 'discord',
-        name: 'Discord',
-        slug: 'discord',
-        description: 'Communication et notifications communautaires',
-        icon: 'i-logos-discord-icon',
-        color: '#5865F2',
-        isActive: true,
-        category: 'communication',
-        authType: 'oauth',
-        actions: [],
-        reactions: []
+        reactions: [
+          {
+            id: 'log',
+            name: 'Log dans la console',
+            description: 'Affiche un message dans la console du serveur',
+            parameters: [
+              {
+                name: 'message',
+                type: 'string',
+                required: true,
+                description: 'Le message à afficher',
+                placeholder: 'Hello from AREA!'
+              },
+              {
+                name: 'level',
+                type: 'select',
+                required: false,
+                description: 'Niveau de log',
+                options: ['info', 'warn', 'error', 'success']
+              }
+            ],
+            requiredData: []
+          }
+        ]
       }
     ]
   }
@@ -114,6 +185,7 @@ export const useServiceManagement = () => {
       { id: 'communication', name: 'Communication', icon: 'i-heroicons-chat-bubble-left-right' },
       { id: 'development', name: 'Développement', icon: 'i-heroicons-code-bracket' },
       { id: 'productivity', name: 'Productivité', icon: 'i-heroicons-chart-bar' },
+      { id: 'automation', name: 'Automation', icon: 'i-heroicons-clock' },
       { id: 'storage', name: 'Stockage', icon: 'i-heroicons-cloud' }
     ]
 
