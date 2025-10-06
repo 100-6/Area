@@ -16,6 +16,7 @@ export interface ActionContext {
     triggerData: any;
     executionId: string;
     timestamp: string;
+    previousOutputs?: Record<string, any>; // Outputs des actions précédentes
 }
 
 /**

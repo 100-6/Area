@@ -7,6 +7,7 @@ export default {
     authType: 'none',
     isActive: true,
 
+    // Les timers sont des triggers, pas des actions
     actions: [
         {
             name: 'daily_at_time',
@@ -70,6 +71,16 @@ export default {
                         minimum: 1,
                         maximum: 1440, // Max 24h
                         example: 30
+                    }
+                }
+            },
+            outputSchema: {
+                type: 'object',
+                properties: {
+                    day: {
+                        type: 'string',
+                        description: 'Jour de la semaine (lundi, mardi, mercredi, jeudi, vendredi, samedi, dimanche)',
+                        example: 'lundi'
                     }
                 }
             }

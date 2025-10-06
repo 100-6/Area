@@ -37,8 +37,25 @@ export class ConsoleLogAction extends BaseAction {
     }
 
     async execute(config: any, context: any): Promise<any> {
-        const message = config.message || 'No message provided';
+        let message = config.message || 'No message provided';
         const level = config.level || 'info';
+
+        // ✨ Support des placeholders avec les outputs précédents
+        const previousOutputs = context.previousOutputs || {};
+        
+        // Collecter toutes les données disponibles
+        const allData: any = {};
+        for (const nodeId in previousOutputs) {
+            Object.assign(allData, previousOutputs[nodeId]);
+        }
+
+        // Remplacer les placeholders {{key}} par les valeurs
+        for (const [key, value] of Object.entries(allData)) {
+            const placeholder = `{{${key}}}`;
+            if (message.includes(placeholder)) {
+                message = message.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), String(value));
+            }
+        }
 
         switch (level) {
             case 'success':
