@@ -14,12 +14,12 @@ RUN apt-get update && apt-get install -y \
     xz-utils \
     zip \
     libglu1-mesa \
-    openjdk-11-jdk \
+    openjdk-17-jdk \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Configuration des variables d'environnement
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV ANDROID_HOME=/opt/android-sdk
 ENV PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools"
 
@@ -37,12 +37,11 @@ RUN yes | sdkmanager --licenses
 # Installation des composants Android nécessaires
 RUN sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.0"
 
-# Installation de Flutter
-ENV FLUTTER_VERSION=3.24.3
+# Installation de Flutter - utiliser la dernière version stable
 ENV FLUTTER_HOME=/opt/flutter
 ENV PATH="$PATH:$FLUTTER_HOME/bin"
 
-RUN git clone --depth 1 --branch ${FLUTTER_VERSION} https://github.com/flutter/flutter.git ${FLUTTER_HOME}
+RUN git clone --depth 1 --branch stable https://github.com/flutter/flutter.git ${FLUTTER_HOME}
 
 # Pré-téléchargement des dépendances Flutter
 RUN flutter precache --android
