@@ -62,55 +62,33 @@ export class OnReactionAdded extends BaseTrigger {
     }
 
     validate(config: TriggerConfig): boolean {
-        if (!config.channelId) {
+        if (!config.channelId)
             throw new Error('channelId is required');
-        }
-
         const idPattern = /^[0-9]{17,19}$/;
-        if (!idPattern.test(config.channelId)) {
+        if (!idPattern.test(config.channelId))
             throw new Error('Invalid Discord channel ID format');
-        }
-
-        if (config.messageId && !idPattern.test(config.messageId)) {
+        if (config.messageId && !idPattern.test(config.messageId))
             throw new Error('Invalid Discord message ID format');
-        }
-
         return true;
     }
 
     async start(areaId: string, config: TriggerConfig): Promise<void> {
         console.log(`[OnReactionAdded] Starting trigger for AREA ${areaId}`.cyan);
-        
         this.validate(config);
 
-        if (!this.botClient.isConnected()) {
+        if (!this.botClient.isConnected())
             await this.botClient.connect();
-        }
-
         const listener = async (eventData: any) => {
             try {
-                // Filtrer par channel
-                if (eventData.channelId !== config.channelId) {
+                if (eventData.channelId !== config.channelId)
                     return;
-                }
-
-                // Filtrer par message spécifique si configuré
-                if (config.messageId && eventData.messageId !== config.messageId) {
+                if (config.messageId && eventData.messageId !== config.messageId)
                     return;
-                }
-
-                // Filtrer par emoji si configuré
-                if (config.emoji && eventData.emoji !== config.emoji) {
+                if (config.emoji && eventData.emoji !== config.emoji)
                     return;
-                }
-
-                // Ignorer les bots si configuré
-                if (config.ignoreBots && eventData.userId === this.botClient.getClient().user?.id) {
+                if (config.ignoreBots && eventData.userId === this.botClient.getClient().user?.id)
                     return;
-                }
-
                 console.log(`[OnReactionAdded] Trigger fired for AREA ${areaId} - ${eventData.emoji} by ${eventData.userTag}`.green);
-
                 const payload: TriggerPayload = {
                     areaId,
                     triggerName: this.getName(),
@@ -138,30 +116,26 @@ export class OnReactionAdded extends BaseTrigger {
                         }
                     }
                 };
-
                 await this.emitTrigger(payload);
             } catch (error) {
                 console.error(`[OnReactionAdded] Error processing event:`.red, error);
             }
         };
-
         this.listeners.set(areaId, listener);
         await this.eventBus.on('discord.reaction.added', listener);
         this.botClient.registerTrigger(this.getName(), areaId);
-
         this.isRunning = true;
         console.log(`[OnReactionAdded] ✓ Trigger started for AREA ${areaId}`.green);
     }
 
     async stop(areaId: string): Promise<void> {
         console.log(`[OnReactionAdded] Stopping trigger for AREA ${areaId}`.yellow);
-
         const listener = this.listeners.get(areaId);
+
         if (listener) {
             await this.eventBus.removeListener('discord.reaction.added', listener);
             this.listeners.delete(areaId);
         }
-
         this.botClient.unregisterTrigger(this.getName(), areaId);
         this.isRunning = false;
         console.log(`[OnReactionAdded] ✓ Trigger stopped for AREA ${areaId}`.yellow);

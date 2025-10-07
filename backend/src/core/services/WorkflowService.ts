@@ -118,11 +118,21 @@ export class WorkflowService {
     async createNode(areaId: string, data: CreateWorkflowNodeDto): Promise<WorkflowNode> {
         console.log(`[WorkflowService] Creating node of type ${data.nodeType} for area ${areaId}`.blue);
         this.validateNodeData(data);
+
+        if (data.nodeType === 'trigger') {
+            const existingNodes = await this.workflowModel.getNodesByArea(areaId);
+            const existingTrigger = existingNodes.find(node => node.nodeType === 'trigger');
+            if (existingTrigger) {
+                const error = new Error('An AREA can only have ONE trigger. Please delete the existing trigger or create a new AREA.') as CustomError;
+                error.statusCode = 400;
+                error.code = 'TRIGGER_ALREADY_EXISTS';
+                throw error;
+            }
+        }
         const serviceId = data.serviceId ? await this.workflowModel.resolveServiceId(data.serviceId) : undefined;
         const actionId = data.actionId && serviceId ? await this.workflowModel.resolveActionId(serviceId, data.actionId) : undefined;
         const reactionId = data.reactionId && serviceId ? await this.workflowModel.resolveReactionId(serviceId, data.reactionId) : undefined;
         const node = await this.workflowModel.createNode(areaId, {...data, serviceId, actionId, reactionId});
-
         console.log(`[WorkflowService] Node created: ${node.id}`.green);
         return node;
     }
