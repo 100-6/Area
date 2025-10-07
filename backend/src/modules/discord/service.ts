@@ -4,7 +4,7 @@ import discordConfig from './config';
 import 'colors';
 
 import { OnMessageCreated, OnMemberJoin, OnReactionAdded } from './triggers/_index';
-import { SendMessage, AddRole, KickMember } from './actions/_index';
+import { SendMessage, AddRole, KickMember, SendWebhookMessage} from './actions/_index';
 
 /**
  * Module Discord principal
@@ -50,6 +50,7 @@ export class DiscordModule extends BaseModule {
             this.registerAction(new SendMessage());
             this.registerAction(new AddRole());
             this.registerAction(new KickMember());
+            this.registerAction(new SendWebhookMessage());
             console.log('[Discord] ✓ Module initialized successfully'.green.bold);
         } catch (error) {
             console.error('[Discord] ❌ Failed to initialize module:'.red, error);
