@@ -181,6 +181,145 @@ export const useServiceManagement = () => {
             requiredData: []
           }
         ]
+      },
+      {
+        id: 'discord',
+        name: 'Discord',
+        slug: 'discord',
+        description: 'Bot Discord pour gérer serveurs et messages',
+        icon: 'i-logos-discord-icon',
+        color: '#5865F2',
+        isActive: true,
+        category: 'communication',
+        authType: 'oauth',
+        actions: [
+          {
+            id: 'on_message_created',
+            name: 'Nouveau message',
+            description: 'Se déclenche quand un nouveau message est créé dans un channel',
+            parameters: [
+              {
+                name: 'channelId',
+                type: 'string',
+                required: true,
+                description: 'ID du channel Discord à surveiller',
+                placeholder: '123456789012345678'
+              }
+            ],
+            triggers: ['message_created']
+          },
+          {
+            id: 'on_member_join',
+            name: 'Nouveau membre',
+            description: 'Se déclenche quand un nouveau membre rejoint le serveur',
+            parameters: [],
+            triggers: ['member_join']
+          },
+          {
+            id: 'on_reaction_added',
+            name: 'Réaction ajoutée',
+            description: 'Se déclenche quand une réaction est ajoutée à un message',
+            parameters: [
+              {
+                name: 'channelId',
+                type: 'string',
+                required: true,
+                description: 'ID du channel Discord à surveiller',
+                placeholder: '123456789012345678'
+              },
+              {
+                name: 'emoji',
+                type: 'string',
+                required: false,
+                description: 'Emoji spécifique à surveiller (optionnel)',
+                placeholder: '👍'
+              }
+            ],
+            triggers: ['reaction_added']
+          }
+        ],
+        reactions: [
+          {
+            id: 'send_message',
+            name: 'Envoyer un message',
+            description: 'Envoie un message dans un channel Discord',
+            parameters: [
+              {
+                name: 'channelId',
+                type: 'string',
+                required: true,
+                description: 'ID du channel Discord où envoyer le message',
+                placeholder: '123456789012345678'
+              },
+              {
+                name: 'content',
+                type: 'string',
+                required: true,
+                description: 'Le message à envoyer',
+                placeholder: 'Hello from AREA!'
+              }
+            ],
+            requiredData: []
+          },
+          {
+            id: 'add_role',
+            name: 'Ajouter un rôle',
+            description: 'Ajoute un rôle à un utilisateur',
+            parameters: [
+              {
+                name: 'guildId',
+                type: 'string',
+                required: true,
+                description: 'ID du serveur Discord',
+                placeholder: '123456789012345678'
+              },
+              {
+                name: 'userId',
+                type: 'string',
+                required: true,
+                description: 'ID de l\'utilisateur Discord',
+                placeholder: '123456789012345678'
+              },
+              {
+                name: 'roleId',
+                type: 'string',
+                required: true,
+                description: 'ID du rôle à ajouter',
+                placeholder: '123456789012345678'
+              }
+            ],
+            requiredData: []
+          },
+          {
+            id: 'kick_member',
+            name: 'Expulser un membre',
+            description: 'Expulse un membre du serveur Discord',
+            parameters: [
+              {
+                name: 'guildId',
+                type: 'string',
+                required: true,
+                description: 'ID du serveur Discord',
+                placeholder: '123456789012345678'
+              },
+              {
+                name: 'userId',
+                type: 'string',
+                required: true,
+                description: 'ID de l\'utilisateur à expulser',
+                placeholder: '123456789012345678'
+              },
+              {
+                name: 'reason',
+                type: 'string',
+                required: false,
+                description: 'Raison de l\'expulsion (optionnel)',
+                placeholder: 'Violation des règles'
+              }
+            ],
+            requiredData: []
+          }
+        ]
       }
     ]
   }

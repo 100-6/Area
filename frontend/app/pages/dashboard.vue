@@ -104,6 +104,7 @@
               @toggle="handleToggleArea"
               @delete="handleDeleteArea"
               @configure="handleConfigureArea"
+              @rename="handleRenameArea"
             />
 
             <!-- Bouton d'ajout en bas -->
@@ -126,6 +127,68 @@
       </UContainer>
     </section>
 
+    <!-- Delete Confirmation Modal -->
+    <UModal
+      v-model:open="showDeleteModal"
+      :prevent-close="false"
+      :ui="{
+        content: 'fixed bg-white divide-y divide-gray-200 flex flex-col focus:outline-none border-0 ring-0 shadow-xl',
+        overlay: 'fixed inset-0 bg-gray-900/50',
+        header: 'flex items-center gap-1.5 p-4 sm:px-6 min-h-16 bg-white',
+        body: 'flex-1 overflow-y-auto p-4 sm:p-6 bg-white',
+        footer: 'flex items-center gap-1.5 p-4 sm:px-6 bg-white'
+      }"
+    >
+      <template #header>
+        <div class="flex items-center gap-3">
+          <div class="delete-icon">
+            <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5" style="color: #DC2626;" />
+          </div>
+          <h3 style="color: var(--text-primary); font-size: 1.25rem; font-weight: 600; margin: 0;">
+            Supprimer l'automatisation
+          </h3>
+        </div>
+      </template>
+
+      <template #body>
+        <div class="space-y-4">
+          <p style="color: var(--text-primary); font-size: 1rem;">
+            Êtes-vous sûr de vouloir supprimer cette automatisation ?
+          </p>
+          <div v-if="areaToDelete" class="delete-area-info">
+            <div class="area-info-content">
+              <UIcon name="i-heroicons-cog-6-tooth" class="w-5 h-5" style="color: var(--color-primary);" />
+              <div>
+                <p class="area-name">{{ areaToDelete.name }}</p>
+                <p class="area-desc">{{ areaToDelete.description || 'Aucune description' }}</p>
+              </div>
+            </div>
+          </div>
+          <p style="color: var(--text-secondary); font-size: 0.875rem;">
+            Cette action est irréversible. Toutes les données associées seront définitivement supprimées.
+          </p>
+        </div>
+      </template>
+
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <UButton
+            variant="outline"
+            @click="cancelDelete"
+            style="background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border-color);"
+          >
+            Annuler
+          </UButton>
+          <UButton
+            @click="confirmDelete"
+            style="background: #DC2626; color: white;"
+          >
+            <UIcon name="i-heroicons-trash" class="w-4 h-4 mr-2" />
+            Supprimer
+          </UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
 
@@ -137,7 +200,6 @@ definePageMeta({
   layout: 'default'
 })
 
-// Dashboard composable with real backend integration
 const {
   areas,
   stats,
@@ -147,10 +209,10 @@ const {
   initialize,
   toggleArea,
   deleteArea,
+  renameArea,
   refresh
 } = useDashboard()
 
-// Area management actions
 const handleToggleArea = async (areaId: string, isActive: boolean) => {
   try {
     await toggleArea(areaId, isActive)
@@ -159,14 +221,32 @@ const handleToggleArea = async (areaId: string, isActive: boolean) => {
   }
 }
 
+const showDeleteModal = ref(false)
+const areaToDelete = ref<AreaData | null>(null)
+
 const handleDeleteArea = async (areaId: string) => {
-  if (confirm('Êtes-vous sûr de vouloir supprimer cette automatisation ?')) {
+  const area = areas.value.find(a => a.id === areaId)
+  if (area) {
+    areaToDelete.value = area
+    showDeleteModal.value = true
+  }
+}
+
+const confirmDelete = async () => {
+  if (areaToDelete.value) {
     try {
-      await deleteArea(areaId)
+      await deleteArea(areaToDelete.value.id)
+      showDeleteModal.value = false
+      areaToDelete.value = null
     } catch (err) {
       console.error('Failed to delete area:', err)
     }
   }
+}
+
+const cancelDelete = () => {
+  showDeleteModal.value = false
+  areaToDelete.value = null
 }
 
 const handleConfigureArea = (areaId: string) => {
@@ -174,7 +254,14 @@ const handleConfigureArea = (areaId: string) => {
   navigateTo(`/workflow/${areaId}/edit`)
 }
 
-// Initialize dashboard on client side
+const handleRenameArea = async (areaId: string, newName: string) => {
+  try {
+    await renameArea(areaId, newName)
+  } catch (err) {
+    console.error('Failed to rename area:', err)
+  }
+}
+
 onMounted(async () => {
   await initialize()
 })
@@ -254,6 +341,43 @@ useHead({
 }
 
 .add-bar-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.delete-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: rgba(220, 38, 38, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.delete-area-info {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.area-info-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.area-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem 0;
+}
+
+.area-desc {
   font-size: 0.875rem;
   color: var(--text-secondary);
   margin: 0;

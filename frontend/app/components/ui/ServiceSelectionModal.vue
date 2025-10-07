@@ -119,12 +119,10 @@
 <script setup lang="ts">
 import type { Service } from '~/types'
 
-// Props
 interface Props {
   open?: boolean
 }
 
-// Emits
 interface Emits {
   (e: 'update:open', value: boolean): void
   (e: 'service-selected', service: Service): void
@@ -136,7 +134,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-// État local
 const isOpen = computed({
   get: () => props.open,
   set: (value) => emit('update:open', value)
@@ -156,21 +153,16 @@ const categories = [
   { value: 'other', label: 'Autres' }
 ]
 
-// Utiliser les services du composable
 const { getAvailableServices } = useServiceManagement()
 const availableServices: Service[] = getAvailableServices()
 
-// Old hardcoded services removed - now using composable
-// Services filtrés
 const filteredServices = computed(() => {
   let services = availableServices
 
-  // Filtrer par catégorie
   if (selectedCategory.value !== 'all') {
     services = services.filter(service => service.category === selectedCategory.value)
   }
 
-  // Filtrer par terme de recherche
   if (searchTerm.value) {
     const term = searchTerm.value.toLowerCase()
     services = services.filter(service =>
@@ -191,7 +183,6 @@ const selectService = (service: Service) => {
 
 const closeModal = () => {
   isOpen.value = false
-  // Reset search when closing
   searchTerm.value = ''
   selectedCategory.value = 'all'
 }

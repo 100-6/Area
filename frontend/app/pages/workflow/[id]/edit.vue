@@ -280,19 +280,16 @@ definePageMeta({
   layout: 'default'
 })
 
-// Get route params
 const route = useRoute()
 const areaId = ref(route.params.id as string)
 
 console.log('Edit page - route.params.id:', route.params.id, typeof route.params.id)
 console.log('Edit page - areaId:', areaId.value, typeof areaId.value)
 
-// Loading and error state
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const areaData = ref<AreaData | null>(null)
 
-// Canvas management (same structure as create.vue)
 const {
   canvasContainer,
   canvas,
@@ -309,7 +306,6 @@ const {
   onWheel
 } = useCanvasManagement()
 
-// Workflow management
 const {
   workflowBlocks,
   connections,
@@ -327,7 +323,6 @@ const {
   loadWorkflow
 } = useWorkflowManagement(canvas, zoom)
 
-// Service management
 const {
   showServiceModal,
   showConfigModal: _showConfigModal,
@@ -343,7 +338,6 @@ const {
   closeConfigModal
 } = useServiceManagement()
 
-// Computed local pour gérer le modal de configuration
 const showConfigModal = computed({
   get: () => _showConfigModal.value,
   set: (value) => {
@@ -353,16 +347,13 @@ const showConfigModal = computed({
   }
 })
 
-// Modals
 const showSaveModal = ref(false)
 const workflowName = ref('')
 const workflowDescription = ref('')
 const nameError = ref('')
 
-// Dashboard composable for area data
 const { getAreaById } = useDashboard()
 
-// API function to get area by ID
 const getAreaByIdFromApi = async (id: string): Promise<AreaData> => {
   const authToken = useCookie('auth-token')
   if (!authToken.value) {
@@ -386,7 +377,6 @@ const getAreaByIdFromApi = async (id: string): Promise<AreaData> => {
   }
 }
 
-// Load existing workflow data
 const loadExistingWorkflow = async () => {
   try {
     isLoading.value = true
@@ -394,23 +384,18 @@ const loadExistingWorkflow = async () => {
 
     console.log('Loading workflow for areaId:', areaId.value)
 
-    // Load area data from API
     areaData.value = await getAreaByIdFromApi(areaId.value)
     console.log('Area data loaded:', areaData.value)
 
-    // Load workflow nodes and connections from backend
     await loadWorkflow(areaId.value)
 
-    // Initialize form fields with existing data
     workflowName.value = areaData.value.name || ''
     workflowDescription.value = areaData.value.description || ''
 
-    // Debug block positions and center view if needed
     nextTick(() => {
       if (workflowBlocks.value.length > 0) {
         console.log('Loaded blocks positions:', workflowBlocks.value.map(b => ({ id: b.id, position: b.position, service: b.service.name })))
 
-        // Calculate center of loaded blocks
         const avgX = workflowBlocks.value.reduce((sum, block) => sum + block.position.x, 0) / workflowBlocks.value.length
         const avgY = workflowBlocks.value.reduce((sum, block) => sum + block.position.y, 0) / workflowBlocks.value.length
 
@@ -418,11 +403,10 @@ const loadExistingWorkflow = async () => {
         console.log('Current pan:', pan.value)
         console.log('Current zoom:', zoom.value)
 
-        // Center the view on loaded blocks if they're far from origin
         if (Math.abs(avgX) > 1000 || Math.abs(avgY) > 1000) {
           console.log('Centering view on loaded blocks...')
           pan.value = {
-            x: -avgX + 400, // Offset to center in viewport
+            x: -avgX + 400,
             y: -avgY + 300
           }
           console.log('New pan:', pan.value)
@@ -440,15 +424,8 @@ const loadExistingWorkflow = async () => {
   }
 }
 
-// Calculate position where new block should be added (same as add button)
 const getNewBlockPosition = () => {
   if (workflowBlocks.value.length === 0) {
-    // For first block, calculate world position that will render at center of viewport
-    // Button renders at: Math.abs(pan.value.x) + 300 pixels from left
-    // Block renders at: block.position.x * zoom.value + pan.value.x pixels from left
-    // So: block.position.x * zoom.value + pan.value.x = Math.abs(pan.value.x) + 300
-    // Therefore: block.position.x = (Math.abs(pan.value.x) + 300 - pan.value.x) / zoom.value
-
     const targetScreenX = Math.abs(pan.value.x) + 300
     const targetScreenY = Math.abs(pan.value.y) + 200
 
@@ -464,7 +441,6 @@ const getNewBlockPosition = () => {
 
     return { x: worldX, y: worldY }
   } else {
-    // For subsequent blocks, position relative to last block
     const lastBlock = workflowBlocks.value[workflowBlocks.value.length - 1]
     return {
       x: lastBlock.position.x + 350,
@@ -473,7 +449,6 @@ const getNewBlockPosition = () => {
   }
 }
 
-// Handle service selection - now opens configuration modal
 const handleServiceSelected = (service: Service) => {
   const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
   const position = getNewBlockPosition()
@@ -484,12 +459,10 @@ const handleServiceSelected = (service: Service) => {
   })
 }
 
-// Handle configuration confirmation
 const handleConfigurationConfirmed = (config: ServiceConfiguration) => {
   onConfigurationConfirmed(config)
 }
 
-// Handle block configuration editing
 const handleBlockConfigure = async (blockId: string) => {
   try {
     console.log('handleBlockConfigure called with blockId:', blockId)
@@ -508,19 +481,15 @@ const handleBlockConfigure = async (blockId: string) => {
     }
   } catch (error) {
     console.error('Failed to configure block:', error)
-    // Optionnel: Afficher un message d'erreur à l'utilisateur
   }
 }
 
-// Modal functions
 const closeSaveModal = () => {
   showSaveModal.value = false
   nameError.value = ''
 }
 
-// Handle save workflow
 const handleSaveWorkflow = async () => {
-  // Validation
   if (!workflowName.value.trim()) {
     nameError.value = 'Le nom est requis'
     return
@@ -529,21 +498,17 @@ const handleSaveWorkflow = async () => {
   nameError.value = ''
 
   try {
-    // Update area data with form values
     const updatedAreaData = {
       name: workflowName.value.trim(),
       description: workflowDescription.value.trim() || undefined
     }
 
-    // Save workflow with updated area data and existing area ID
     await saveWorkflow(updatedAreaData, areaId.value)
 
     showSaveModal.value = false
 
-    // Show success message
     console.log('Workflow updated successfully!')
 
-    // Refresh area data
     areaData.value = { ...areaData.value, ...updatedAreaData }
 
   } catch (err: any) {
@@ -551,7 +516,6 @@ const handleSaveWorkflow = async () => {
   }
 }
 
-// Watch for route changes to handle navigation
 watch(() => route.params.id, (newId) => {
   console.log('Route params changed - newId:', newId, typeof newId)
   if (newId && typeof newId === 'string' && newId !== '[object PointerEvent]') {
@@ -561,7 +525,6 @@ watch(() => route.params.id, (newId) => {
   }
 }, { immediate: true })
 
-// Load on mount as fallback
 onMounted(() => {
   console.log('Edit page mounted - areaId:', areaId.value)
   if (!areaId.value || areaId.value === '[object PointerEvent]') {

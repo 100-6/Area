@@ -489,12 +489,15 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
 
       workflowBlocks.value = mappedBlocks
 
-      // Map backend connections to frontend connections
       connections.value = workflow.connections.map(mapBackendConnectionToFrontend)
 
       currentAreaId.value = areaId
 
       console.log(`[WorkflowManagement] Loaded ${workflowBlocks.value.length} blocks and ${connections.value.length} connections`)
+
+      nextTick(() => {
+        connections.value = [...connections.value]
+      })
 
       return workflow
     } catch (err: any) {

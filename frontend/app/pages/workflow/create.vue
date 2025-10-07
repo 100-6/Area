@@ -306,7 +306,6 @@ definePageMeta({
   layout: 'default'
 })
 
-// Composables
 const {
   canvasContainer,
   canvas,
@@ -356,7 +355,6 @@ const {
   handlePreSelectedService
 } = useServiceManagement()
 
-// Computed local pour gérer le modal de configuration
 const showConfigModal = computed({
   get: () => _showConfigModal.value,
   set: (value) => {
@@ -368,14 +366,11 @@ const showConfigModal = computed({
 
 const route = useRoute()
 
-// Save modal state
 const showSaveModal = ref(false)
 const workflowName = ref('')
 const workflowDescription = ref('')
 const nameError = ref('')
 
-// Service selection handler - let the composable handle positioning
-// Handle service selection - now opens configuration modal
 const handleServiceSelected = (service: Service) => {
   const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
 
@@ -385,12 +380,10 @@ const handleServiceSelected = (service: Service) => {
   })
 }
 
-// Handle configuration confirmation
 const handleConfigurationConfirmed = (config: ServiceConfiguration) => {
   onConfigurationConfirmed(config)
 }
 
-// Handle block configuration editing
 const handleBlockConfigure = async (blockId: string) => {
   try {
     const configInfo = await configureBlock(blockId)
@@ -406,11 +399,9 @@ const handleBlockConfigure = async (blockId: string) => {
     }
   } catch (error) {
     console.error('Failed to configure block:', error)
-    // Optionnel: Afficher un message d'erreur à l'utilisateur
   }
 }
 
-// Save modal functions
 const openSaveModal = () => {
   if (workflowBlocks.value.length === 0) {
     return
@@ -424,17 +415,13 @@ const closeSaveModal = () => {
   nameError.value = ''
 }
 
-// Save workflow function
 const handleSaveWorkflow = async () => {
   try {
     nameError.value = ''
 
-    // Check if we're editing an existing workflow
     if (currentAreaId.value) {
-      // Save existing workflow
       await saveWorkflowData()
     } else {
-      // Validate new workflow name
       if (!workflowName.value.trim()) {
         nameError.value = 'Le nom est obligatoire'
         return
@@ -448,22 +435,18 @@ const handleSaveWorkflow = async () => {
       await saveWorkflowData(areaData)
     }
 
-    // Close modal and redirect to dashboard
     showSaveModal.value = false
     await navigateTo('/dashboard')
 
   } catch (error) {
     console.error('Failed to save workflow:', error)
-    // Error is already handled in saveError reactive ref
   }
 }
 
-// Actions
 const goBack = () => {
   navigateTo('/dashboard')
 }
 
-// Keyboard shortcuts
 useKeyboardShortcuts({
   onEscape: () => {
     if (showSaveModal.value) {
@@ -480,24 +463,17 @@ useKeyboardShortcuts({
   onSave: openSaveModal
 })
 
-// Lifecycle
 onMounted(async () => {
-  // Check if we're editing an existing workflow
   const areaId = route.query.areaId as string
 
   if (areaId) {
     try {
-      // Load existing workflow
       await loadWorkflow(areaId)
-      // Pre-populate form fields if we have area data
-      // TODO: Get area name/description from loaded workflow
     } catch (error) {
       console.error('Failed to load workflow:', error)
-      // Redirect to create mode if loading fails
       await navigateTo('/workflow/create')
     }
   } else {
-    // Handle pre-selected service from URL for new workflows
     handlePreSelectedService(route, (service) => {
       const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
       selectServiceWithConfiguration(service, blockType, (config) => {

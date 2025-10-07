@@ -43,7 +43,14 @@
           :label="getStatusLabel(area)"
         />
 
-        <UDropdown :items="getAreaActions(area)">
+        <UDropdownMenu
+          :items="getAreaActions(area)"
+          :ui="{
+            content: 'bg-white shadow-xl border border-gray-200 rounded-lg',
+            item: 'text-gray-700 hover:bg-gray-50',
+            itemLeadingIcon: 'text-gray-500'
+          }"
+        >
           <UButton
             variant="ghost"
             size="sm"
@@ -51,13 +58,78 @@
             class="bar-action-menu"
             @click.stop
           />
-        </UDropdown>
+        </UDropdownMenu>
       </div>
     </div>
 
     <!-- Hover glow effect -->
     <div class="workflow-bar-glow"></div>
   </div>
+
+  <!-- Rename Modal -->
+  <UModal
+    v-model:open="showRenameModal"
+    :prevent-close="false"
+    :ui="{
+      content: 'fixed bg-white divide-y divide-gray-200 flex flex-col focus:outline-none border-0 ring-0 shadow-xl',
+      overlay: 'fixed inset-0 bg-gray-900/50',
+      header: 'flex items-center gap-1.5 p-4 sm:px-6 min-h-16 bg-white',
+      body: 'flex-1 overflow-y-auto p-4 sm:p-6 bg-white',
+      footer: 'flex items-center gap-1.5 p-4 sm:px-6 bg-white'
+    }"
+  >
+    <template #header>
+      <div class="flex items-center gap-3">
+        <div class="rename-icon">
+          <UIcon name="i-heroicons-pencil" class="w-5 h-5" style="color: var(--color-primary);" />
+        </div>
+        <h3 style="color: var(--text-primary); font-size: 1.25rem; font-weight: 600; margin: 0;">
+          Renommer l'automatisation
+        </h3>
+      </div>
+    </template>
+
+    <template #body>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-2" style="color: var(--text-primary);">
+            Nouveau nom
+          </label>
+          <UInput
+            v-model="newAreaName"
+            placeholder="Entrez le nouveau nom..."
+            size="lg"
+            maxlength="100"
+            style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);"
+            @keyup.enter="confirmRename"
+            @keyup.escape="cancelRename"
+          />
+        </div>
+        <p class="text-sm" style="color: var(--text-secondary);">
+          Le nom de l'automatisation sera mis à jour immédiatement.
+        </p>
+      </div>
+    </template>
+
+    <template #footer>
+      <div class="flex justify-end gap-3">
+        <UButton
+          variant="outline"
+          @click="cancelRename"
+          style="background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border-color);"
+        >
+          Annuler
+        </UButton>
+        <UButton
+          @click="confirmRename"
+          :disabled="!newAreaName.trim() || newAreaName.trim() === area.name"
+          style="background: var(--color-tertiary); color: var(--text-white);"
+        >
+          Renommer
+        </UButton>
+      </div>
+    </template>
+  </UModal>
 </template>
 
 <script setup lang="ts">
@@ -71,6 +143,7 @@ interface Emits {
   toggle: [areaId: string, isActive: boolean]
   delete: [areaId: string]
   configure: [areaId: string]
+  rename: [areaId: string, newName: string]
 }
 
 const props = defineProps<Props>()
@@ -126,6 +199,37 @@ const getStatusLabel = (area: AreaData) => {
   }
 }
 
+// State for rename modal
+const showRenameModal = ref(false)
+const newAreaName = ref('')
+
+/**
+ * Handle rename action
+ */
+const handleRename = () => {
+  newAreaName.value = props.area.name
+  showRenameModal.value = true
+}
+
+/**
+ * Confirm rename action
+ */
+const confirmRename = () => {
+  if (newAreaName.value.trim() && newAreaName.value.trim() !== props.area.name) {
+    emit('rename', props.area.id, newAreaName.value.trim())
+  }
+  showRenameModal.value = false
+  newAreaName.value = ''
+}
+
+/**
+ * Cancel rename action
+ */
+const cancelRename = () => {
+  showRenameModal.value = false
+  newAreaName.value = ''
+}
+
 /**
  * Get dropdown actions for area
  */
@@ -134,26 +238,27 @@ const getAreaActions = (area: AreaData) => [
     {
       label: area.is_active ? 'Mettre en pause' : 'Activer',
       icon: area.is_active ? 'i-heroicons-pause' : 'i-heroicons-play',
-      click: () => emit('toggle', area.id, !area.is_active)
+      onSelect: () => emit('toggle', area.id, !area.is_active)
     }
   ],
   [
     {
       label: 'Configurer',
       icon: 'i-heroicons-cog-6-tooth',
-      click: () => emit('configure', area.id)
+      onSelect: () => emit('configure', area.id)
     },
     {
-      label: 'Historique',
-      icon: 'i-heroicons-clock',
-      click: () => navigateTo(`/workflow/${area.id}/history`)
+      label: 'Renommer',
+      icon: 'i-heroicons-pencil',
+      onSelect: () => handleRename()
     }
   ],
   [
     {
       label: 'Supprimer',
       icon: 'i-heroicons-trash',
-      click: () => emit('delete', area.id)
+      color: 'error',
+      onSelect: () => emit('delete', area.id)
     }
   ]
 ]
@@ -318,6 +423,17 @@ const getAreaActions = (area: AreaData) => [
 
 .glass-bar:hover .workflow-bar-glow {
   opacity: 1;
+}
+
+.rename-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: rgba(167, 240, 186, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 /* Mobile responsive */

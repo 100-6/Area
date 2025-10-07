@@ -119,6 +119,38 @@ export const useDashboard = () => {
   }
 
   /**
+   * Rename an area
+   */
+  const renameArea = async (areaId: string, newName: string) => {
+    try {
+      const authToken = useCookie('auth-token')
+
+      const response = await $fetch(`/api/areas/${areaId}`, {
+        method: 'PATCH',
+        baseURL: backendUrl,
+        headers: {
+          'Authorization': `Bearer ${authToken.value}`,
+          'Content-Type': 'application/json'
+        },
+        body: { name: newName }
+      })
+
+      if (response.success) {
+        const area = areas.value.find(a => a.id === areaId)
+        if (area) {
+          area.name = newName
+          area.updated_at = new Date()
+        }
+      } else {
+        throw new Error(response.message || 'Failed to rename area')
+      }
+    } catch (err: any) {
+      error.value = err.message || 'Erreur lors du renommage'
+      throw err
+    }
+  }
+
+  /**
    * Create a new area
    */
   const createArea = async (data: { name: string; description?: string }) => {
@@ -293,6 +325,7 @@ export const useDashboard = () => {
     fetchAreas,
     toggleArea,
     deleteArea,
+    renameArea,
     createArea,
     refresh,
     initialize,
