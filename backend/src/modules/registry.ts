@@ -1,6 +1,7 @@
 import { BaseModule } from './_base/BaseModule';
 import { timerModule } from './timer/service';
 import { consoleModule } from './console/service';
+import { discordModule } from './discord/service';
 import 'colors';
 
 /**
@@ -37,6 +38,7 @@ class ModuleRegistry {
             // Add here new modules to register
             await this.registerModule(timerModule);
             await this.registerModule(consoleModule);
+            await this.registerModule(discordModule);
             this.initialized = true;
             console.log(`[Registry] Successfully initialized ${this.modules.size} module(s)`.green.bold);
         } catch (error) {
