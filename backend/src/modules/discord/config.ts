@@ -220,6 +220,47 @@ export default {
                     }
                 }
             }
+        },
+        {
+            name: 'send_webhook_message',
+            displayName: 'Send Message via Webhook',
+            description: 'Send a message to a Discord channel using a webhook URL',
+            configSchema: {
+                type: 'object',
+                required: ['webhookUrl', 'content'],
+                properties: {
+                    webhookUrl: {
+                        type: 'string',
+                        title: 'Webhook URL',
+                        description: 'The Discord webhook URL to send the message to',
+                        format: 'uri',
+                        example: 'https://discord.com/api/webhooks/1234567890123456789/abcdefghijklmnopqrstuvwxyz'
+                    },
+                    content: {
+                        type: 'string',
+                        title: 'Message Content',
+                        description: 'The text message to send (supports variables like {{author.username}})',
+                        minLength: 1,
+                        maxLength: 2000,
+                        example: 'Hello from AREA via webhook!'
+                    },
+                    username: {
+                        type: 'string',
+                        title: 'Username (optional)',
+                        description: 'Override the default webhook username',
+                        minLength: 1,
+                        maxLength: 80,
+                        example: 'AREA Bot'
+                    },
+                    avatarUrl: {
+                        type: 'string',
+                        title: 'Avatar URL (optional)',
+                        description: 'Override the default webhook avatar',
+                        format: 'uri',
+                        example: 'https://example.com/my-bot-avatar.png'
+                    }
+                }
+            }
         }
     ]
 };
