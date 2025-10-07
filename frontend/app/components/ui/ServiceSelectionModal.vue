@@ -1,6 +1,8 @@
 <template>
   <UModal
     v-model:open="isOpen"
+    :prevent-close="false"
+    @close="closeModal"
     :ui="{
       content: 'fixed bg-white divide-y divide-gray-200 flex flex-col focus:outline-none border-0 ring-0 shadow-xl',
       overlay: 'fixed inset-0 bg-gray-900/50',
@@ -117,12 +119,10 @@
 <script setup lang="ts">
 import type { Service } from '~/types'
 
-// Props
 interface Props {
   open?: boolean
 }
 
-// Emits
 interface Emits {
   (e: 'update:open', value: boolean): void
   (e: 'service-selected', service: Service): void
@@ -134,7 +134,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-// État local
 const isOpen = computed({
   get: () => props.open,
   set: (value) => emit('update:open', value)
@@ -148,156 +147,22 @@ const categories = [
   { value: 'all', label: 'Tous' },
   { value: 'communication', label: 'Communication' },
   { value: 'productivity', label: 'Productivité' },
-  { value: 'social', label: 'Réseaux sociaux' },
-  { value: 'storage', label: 'Stockage' },
+  { value: 'automation', label: 'Automation' },
   { value: 'development', label: 'Développement' },
+  { value: 'storage', label: 'Stockage' },
   { value: 'other', label: 'Autres' }
 ]
 
-// Services disponibles (fake data pour l'exemple)
-const availableServices: Service[] = [
-  {
-    id: 'gmail',
-    name: 'Gmail',
-    slug: 'gmail',
-    description: 'Gérez vos emails automatiquement',
-    icon: 'i-logos-google-gmail',
-    color: '#EA4335',
-    isActive: true,
-    category: 'communication',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'slack',
-    name: 'Slack',
-    slug: 'slack',
-    description: 'Notifications et messages d\'équipe',
-    icon: 'i-logos-slack-icon',
-    color: '#4A154B',
-    isActive: true,
-    category: 'communication',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'discord',
-    name: 'Discord',
-    slug: 'discord',
-    description: 'Messages et notifications Discord',
-    icon: 'i-logos-discord-icon',
-    color: '#5865F2',
-    isActive: true,
-    category: 'communication',
-    authType: 'webhook',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'github',
-    name: 'GitHub',
-    slug: 'github',
-    description: 'Automatisez vos workflows Git',
-    icon: 'i-logos-github-icon',
-    color: '#181717',
-    isActive: true,
-    category: 'development',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'google-drive',
-    name: 'Google Drive',
-    slug: 'google-drive',
-    description: 'Gestion de fichiers cloud',
-    icon: 'i-logos-google-drive',
-    color: '#4285F4',
-    isActive: true,
-    category: 'storage',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'dropbox',
-    name: 'Dropbox',
-    slug: 'dropbox',
-    description: 'Synchronisation de fichiers',
-    icon: 'i-logos-dropbox',
-    color: '#0061FF',
-    isActive: false,
-    category: 'storage',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'spotify',
-    name: 'Spotify',
-    slug: 'spotify',
-    description: 'Automatisations musicales',
-    icon: 'i-logos-spotify-icon',
-    color: '#1DB954',
-    isActive: true,
-    category: 'social',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'twitter',
-    name: 'Twitter',
-    slug: 'twitter',
-    description: 'Publications automatiques',
-    icon: 'i-logos-twitter',
-    color: '#1DA1F2',
-    isActive: false,
-    category: 'social',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'trello',
-    name: 'Trello',
-    slug: 'trello',
-    description: 'Gestion de projets et tâches',
-    icon: 'i-logos-trello',
-    color: '#0079BF',
-    isActive: true,
-    category: 'productivity',
-    authType: 'oauth',
-    actions: [],
-    reactions: []
-  },
-  {
-    id: 'notion',
-    name: 'Notion',
-    slug: 'notion',
-    description: 'Base de données et documentation',
-    icon: 'i-logos-notion-icon',
-    color: '#000000',
-    isActive: true,
-    category: 'productivity',
-    authType: 'api_key',
-    actions: [],
-    reactions: []
-  }
-]
+const { getAvailableServices } = useServiceManagement()
+const availableServices: Service[] = getAvailableServices()
 
-// Services filtrés
 const filteredServices = computed(() => {
   let services = availableServices
 
-  // Filtrer par catégorie
   if (selectedCategory.value !== 'all') {
     services = services.filter(service => service.category === selectedCategory.value)
   }
 
-  // Filtrer par terme de recherche
   if (searchTerm.value) {
     const term = searchTerm.value.toLowerCase()
     services = services.filter(service =>
@@ -314,12 +179,10 @@ const selectService = (service: Service) => {
   if (!service.isActive) return
 
   emit('service-selected', service)
-  closeModal()
 }
 
 const closeModal = () => {
   isOpen.value = false
-  // Reset search when closing
   searchTerm.value = ''
   selectedCategory.value = 'all'
 }

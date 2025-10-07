@@ -89,3 +89,85 @@ export interface UpdateWorkflowData extends Partial<CreateWorkflowData> {
   isActive?: boolean
   status?: Workflow['status']
 }
+
+// Backend AREA integration types
+export interface AreaData {
+  id: string
+  user_id: string
+  name: string
+  description?: string
+  is_active: boolean
+  execution_count: number
+  last_triggered_at?: Date | string
+  last_execution_status?: 'success' | 'failed' | 'pending'
+  created_at: Date | string
+  updated_at: Date | string
+}
+
+export interface AreaStats {
+  totalAreas: number
+  activeAreas: number
+  totalExecutions: number
+  successRate: number
+  recentActivity: AreaData[]
+}
+
+export interface CreateAreaData {
+  name: string
+  description?: string
+}
+
+export interface UpdateAreaData extends Partial<CreateAreaData> {
+  is_active?: boolean
+}
+
+// Backend workflow integration types
+export interface BackendWorkflowNode {
+  id: string
+  areaId: string
+  nodeType: 'trigger' | 'action' | 'condition' | 'delay' | 'filter'
+  serviceId?: string
+  serviceName?: string  // Nom du service résolu par le backend
+  actionId?: string
+  reactionId?: string
+  connectionId?: string
+  config: Record<string, any>
+  positionX: number
+  positionY: number
+  label?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface BackendWorkflowConnection {
+  id: string
+  areaId: string
+  sourceNodeId: string
+  targetNodeId: string
+  condition?: Record<string, any>
+  createdAt: string
+}
+
+export interface BackendWorkflow {
+  area: AreaData
+  nodes: BackendWorkflowNode[]
+  connections: BackendWorkflowConnection[]
+}
+
+export interface CreateWorkflowNodeDto {
+  nodeType: 'trigger' | 'action' | 'condition' | 'delay' | 'filter'
+  serviceId?: string
+  actionId?: string
+  reactionId?: string
+  connectionId?: string
+  config: Record<string, any>
+  positionX: number
+  positionY: number
+  label?: string
+}
+
+export interface CreateWorkflowConnectionDto {
+  sourceNodeId: string
+  targetNodeId: string
+  condition?: Record<string, any>
+}
