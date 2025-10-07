@@ -190,6 +190,11 @@ export const errorHandler = (error: CustomError, req: Request, res: Response, ne
             message = 'Connexion invalide entre les nœuds';
             errorCode = 'INVALID_CONNECTION';
             break;
+        case 'TRIGGER_ALREADY_EXISTS':
+            statusCode = 400;
+            message = 'Un nœud de type trigger existe déjà dans cette AREA';
+            errorCode = 'TRIGGER_ALREADY_EXISTS';
+            break;
     }
     console.error('Error details:'.cyan,
         { url: req.url, method: req.method, ip: req.ip, userAgent: req.get('User-Agent'), statusCode, errorCode, timestamp: new Date().toISOString() });
