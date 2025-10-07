@@ -1,4 +1,4 @@
-import type { Service, ServiceConfiguration } from '~/types'
+              import type { Service, ServiceConfiguration } from '~/types'
 
 /**
  * Service selection and authentication management
@@ -315,6 +315,42 @@ export const useServiceManagement = () => {
                 required: false,
                 description: 'Raison de l\'expulsion (optionnel)',
                 placeholder: 'Violation des règles'
+              }
+            ],
+            requiredData: []
+          },
+          {
+            id: 'send_webhook_message',
+            name: 'Envoyer un message via webhook',
+            description: 'Envoie un message dans un channel Discord via webhook (sans bot)',
+            parameters: [
+              {
+                name: 'webhookUrl',
+                type: 'string',
+                required: true,
+                description: 'URL du webhook Discord',
+                placeholder: 'https://discord.com/api/webhooks/...'
+              },
+              {
+                name: 'content',
+                type: 'string',
+                required: true,
+                description: 'Le message à envoyer',
+                placeholder: 'Hello from AREA!'
+              },
+              {
+                name: 'username',
+                type: 'string',
+                required: false,
+                description: 'Nom d\'utilisateur personnalisé (optionnel)',
+                placeholder: 'AREA Bot'
+              },
+              {
+                name: 'avatarUrl',
+                type: 'string',
+                required: false,
+                description: 'URL de l\'avatar personnalisé (optionnel)',
+                placeholder: 'https://...'
               }
             ],
             requiredData: []

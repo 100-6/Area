@@ -233,52 +233,12 @@
           <div class="group p-8 rounded-2xl border card-hover"
                style="background: var(--bg-card); border-color: var(--border-color);">
             <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 smooth-hover group-hover:scale-110"
-                 style="background: linear-gradient(135deg, var(--color-tertiary), var(--color-accent));">
-              <UIcon name="i-heroicons-shield-check" class="w-7 h-7 text-white" />
-            </div>
-            <h3 class="text-xl font-bold mb-4" style="color: var(--text-primary);">Sécurité Enterprise</h3>
-            <p style="color: var(--text-secondary);">
-              Chiffrement de bout en bout, conformité RGPD, et authentification à deux facteurs incluse.
-            </p>
-            <div class="mt-6 flex items-center gap-2">
-              <UIcon name="i-heroicons-lock-closed" class="w-4 h-4" style="color: var(--color-secondary);" />
-              <span class="text-sm font-medium" style="color: var(--color-secondary);">Certifié SOC 2</span>
-            </div>
-          </div>
-
-          <div class="group p-8 rounded-2xl border card-hover"
-               style="background: var(--bg-card); border-color: var(--border-color);">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 smooth-hover group-hover:scale-110"
                  style="background: linear-gradient(135deg, var(--color-primary), var(--color-tertiary));">
               <UIcon name="i-heroicons-chart-bar-square" class="w-7 h-7" style="color: var(--text-white);" />
             </div>
             <h3 class="text-xl font-bold mb-4" style="color: var(--text-primary);">Analytics Avancés</h3>
             <p style="color: var(--text-secondary);">
               Suivez les performances de vos workflows avec des tableaux de bord détaillés.
-            </p>
-          </div>
-
-          <div class="group p-8 rounded-2xl border card-hover"
-               style="background: var(--bg-card); border-color: var(--border-color);">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 smooth-hover group-hover:scale-110"
-                 style="background: linear-gradient(135deg, var(--color-secondary), var(--color-accent));">
-              <UIcon name="i-heroicons-users" class="w-7 h-7 text-white" />
-            </div>
-            <h3 class="text-xl font-bold mb-4" style="color: var(--text-primary);">Collaboration d'équipe</h3>
-            <p style="color: var(--text-secondary);">
-              Partagez et gérez vos automatisations en équipe avec des permissions granulaires.
-            </p>
-          </div>
-
-          <div class="group p-8 rounded-2xl border card-hover"
-               style="background: var(--bg-card); border-color: var(--border-color);">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 smooth-hover group-hover:scale-110"
-                 style="background: linear-gradient(135deg, var(--color-tertiary), var(--color-primary));">
-              <UIcon name="i-heroicons-cpu-chip" class="w-7 h-7 text-white" />
-            </div>
-            <h3 class="text-xl font-bold mb-4" style="color: var(--text-primary);">IA Intégrée</h3>
-            <p style="color: var(--text-secondary);">
-              Laissez l'IA suggérer et optimiser vos workflows pour des performances maximales.
             </p>
           </div>
         </div>
