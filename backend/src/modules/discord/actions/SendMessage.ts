@@ -92,6 +92,15 @@ export class SendMessage extends BaseAction {
                 result = result.replace(/\{\{member\.username\}\}/g, context.triggerData.member.username || '');
                 result = result.replace(/\{\{member\.tag\}\}/g, context.triggerData.member.tag || '');
             }
+            if (context.triggerData.user) {
+                result = result.replace(/\{\{user\.id\}\}/g, context.triggerData.user.id || '');
+                result = result.replace(/\{\{user\.username\}\}/g, context.triggerData.user.username || '');
+                result = result.replace(/\{\{user\.tag\}\}/g, context.triggerData.user.tag || '');
+            }
+            if (context.triggerData.reaction) {
+                result = result.replace(/\{\{reaction\.emoji\}\}/g, context.triggerData.reaction.emoji || '');
+                result = result.replace(/\{\{reaction\.emojiId\}\}/g, context.triggerData.reaction.emojiId || '');
+            }
             if (context.triggerData.message) {
                 result = result.replace(/\{\{message\.content\}\}/g, context.triggerData.message.content || '');
                 result = result.replace(/\{\{message\.id\}\}/g, context.triggerData.message.id || '');
@@ -101,7 +110,6 @@ export class SendMessage extends BaseAction {
                 result = result.replace(/\{\{guild\.id\}\}/g, context.triggerData.guild.id || '');
             }
         }
-
         return result;
     }
 
