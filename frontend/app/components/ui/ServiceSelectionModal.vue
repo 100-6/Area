@@ -1,6 +1,8 @@
 <template>
   <UModal
     v-model:open="isOpen"
+    :prevent-close="false"
+    @close="closeModal"
     :ui="{
       content: 'fixed bg-white divide-y divide-gray-200 flex flex-col focus:outline-none border-0 ring-0 shadow-xl',
       overlay: 'fixed inset-0 bg-gray-900/50',
@@ -185,7 +187,6 @@ const selectService = (service: Service) => {
   if (!service.isActive) return
 
   emit('service-selected', service)
-  closeModal()
 }
 
 const closeModal = () => {

@@ -2,6 +2,7 @@
 export * from './User'
 export * from './api'
 export * from './Service'
+export * from './ServiceConfiguration'
 export * from './Workflow'
 export * from './components'
 export * from './store'

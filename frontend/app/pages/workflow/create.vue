@@ -135,7 +135,7 @@
           :has-output-connection="getBlockConnectionState(block.id).hasOutputConnection"
           @update-position="updateBlockPosition"
           @delete="deleteBlock"
-          @configure="configureBlock"
+          @configure="handleBlockConfigure"
         />
 
         <!-- Connections between blocks -->
@@ -185,7 +185,17 @@
     <!-- Service Selection Modal -->
     <UiServiceSelectionModal
       v-model:open="showServiceModal"
-      @service-selected="onServiceSelected"
+      @service-selected="handleServiceSelected"
+    />
+
+    <!-- Service Configuration Modal -->
+    <UiServiceConfigurationModal
+      v-if="selectedService"
+      v-model:open="showConfigModal"
+      :service="selectedService"
+      :block-type="selectedBlockType"
+      :initial-config="currentConfiguration"
+      @configuration-confirmed="handleConfigurationConfirmed"
     />
 
     <!-- Save Workflow Modal -->
@@ -290,7 +300,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Service } from '~/types'
+import type { Service, ServiceConfiguration } from '~/types'
 
 definePageMeta({
   layout: 'default'
@@ -324,6 +334,7 @@ const {
   updateBlockPosition,
   deleteBlock,
   configureBlock,
+  updateBlockConfiguration,
   getBlockConnectionState,
   getConnectionPath,
   saveWorkflow: saveWorkflowData,
@@ -332,9 +343,28 @@ const {
 
 const {
   showServiceModal,
+  showConfigModal: _showConfigModal,
+  selectedService,
+  selectedBlockType,
+  isEditingConfiguration,
+  currentConfiguration,
   openServiceModal,
-  onServiceSelected: handleServiceSelection
+  selectServiceWithConfiguration,
+  onConfigurationConfirmed,
+  editServiceConfiguration,
+  closeConfigModal,
+  handlePreSelectedService
 } = useServiceManagement()
+
+// Computed local pour gérer le modal de configuration
+const showConfigModal = computed({
+  get: () => _showConfigModal.value,
+  set: (value) => {
+    if (!value) {
+      closeConfigModal()
+    }
+  }
+})
 
 const route = useRoute()
 
@@ -345,9 +375,39 @@ const workflowDescription = ref('')
 const nameError = ref('')
 
 // Service selection handler - let the composable handle positioning
-const onServiceSelected = (service: Service) => {
-  // Don't pass a position - let useWorkflowManagement use its default positioning
-  handleServiceSelection(service, addServiceBlock)
+// Handle service selection - now opens configuration modal
+const handleServiceSelected = (service: Service) => {
+  const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
+
+  selectServiceWithConfiguration(service, blockType, (config) => {
+    console.log('Adding service block with configuration:', config)
+    addServiceBlock(config)
+  })
+}
+
+// Handle configuration confirmation
+const handleConfigurationConfirmed = (config: ServiceConfiguration) => {
+  onConfigurationConfirmed(config)
+}
+
+// Handle block configuration editing
+const handleBlockConfigure = async (blockId: string) => {
+  try {
+    const configInfo = await configureBlock(blockId)
+    if (configInfo) {
+      editServiceConfiguration(
+        configInfo.service,
+        configInfo.blockType,
+        configInfo.currentConfig,
+        (newConfig: ServiceConfiguration) => {
+          updateBlockConfiguration(blockId, newConfig)
+        }
+      )
+    }
+  } catch (error) {
+    console.error('Failed to configure block:', error)
+    // Optionnel: Afficher un message d'erreur à l'utilisateur
+  }
 }
 
 // Save modal functions
@@ -404,8 +464,6 @@ const goBack = () => {
 }
 
 // Keyboard shortcuts
-const { handlePreSelectedService } = useServiceManagement()
-
 useKeyboardShortcuts({
   onEscape: () => {
     if (showSaveModal.value) {
@@ -440,7 +498,12 @@ onMounted(async () => {
     }
   } else {
     // Handle pre-selected service from URL for new workflows
-    handlePreSelectedService(route, addServiceBlock)
+    handlePreSelectedService(route, (service) => {
+      const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
+      selectServiceWithConfiguration(service, blockType, (config) => {
+        addServiceBlock(config)
+      })
+    })
   }
 })
 

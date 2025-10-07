@@ -1,4 +1,4 @@
-import type { Service, CreateAreaData, BackendWorkflowNode, BackendWorkflowConnection } from '~/types'
+import type { Service, CreateAreaData, BackendWorkflowNode, BackendWorkflowConnection, ServiceConfiguration } from '~/types'
 
 export interface WorkflowBlockData {
   id: string
@@ -56,7 +56,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
   })
 
-  const addServiceBlock = (service: Service, position?: { x: number; y: number }) => {
+  const addServiceBlock = (config: ServiceConfiguration, position?: { x: number; y: number }) => {
     let newPosition
     if (position) {
       // Use provided position (from add button location)
@@ -74,30 +74,26 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
 
     const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
 
-    // Auto-configure actionId/reactionId based on service and type
+    // Use configuration from the modal
     let actionId: string | undefined
     let reactionId: string | undefined
-    let config: Record<string, any> = {}
 
-    // Configuration par défaut basée sur le type de bloc et les actions/reactions disponibles
-    if (blockType === 'trigger' && service.actions.length > 0) {
-      actionId = service.actions[0].id
-      config = service.actions[0].defaultConfig || {}
-    } else if (blockType === 'action' && service.reactions.length > 0) {
-      reactionId = service.reactions[0].id
-      config = service.reactions[0].defaultConfig || {}
+    if (blockType === 'trigger' && config.selectedAction) {
+      actionId = config.selectedAction.id
+    } else if (blockType === 'action' && config.selectedReaction) {
+      reactionId = config.selectedReaction.id
     }
 
     const newBlock: WorkflowBlockData = {
       id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      service,
+      service: config.service,
       position: newPosition,
       type: blockType,
-      serviceId: service.id,
+      serviceId: config.service.id,
       actionId,
       reactionId,
-      config,
-      label: service.name
+      config: config.parameters,
+      label: config.service.name
     }
 
     workflowBlocks.value.push(newBlock)
@@ -127,8 +123,136 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     connections.value = connections.value.filter(c => c.from !== blockId && c.to !== blockId)
   }
 
-  const configureBlock = (blockId: string) => {
-    console.log('Configuring block:', blockId)
+  const configureBlock = async (blockId: string, onConfigurationChanged?: (config: ServiceConfiguration) => void) => {
+    const block = workflowBlocks.value.find(b => b.id === blockId)
+    if (!block) {
+      console.warn('Block not found for configuration:', blockId)
+      return null
+    }
+
+    // Rafraîchir les données depuis le backend
+    console.log('configureBlock - currentAreaId:', currentAreaId.value)
+    if (currentAreaId.value) {
+      console.log('Refreshing block data from backend for block:', blockId)
+      try {
+        await refreshBlockFromBackend(blockId)
+      } catch (error) {
+        console.warn('Failed to refresh block from backend:', error)
+        // Continue avec les données actuelles si le rafraîchissement échoue
+      }
+    } else {
+      console.warn('No currentAreaId available, skipping backend refresh. This might be expected for new workflows.')
+    }
+
+    // Récupérer le bloc mis à jour - assurer la réactivité
+    const refreshedBlock = workflowBlocks.value.find(b => b.id === blockId) || block
+
+    console.log('Configuring block after refresh:', blockId, 'Config:', refreshedBlock.config)
+    console.log('Block details:', {
+      serviceId: refreshedBlock.serviceId,
+      actionId: refreshedBlock.actionId,
+      reactionId: refreshedBlock.reactionId,
+      type: refreshedBlock.type,
+      configKeys: Object.keys(refreshedBlock.config || {}),
+      configValues: refreshedBlock.config
+    })
+
+    // Trouver l'action ou réaction correspondante
+    let selectedAction: any = undefined
+    let selectedReaction: any = undefined
+
+    if (refreshedBlock.type === 'trigger' && refreshedBlock.actionId) {
+      selectedAction = refreshedBlock.service.actions.find(a => a.id === refreshedBlock.actionId)
+      console.log('Found selected action:', selectedAction)
+    } else if (refreshedBlock.type === 'action' && refreshedBlock.reactionId) {
+      selectedReaction = refreshedBlock.service.reactions.find(r => r.id === refreshedBlock.reactionId)
+      console.log('Found selected reaction:', selectedReaction)
+    }
+
+    // Créer la configuration finale
+    const finalConfig = {
+      service: refreshedBlock.service,
+      selectedAction,
+      selectedReaction,
+      parameters: { ...(refreshedBlock.config || {}) }
+    } as ServiceConfiguration
+
+    console.log('Final configuration being returned from configureBlock:', {
+      parameters: finalConfig.parameters,
+      selectedAction: finalConfig.selectedAction,
+      selectedReaction: finalConfig.selectedReaction
+    })
+
+    // Retourner les informations nécessaires pour ouvrir le modal de configuration
+    return {
+      blockId: refreshedBlock.id,
+      service: refreshedBlock.service,
+      blockType: refreshedBlock.type,
+      currentConfig: finalConfig,
+      onConfigurationChanged
+    }
+  }
+
+  const refreshBlockFromBackend = async (blockId: string) => {
+    if (!currentAreaId.value) return
+
+    try {
+      console.log('Fetching latest workflow data for block refresh...')
+      const workflow = await workflowApi.getWorkflow(currentAreaId.value)
+
+      // Trouver le nœud correspondant dans le workflow backend
+      const backendNode = workflow.nodes.find(node => node.id === blockId)
+      if (!backendNode) {
+        console.warn('Block not found in backend workflow:', blockId)
+        return
+      }
+
+      // Mettre à jour le bloc local avec les données du backend
+      const blockIndex = workflowBlocks.value.findIndex(b => b.id === blockId)
+      if (blockIndex !== -1) {
+        const currentBlock = workflowBlocks.value[blockIndex]
+
+        // Mettre à jour les paramètres de configuration avec les données du backend
+        workflowBlocks.value[blockIndex] = {
+          ...currentBlock,
+          actionId: backendNode.actionId,
+          reactionId: backendNode.reactionId,
+          config: backendNode.config || {}
+        }
+
+        console.log('Block refreshed from backend:', {
+          blockId,
+          actionId: backendNode.actionId,
+          reactionId: backendNode.reactionId,
+          config: backendNode.config,
+          fullBackendNode: backendNode
+        })
+
+        console.log('Updated frontend block:', workflowBlocks.value[blockIndex])
+      }
+    } catch (error) {
+      console.error('Failed to refresh block from backend:', error)
+      throw error
+    }
+  }
+
+  const updateBlockConfiguration = (blockId: string, config: ServiceConfiguration) => {
+    const block = workflowBlocks.value.find(b => b.id === blockId)
+    if (!block) {
+      console.warn('Block not found for configuration update:', blockId)
+      return
+    }
+
+    // Mettre à jour la configuration du bloc
+    if (config.selectedAction && block.type === 'trigger') {
+      block.actionId = config.selectedAction.id
+    } else if (config.selectedReaction && block.type === 'action') {
+      block.reactionId = config.selectedReaction.id
+    }
+
+    block.config = { ...config.parameters }
+
+    console.log('Block configuration updated:', blockId, block.config)
   }
 
   const getBlockConnectionState = (blockId: string) => {
@@ -306,20 +430,9 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       // Le backend a fourni le nom du service, on résout directement
       service = resolveService(node.serviceName)
     } else if (node.serviceId) {
-      // Fallback : mapping UUID → nom pour les workflows existants
-      const uuidToName = new Map([
-        ['9a6eb232-a943-4179-bf67-09ecb912ae26', 'timer'],
-        ['197a9125-47fd-4953-a449-0a085e74179c', 'console']
-      ])
-
-      const serviceName = uuidToName.get(node.serviceId)
-      if (serviceName) {
-        service = resolveService(serviceName)
-        console.log(`[WorkflowManagement] Mapped UUID ${node.serviceId} → ${serviceName}`)
-      } else {
-        console.warn(`[WorkflowManagement] Unknown UUID:`, node.serviceId)
-        return null
-      }
+      // Plus besoin de mapping - le backend devrait toujours fournir serviceName maintenant
+      console.warn(`[WorkflowManagement] Node has serviceId but no serviceName - this should not happen with the updated backend:`, node.serviceId)
+      return null
     }
 
     if (!service) {
@@ -332,7 +445,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       service,
       position: { x: node.positionX, y: node.positionY },
       type: node.nodeType === 'trigger' ? 'trigger' : 'action',
-      serviceId: service.id, // Utiliser le nom du service au lieu de l'UUID
+      serviceId: node.serviceId, // Garder l'UUID pour les sauvegardes
       actionId: node.actionId,
       reactionId: node.reactionId,
       config: node.config,
@@ -413,6 +526,9 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     saveWorkflow,
     loadWorkflow,
     serializeWorkflow,
-    initializeServiceMapping
+    initializeServiceMapping,
+
+    // Configuration editing
+    updateBlockConfiguration
   }
 }

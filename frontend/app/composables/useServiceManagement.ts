@@ -1,10 +1,16 @@
-import type { Service } from '~/types'
+import type { Service, ServiceConfiguration } from '~/types'
 
 /**
  * Service selection and authentication management
  */
 export const useServiceManagement = () => {
   const showServiceModal = ref(false)
+  const showConfigModal = ref(false)
+  const selectedService = ref<Service | null>(null)
+  const selectedBlockType = ref<'trigger' | 'action'>('trigger')
+  const pendingServiceCallback = ref<((config: ServiceConfiguration) => void) | null>(null)
+  const isEditingConfiguration = ref(false)
+  const currentConfiguration = ref<ServiceConfiguration | null>(null)
 
   const openServiceModal = () => {
     showServiceModal.value = true
@@ -210,8 +216,74 @@ export const useServiceManagement = () => {
     return Promise.resolve(true)
   }
 
+  /**
+   * Open service configuration modal
+   */
+  const openConfigModal = (service: Service, blockType: 'trigger' | 'action', callback: (config: ServiceConfiguration) => void) => {
+    selectedService.value = service
+    selectedBlockType.value = blockType
+    pendingServiceCallback.value = callback
+    showConfigModal.value = true
+  }
+
+  /**
+   * Close service configuration modal
+   */
+  const closeConfigModal = () => {
+    showConfigModal.value = false
+    selectedService.value = null
+    pendingServiceCallback.value = null
+    isEditingConfiguration.value = false
+    currentConfiguration.value = null
+  }
+
+  /**
+   * Handle service configuration confirmation
+   */
+  const onConfigurationConfirmed = (config: ServiceConfiguration) => {
+    if (pendingServiceCallback.value) {
+      pendingServiceCallback.value(config)
+      pendingServiceCallback.value = null
+    }
+    closeConfigModal()
+  }
+
+  /**
+   * Complete service selection workflow with configuration
+   */
+  const selectServiceWithConfiguration = (service: Service, blockType: 'trigger' | 'action', callback: (config: ServiceConfiguration) => void) => {
+    // Close service selection modal first
+    closeServiceModal()
+
+    // Open configuration modal
+    openConfigModal(service, blockType, callback)
+  }
+
+  /**
+   * Open configuration modal for editing existing block
+   */
+  const editServiceConfiguration = (service: Service, blockType: 'trigger' | 'action', initialConfig: ServiceConfiguration, callback: (config: ServiceConfiguration) => void) => {
+    selectedService.value = service
+    selectedBlockType.value = blockType
+
+    // Create a new configuration object to ensure reactivity
+    currentConfiguration.value = {
+      service: initialConfig.service,
+      selectedAction: initialConfig.selectedAction,
+      selectedReaction: initialConfig.selectedReaction,
+      parameters: { ...initialConfig.parameters }
+    }
+
+    isEditingConfiguration.value = true
+    pendingServiceCallback.value = callback
+    showConfigModal.value = true
+
+    console.log('editServiceConfiguration - setting currentConfiguration:', currentConfiguration.value)
+  }
+
   return {
-    showServiceModal: readonly(showServiceModal),
+    // Service selection
+    showServiceModal,
     openServiceModal,
     closeServiceModal,
     onServiceSelected,
@@ -219,6 +291,18 @@ export const useServiceManagement = () => {
     getAvailableServices,
     fetchServicesWithCategories,
     authenticateService,
-    checkServiceConnection
+    checkServiceConnection,
+
+    // Service configuration
+    showConfigModal: readonly(showConfigModal),
+    selectedService: readonly(selectedService),
+    selectedBlockType: readonly(selectedBlockType),
+    isEditingConfiguration: readonly(isEditingConfiguration),
+    currentConfiguration: readonly(currentConfiguration),
+    openConfigModal,
+    closeConfigModal,
+    onConfigurationConfirmed,
+    selectServiceWithConfiguration,
+    editServiceConfiguration
   }
 }

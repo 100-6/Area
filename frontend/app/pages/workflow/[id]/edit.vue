@@ -130,7 +130,7 @@
             :has-output-connection="getBlockConnectionState(block.id).hasOutputConnection"
             @update-position="updateBlockPosition"
             @delete="() => deleteBlock(block.id)"
-            @configure="() => configureBlock(block.id)"
+            @configure="() => handleBlockConfigure(block.id)"
           />
 
           <!-- Connection lines -->
@@ -177,7 +177,17 @@
       <!-- Service Selection Modal -->
       <UiServiceSelectionModal
         v-model:open="showServiceModal"
-        @service-selected="addServiceBlock"
+        @service-selected="handleServiceSelected"
+      />
+
+      <!-- Service Configuration Modal -->
+      <UiServiceConfigurationModal
+        v-if="selectedService"
+        v-model:open="showConfigModal"
+        :service="selectedService"
+        :block-type="selectedBlockType"
+        :initial-config="currentConfiguration"
+        @configuration-confirmed="handleConfigurationConfirmed"
       />
 
       <!-- Save Workflow Modal -->
@@ -225,7 +235,7 @@
               <UTextarea
                 v-model="workflowDescription"
                 placeholder="Décrivez le but de cette automatisation"
-                rows="3"
+                :rows="3"
                 style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);"
               />
             </div>
@@ -263,7 +273,7 @@
 </template>
 
 <script setup lang="ts">
-import type { AreaData, BackendWorkflow, Service } from '~/types'
+import type { AreaData, BackendWorkflow, Service, ServiceConfiguration } from '~/types'
 
 definePageMeta({
   middleware: 'auth',
@@ -310,6 +320,7 @@ const {
   updateBlockPosition,
   deleteBlock,
   configureBlock,
+  updateBlockConfiguration,
   getBlockConnectionState,
   getConnectionPath,
   saveWorkflow,
@@ -319,10 +330,28 @@ const {
 // Service management
 const {
   showServiceModal,
+  showConfigModal: _showConfigModal,
+  selectedService,
+  selectedBlockType,
+  isEditingConfiguration,
+  currentConfiguration,
   openServiceModal,
   closeServiceModal,
-  onServiceSelected
+  selectServiceWithConfiguration,
+  onConfigurationConfirmed,
+  editServiceConfiguration,
+  closeConfigModal
 } = useServiceManagement()
+
+// Computed local pour gérer le modal de configuration
+const showConfigModal = computed({
+  get: () => _showConfigModal.value,
+  set: (value) => {
+    if (!value) {
+      closeConfigModal()
+    }
+  }
+})
 
 // Modals
 const showSaveModal = ref(false)
@@ -444,12 +473,43 @@ const getNewBlockPosition = () => {
   }
 }
 
-// Handle service selection
+// Handle service selection - now opens configuration modal
 const handleServiceSelected = (service: Service) => {
+  const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
   const position = getNewBlockPosition()
-  console.log('Adding service block at position:', position)
-  addServiceBlock(service, position)
-  closeServiceModal()
+
+  selectServiceWithConfiguration(service, blockType, (config) => {
+    console.log('Adding service block with configuration at position:', position)
+    addServiceBlock(config, position)
+  })
+}
+
+// Handle configuration confirmation
+const handleConfigurationConfirmed = (config: ServiceConfiguration) => {
+  onConfigurationConfirmed(config)
+}
+
+// Handle block configuration editing
+const handleBlockConfigure = async (blockId: string) => {
+  try {
+    console.log('handleBlockConfigure called with blockId:', blockId)
+    console.log('handleBlockConfigure - areaId:', areaId.value)
+
+    const configInfo = await configureBlock(blockId)
+    if (configInfo) {
+      editServiceConfiguration(
+        configInfo.service,
+        configInfo.blockType,
+        configInfo.currentConfig,
+        (newConfig: ServiceConfiguration) => {
+          updateBlockConfiguration(blockId, newConfig)
+        }
+      )
+    }
+  } catch (error) {
+    console.error('Failed to configure block:', error)
+    // Optionnel: Afficher un message d'erreur à l'utilisateur
+  }
 }
 
 // Modal functions

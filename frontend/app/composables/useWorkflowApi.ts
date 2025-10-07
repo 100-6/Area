@@ -250,8 +250,8 @@ export const useWorkflowApi = () => {
       actionId: block.actionId,
       reactionId: block.reactionId,
       config: block.config || {},
-      positionX: block.position.x,
-      positionY: block.position.y,
+      positionX: Math.round(block.position.x),
+      positionY: Math.round(block.position.y),
       label: block.label || block.service.name
     }
   }
