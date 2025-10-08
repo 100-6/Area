@@ -47,8 +47,15 @@ export class WorkflowExecutor {
             
             const connections = await this.workflowModel.getConnectionsByArea(areaId);
             
+            // ✨ Initialiser outputsMap avec les données du trigger
+            const initialOutputs: Record<string, any> = {};
+            if (triggerData.data) {
+                initialOutputs[triggerNode.id] = triggerData.data;
+                console.log(`[WorkflowExecutor] Stored trigger outputs from node ${triggerNode.id}`.blue);
+            }
+            
             // Exécuter toutes les actions connectées au trigger
-            await this.executeConnectedActions(triggerNode.id, nodes, connections, triggerData);
+            await this.executeConnectedActions(triggerNode.id, nodes, connections, triggerData, new Set(), initialOutputs);
             
         } catch (error) {
             console.error('[WorkflowExecutor] Error:'.red, error);
@@ -63,7 +70,8 @@ export class WorkflowExecutor {
         nodes: any[],
         connections: any[],
         triggerData: any,
-        executedNodes: Set<string> = new Set()
+        executedNodes: Set<string> = new Set(),
+        outputsMap: Record<string, any> = {}
     ): Promise<void> {
         // Éviter les boucles infinies
         if (executedNodes.has(sourceNodeId)) {
@@ -91,35 +99,43 @@ export class WorkflowExecutor {
             
             if (actionNode.nodeType === 'action') {
                 console.log(`[WorkflowExecutor] Executing action node ${nodeId}`.cyan);
-                await this.executeAction(actionNode, triggerData);
+                const result = await this.executeAction(actionNode, triggerData, outputsMap);
+                
+                // Stocker l'output de cette action
+                if (result && result.success && result.data) {
+                    outputsMap[nodeId] = result.data;
+                    console.log(`[WorkflowExecutor] Stored outputs from node ${nodeId}`.blue);
+                }
                 
                 // Continuer l'exécution avec les actions connectées à celle-ci
-                await this.executeConnectedActions(nodeId, nodes, connections, triggerData, executedNodes);
+                await this.executeConnectedActions(nodeId, nodes, connections, triggerData, executedNodes, outputsMap);
             }
         }
     }
 
-    private async executeAction(actionNode: any, triggerData: any): Promise<void> {
+    private async executeAction(actionNode: any, triggerData: any, outputsMap: Record<string, any> = {}): Promise<any> {
         try {
             const serviceName = await this.workflowModel.getServiceNameById(actionNode.serviceId);
             const reactionName = await this.workflowModel.getReactionNameById(actionNode.reactionId);
             const module = moduleRegistry.getModule(serviceName);
 
             if (!module)
-                return;
+                return { success: false, error: 'Module not found' };
             const action = module.getAction(reactionName);
             if (!action)
-                return;
+                return { success: false, error: 'Action not found' };
             const context = {
                 areaId: actionNode.areaId,
                 triggerData: triggerData.data,
                 timestamp: triggerData.timestamp,
                 userId: actionNode.userId || triggerData.userId,
-                executionId: `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                executionId: `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                previousOutputs: outputsMap
             };
-            await action.execute(actionNode.config, context);
+            return await action.execute(actionNode.config, context);
         } catch (error) {
             console.error('[WorkflowExecutor] Action failed:'.red, error);
+            return { success: false, error: (error as Error).message };
         }
     }
 }

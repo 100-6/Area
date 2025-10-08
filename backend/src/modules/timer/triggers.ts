@@ -53,6 +53,10 @@ export class EveryXMinutesTrigger extends BaseTrigger {
         console.log(`[Timer] Starting every_x_minutes for AREA ${areaId}: every ${cfg.interval} min`.green);
         const intervalMs = cfg.interval * 60 * 1000;
         const intervalId = setInterval(async () => {
+            const now = new Date();
+            const days = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+            const dayOfWeek = now.getDay();
+            
             const payload: TriggerPayload = {
                 areaId,
                 triggerName: this.getName(),
@@ -60,7 +64,8 @@ export class EveryXMinutesTrigger extends BaseTrigger {
                 timestamp: new Date().toISOString(),
                 data: {
                     interval: cfg.interval,
-                    firedAt: new Date().toISOString()
+                    firedAt: new Date().toISOString(),
+                    day: days[dayOfWeek] // ✨ Ajout du jour en français
                 }
             };
             await this.emitTrigger(payload);

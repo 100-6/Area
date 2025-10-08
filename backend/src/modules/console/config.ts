@@ -20,8 +20,8 @@ export default {
                 properties: {
                     message: {
                         type: 'string',
-                        description: 'Le message à afficher',
-                        example: 'Hello from AREA!'
+                        description: 'Le message à afficher (peut utiliser {{key}} pour accéder aux outputs précédents)',
+                        example: 'Hello from AREA! Title: {{title}}'
                     },
                     level: {
                         type: 'string',
