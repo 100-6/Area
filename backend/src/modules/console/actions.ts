@@ -86,6 +86,9 @@ export class ConsoleLogAction extends BaseAction {
             default:
                 console.log(`[Console Action] ${message}`.cyan);
         }
-        return { success: true, message, level };
+        return { 
+            success: true,
+            data: { message, level } 
+        };
     }
 }
