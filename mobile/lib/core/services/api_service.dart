@@ -41,6 +41,7 @@ class ApiService {
   }) async {
     try {
       final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+      print('API GET: $url');
 
       final response = await _client
           .get(
@@ -52,8 +53,10 @@ class ApiService {
           )
           .timeout(ApiConstants.timeoutDuration);
 
+      print('API Response: ${response.statusCode}');
       return _handleResponse(response);
     } catch (e) {
+      print('API Error: $e');
       throw ApiException('Erreur de connexion: ${e.toString()}');
     }
   }
