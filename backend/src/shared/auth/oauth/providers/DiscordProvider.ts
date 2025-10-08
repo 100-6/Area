@@ -45,7 +45,7 @@ export class DiscordProvider implements IOAuthProvider {
             client_id: this.clientId,
             redirect_uri: this.redirectUri,
             response_type: 'code',
-            scope: 'identify email',
+            scope: 'identify email guilds',
             state: state,
         });
 
