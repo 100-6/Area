@@ -465,6 +465,16 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
       }
     }
 
+    if (serviceName == 'discord') {
+      if (triggerName == 'on_message_created') {
+        return 'Discord: On message created';
+      } else if (triggerName == 'on_member_join') {
+        return 'Discord: On member join';
+      } else if (triggerName == 'on_reaction_added') {
+        return 'Discord: On reaction added';
+      }
+    }
+
     return _triggerNode!.label ?? 'Trigger';
   }
 
@@ -492,6 +502,26 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
         final time = config['time'];
         if (time != null) {
           return 'Weekdays at $time';
+        }
+      }
+    }
+
+    // Discord triggers
+    if (serviceName == 'discord') {
+      if (triggerName == 'on_message_created') {
+        final channelId = config['channelId'];
+        final keyword = config['keyword'];
+        if (channelId != null) {
+          return 'Channel: $channelId${keyword != null && keyword.isNotEmpty ? ' - Keyword: "$keyword"' : ''}';
+        }
+      } else if (triggerName == 'on_member_join') {
+        final guildId = config['guildId'];
+        return 'Server: $guildId';
+      } else if (triggerName == 'on_reaction_added') {
+        final channelId = config['channelId'];
+        final emoji = config['emoji'];
+        if (channelId != null) {
+          return 'Channel: $channelId${emoji != null && emoji.isNotEmpty ? ' - Emoji: $emoji' : ''}';
         }
       }
     }
@@ -600,6 +630,17 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
       }
     }
 
+    // Discord actions
+    if (serviceName == 'discord') {
+      if (actionName == 'send_message') {
+        return 'Discord: Send message';
+      } else if (actionName == 'add_role') {
+        return 'Discord: Add role';
+      } else if (actionName == 'kick_member') {
+        return 'Discord: Kick member';
+      }
+    }
+
     return node.label ?? 'Action';
   }
 
@@ -619,6 +660,28 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
             ? '${message.substring(0, 50)}...'
             : message;
         return '[$level] "$truncatedMessage"';
+      }
+    }
+
+    // Discord actions
+    if (serviceName == 'discord') {
+      if (actionName == 'send_message') {
+        final channelId = config['channelId'];
+        final content = config['content'];
+        if (channelId != null) {
+          final truncatedContent = content != null && content.length > 30
+              ? '${content.substring(0, 30)}...'
+              : content ?? '';
+          return 'Channel: $channelId${truncatedContent.isNotEmpty ? ' - "$truncatedContent"' : ''}';
+        }
+      } else if (actionName == 'add_role') {
+        final roleId = config['roleId'];
+        final userId = config['userId'];
+        return 'Add role $roleId to user $userId';
+      } else if (actionName == 'kick_member') {
+        final userId = config['userId'];
+        final reason = config['reason'];
+        return 'Kick user $userId${reason != null && reason.isNotEmpty ? ': $reason' : ''}';
       }
     }
 

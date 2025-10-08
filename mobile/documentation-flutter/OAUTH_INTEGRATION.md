@@ -2,7 +2,6 @@
 
 ## ✅ Providers OAuth disponibles
 
-L'application mobile supporte maintenant **4 providers OAuth** connectés au backend :
 
 | Provider | Couleur | Icône |
 |----------|---------|-------|

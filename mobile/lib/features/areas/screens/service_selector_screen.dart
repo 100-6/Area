@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/service_info.dart';
 import '../services/area_service.dart';
+import '../widgets/service_connection_dialog.dart';
+import '../../../core/services/oauth_service.dart';
+import '../../../core/services/service_connection_service.dart';
+import '../../auth/data/auth_repository.dart';
 
 class ServiceSelectorScreen extends StatefulWidget {
   final String nodeType; // 'trigger' or 'action'
@@ -13,6 +18,8 @@ class ServiceSelectorScreen extends StatefulWidget {
 
 class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
   final AreaService _areaService = AreaService();
+  final ServiceConnectionService _connectionService = ServiceConnectionService();
+  final OAuthService _oauthService = OAuthService();
   List<ServiceInfo> _services = [];
   bool _isLoading = true;
   String? _error;
@@ -166,12 +173,86 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () {
-          Navigator.pop(context, {
-            'service': service.name,
-            'name': name,
-            'description': description,
-          });
+        onTap: () async {
+          // Vérifier si le service nécessite une connexion OAuth
+          if (_requiresOAuthConnection(service.name)) {
+            final authRepo = context.read<AuthRepository>();
+            final token = await authRepo.getToken();
+
+            if (token == null) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Vous devez être connecté')),
+                );
+              }
+              return;
+            }
+
+            // Vérifier si l'utilisateur est connecté au service
+            final isConnected = await _connectionService.isServiceConnected(
+              serviceName: service.name,
+              token: token,
+            );
+
+            if (!isConnected && mounted) {
+              // Afficher le dialogue pour se connecter
+              final provider = _getOAuthProvider(service.name);
+              if (provider == null) {
+                Navigator.pop(context, {
+                  'service': service.name,
+                  'name': name,
+                  'description': description,
+                });
+                return;
+              }
+
+              final shouldConnect = await ServiceConnectionDialog.show(
+                context,
+                serviceName: service.name,
+                provider: provider,
+              );
+
+              if (shouldConnect == true && mounted) {
+                // Lancer le flux OAuth
+                final result = await _oauthService.signInWithProvider(provider);
+
+                if (result.isSuccess || result.isPending) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Connexion à ${provider.displayName} en cours...',
+                        ),
+                        backgroundColor: Colors.blue,
+                      ),
+                    );
+                  }
+                  // Attendre un peu puis continuer
+                  await Future.delayed(const Duration(seconds: 2));
+                } else if (result.error != null && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(result.error!),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+              } else {
+                // L'utilisateur a annulé
+                return;
+              }
+            }
+          }
+
+          // Continuer avec la sélection
+          if (mounted) {
+            Navigator.pop(context, {
+              'service': service.name,
+              'name': name,
+              'description': description,
+            });
+          }
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -232,8 +313,16 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
         return Colors.purple;
       case 'console':
         return Colors.orange;
+      case 'discord':
+        return const Color(0xFF5865F2);
       case 'github':
         return Colors.black;
+      case 'gitlab':
+        return const Color(0xFFFC6D26);
+      case 'dropbox':
+        return const Color(0xFF0061FF);
+      case 'google':
+        return const Color(0xFF4285F4);
       case 'email':
         return Colors.red;
       case 'slack':
@@ -249,14 +338,47 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
         return Icons.schedule;
       case 'console':
         return Icons.code;
+      case 'discord':
+        return Icons.discord;
       case 'github':
         return Icons.terminal;
+      case 'gitlab':
+        return Icons.source;
+      case 'dropbox':
+        return Icons.cloud;
+      case 'google':
+        return Icons.g_mobiledata;
       case 'email':
         return Icons.email;
       case 'slack':
         return Icons.chat;
       default:
         return Icons.widgets;
+    }
+  }
+
+  /// Vérifie si un service nécessite une connexion OAuth
+  bool _requiresOAuthConnection(String serviceName) {
+    // Discord utilise un bot backend, pas d'OAuth individuel
+    final oauthServices = ['github', 'gitlab', 'dropbox', 'google'];
+    return oauthServices.contains(serviceName.toLowerCase());
+  }
+
+  /// Obtient le provider OAuth correspondant au nom du service
+  OAuthProvider? _getOAuthProvider(String serviceName) {
+    switch (serviceName.toLowerCase()) {
+      case 'discord':
+        return OAuthProvider.discord;
+      case 'github':
+        return OAuthProvider.github;
+      case 'gitlab':
+        return OAuthProvider.gitlab;
+      case 'dropbox':
+        return OAuthProvider.dropbox;
+      case 'google':
+        return OAuthProvider.google;
+      default:
+        return null;
     }
   }
 }
