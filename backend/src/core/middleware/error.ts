@@ -195,6 +195,61 @@ export const errorHandler = (error: CustomError, req: Request, res: Response, ne
             message = 'Un nœud de type trigger existe déjà dans cette AREA';
             errorCode = 'TRIGGER_ALREADY_EXISTS';
             break;
+        case 'USER_NOT_AUTHENTICATED':
+            statusCode = 401;
+            message = 'Utilisateur non authentifié';
+            errorCode = 'USER_NOT_AUTHENTICATED';
+            break;
+        case 'DISCORD_NOT_CONNECTED':
+            statusCode = 403;
+            message = 'Vous devez vous connecter à Discord via OAuth pour accéder à cette ressource';
+            errorCode = 'DISCORD_NOT_CONNECTED';
+            break;
+        case 'DISCORD_TOKEN_EXPIRED':
+            statusCode = 403;
+            message = 'Votre authentification Discord a expiré. Veuillez vous reconnecter';
+            errorCode = 'DISCORD_TOKEN_EXPIRED';
+            break;
+        case 'DISCORD_AUTH_CHECK_FAILED':
+            statusCode = 500;
+            message = 'Erreur lors de la vérification de l\'authentification Discord';
+            errorCode = 'DISCORD_AUTH_CHECK_FAILED';
+            break;
+        case 'DISCORD_TOKEN_INVALID':
+            statusCode = 403;
+            message = 'Votre token Discord est invalide ou expiré. Veuillez vous reconnecter';
+            errorCode = 'DISCORD_TOKEN_INVALID';
+            break;
+        case 'DISCORD_RATE_LIMITED':
+            statusCode = 429;
+            message = 'Trop de requêtes vers l\'API Discord. Veuillez réessayer plus tard';
+            errorCode = 'DISCORD_RATE_LIMITED';
+            break;
+        case 'DISCORD_API_ERROR':
+            statusCode = 500;
+            message = 'Erreur lors de la communication avec l\'API Discord';
+            errorCode = 'DISCORD_API_ERROR';
+            break;
+        case 'ACCESS_DENIED':
+            statusCode = 403;
+            message = 'Accès refusé. Vous n\'avez pas les permissions nécessaires';
+            errorCode = 'ACCESS_DENIED';
+            break;
+        case 'GUILD_NOT_FOUND':
+            statusCode = 404;
+            message = 'Serveur Discord introuvable';
+            errorCode = 'GUILD_NOT_FOUND';
+            break;
+        case 'MEMBER_NOT_FOUND':
+            statusCode = 404;
+            message = 'Membre Discord introuvable';
+            errorCode = 'MEMBER_NOT_FOUND';
+            break;
+        case 'DISCORD_BOT_NOT_CONNECTED':
+            statusCode = 503;
+            message = 'Le bot Discord n\'est pas connecté. Veuillez réessayer dans quelques instants';
+            errorCode = 'DISCORD_BOT_NOT_CONNECTED';
+            break;
     }
     console.error('Error details:'.cyan,
         { url: req.url, method: req.method, ip: req.ip, userAgent: req.get('User-Agent'), statusCode, errorCode, timestamp: new Date().toISOString() });
