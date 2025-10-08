@@ -30,6 +30,19 @@ export default {
                         default: 'info'
                     }
                 }
+            },
+            outputSchema: {
+                type: 'object',
+                properties: {
+                    message: {
+                        type: 'string',
+                        description: 'Message affiché (après résolution des placeholders)'
+                    },
+                    level: {
+                        type: 'string',
+                        description: 'Niveau de log utilisé'
+                    }
+                }
             }
         }
     ]

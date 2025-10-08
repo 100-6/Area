@@ -52,6 +52,14 @@ export abstract class BaseTrigger {
     abstract getConfigSchema(): any;
 
     /**
+     * Schéma des données retournées par le trigger (JSON Schema)
+     * Ces données seront disponibles dans context.previousOutputs pour les actions suivantes
+     */
+    getOutputSchema(): any {
+        return null; // Par défaut, pas d'output schema
+    }
+
+    /**
      * Valider la configuration fournie par l'utilisateur
      * @throws Error si la config est invalide
      */

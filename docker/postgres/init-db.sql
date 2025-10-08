@@ -109,6 +109,7 @@ CREATE TABLE service_actions (
     webhook_path VARCHAR(255),
     polling_interval INTEGER,
     config_schema JSONB,
+    output_schema JSONB,
     example_config JSONB,
     example_data JSONB,
     is_active BOOLEAN DEFAULT TRUE,
@@ -128,6 +129,7 @@ CREATE TABLE service_reactions (
     description TEXT,
     required_scopes TEXT,
     config_schema JSONB,
+    output_schema JSONB,
     example_config JSONB,
     rate_limit_per_hour INTEGER DEFAULT 1000,
     is_active BOOLEAN DEFAULT TRUE,
@@ -271,3 +273,5 @@ COMMENT ON COLUMN workflow_nodes.reaction_id IS 'Pour les nœuds de type action'
 COMMENT ON COLUMN workflow_nodes.position_x IS 'Position X du nœud dans l''éditeur de workflow';
 COMMENT ON COLUMN workflow_nodes.position_y IS 'Position Y du nœud dans l''éditeur de workflow';
 COMMENT ON COLUMN area_executions.execution_path IS 'Chemin d''exécution: liste des node_ids parcourus';
+COMMENT ON COLUMN service_actions.output_schema IS 'JSON Schema définissant les données retournées par le trigger, disponibles dans context.previousOutputs';
+COMMENT ON COLUMN service_reactions.output_schema IS 'JSON Schema définissant les données retournées par la réaction, disponibles dans context.previousOutputs';

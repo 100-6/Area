@@ -26,6 +26,22 @@ export class ConsoleLogAction extends BaseAction {
         };
     }
 
+    getOutputSchema(): any {
+        return {
+            type: 'object',
+            properties: {
+                message: {
+                    type: 'string',
+                    description: 'Message affiché (après résolution des placeholders)'
+                },
+                level: {
+                    type: 'string',
+                    description: 'Niveau de log utilisé'
+                }
+            }
+        };
+    }
+
     getRequiredScopes(): string[] {
         return [];
     }

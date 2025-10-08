@@ -31,6 +31,24 @@ export default {
                         enum: ['Europe/Paris', 'America/New_York', 'Asia/Tokyo', 'UTC']
                     }
                 }
+            },
+            outputSchema: {
+                type: 'object',
+                properties: {
+                    time: {
+                        type: 'string',
+                        description: 'Heure de déclenchement configurée (HH:mm)'
+                    },
+                    timezone: {
+                        type: 'string',
+                        description: 'Fuseau horaire configuré'
+                    },
+                    firedAt: {
+                        type: 'string',
+                        format: 'date-time',
+                        description: 'Date et heure du déclenchement'
+                    }
+                }
             }
         },
         {
@@ -52,6 +70,30 @@ export default {
                         type: 'string',
                         description: 'Fuseau horaire',
                         default: 'Europe/Paris'
+                    }
+                }
+            },
+            outputSchema: {
+                type: 'object',
+                properties: {
+                    time: {
+                        type: 'string',
+                        description: 'Heure de déclenchement configurée (HH:mm)'
+                    },
+                    timezone: {
+                        type: 'string',
+                        description: 'Fuseau horaire configuré'
+                    },
+                    dayOfWeek: {
+                        type: 'number',
+                        description: 'Jour de la semaine (0=dimanche, 1=lundi, ..., 6=samedi)',
+                        minimum: 1,
+                        maximum: 5
+                    },
+                    firedAt: {
+                        type: 'string',
+                        format: 'date-time',
+                        description: 'Date et heure du déclenchement'
                     }
                 }
             }
