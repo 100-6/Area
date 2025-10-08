@@ -50,6 +50,14 @@ export abstract class BaseAction {
     abstract getConfigSchema(): any;
 
     /**
+     * Schéma des données retournées par l'action (JSON Schema)
+     * Ces données seront disponibles dans context.previousOutputs pour les actions suivantes
+     */
+    getOutputSchema(): any {
+        return null; // Par défaut, pas d'output schema
+    }
+
+    /**
      * Scopes OAuth2 requis (si applicable)
      */
     abstract getRequiredScopes(): string[];

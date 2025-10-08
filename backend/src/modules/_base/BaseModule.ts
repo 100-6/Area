@@ -148,11 +148,11 @@ export abstract class BaseModule {
             name: this.config.name,
             actions: this.getAllTriggers().map(trigger => ({
                 name: trigger.getName(),
-                description: trigger.getDescription()
+                description: trigger.getDescription(),
             })),
             reactions: this.getAllActions().map(action => ({
                 name: action.getName(),
-                description: action.getDescription()
+                description: action.getDescription(),
             }))
         };
     }

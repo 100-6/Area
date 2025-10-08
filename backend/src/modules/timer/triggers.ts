@@ -37,6 +37,28 @@ export class EveryXMinutesTrigger extends BaseTrigger {
         };
     }
 
+    getOutputSchema(): any {
+        return {
+            type: 'object',
+            properties: {
+                interval: {
+                    type: 'number',
+                    description: 'Intervalle en minutes configuré'
+                },
+                firedAt: {
+                    type: 'string',
+                    format: 'date-time',
+                    description: 'Date et heure du déclenchement'
+                },
+                day: {
+                    type: 'string',
+                    description: 'Jour de la semaine (lundi, mardi, mercredi, jeudi, vendredi, samedi, dimanche)',
+                    example: 'lundi'
+                }
+            }
+        };
+    }
+
     validate(config: TriggerConfig): boolean {
         const cfg = config as EveryXMinutesConfig;
 
@@ -122,6 +144,27 @@ export class DailyAtTimeTrigger extends BaseTrigger {
                     description: 'Fuseau horaire',
                     default: 'Europe/Paris',
                     enum: ['Europe/Paris', 'America/New_York', 'Asia/Tokyo', 'UTC']
+                }
+            }
+        };
+    }
+
+    getOutputSchema(): any {
+        return {
+            type: 'object',
+            properties: {
+                time: {
+                    type: 'string',
+                    description: 'Heure de déclenchement configurée (HH:mm)'
+                },
+                timezone: {
+                    type: 'string',
+                    description: 'Fuseau horaire configuré'
+                },
+                firedAt: {
+                    type: 'string',
+                    format: 'date-time',
+                    description: 'Date et heure du déclenchement'
                 }
             }
         };
@@ -220,6 +263,33 @@ export class EveryWeekdayTrigger extends BaseTrigger {
                     type: 'string',
                     description: 'Fuseau horaire',
                     default: 'Europe/Paris'
+                }
+            }
+        };
+    }
+
+    getOutputSchema(): any {
+        return {
+            type: 'object',
+            properties: {
+                time: {
+                    type: 'string',
+                    description: 'Heure de déclenchement configurée (HH:mm)'
+                },
+                timezone: {
+                    type: 'string',
+                    description: 'Fuseau horaire configuré'
+                },
+                dayOfWeek: {
+                    type: 'number',
+                    description: 'Jour de la semaine (0=dimanche, 1=lundi, ..., 6=samedi)',
+                    minimum: 1,
+                    maximum: 5
+                },
+                firedAt: {
+                    type: 'string',
+                    format: 'date-time',
+                    description: 'Date et heure du déclenchement'
                 }
             }
         };

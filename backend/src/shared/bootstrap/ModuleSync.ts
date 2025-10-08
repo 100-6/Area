@@ -83,17 +83,21 @@ export class ModuleSync {
         const triggers = module.getAllTriggers();
 
         for (const trigger of triggers) {
+            // Récupérer l'output schema du trigger s'il existe
+            const outputSchema = trigger.getOutputSchema ? trigger.getOutputSchema() : null;
+            
             const query = `
                 INSERT INTO service_actions (
                     service_id, name, display_name, description, 
-                    trigger_type, config_schema, is_active
+                    trigger_type, config_schema, output_schema, is_active
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 ON CONFLICT (service_id, name) DO UPDATE SET
                     display_name = EXCLUDED.display_name,
                     description = EXCLUDED.description,
                     trigger_type = EXCLUDED.trigger_type,
                     config_schema = EXCLUDED.config_schema,
+                    output_schema = EXCLUDED.output_schema,
                     is_active = EXCLUDED.is_active,
                     updated_at = CURRENT_TIMESTAMP
             `;
@@ -105,6 +109,7 @@ export class ModuleSync {
                 trigger.getDescription(),
                 'schedule',
                 JSON.stringify({}),
+                outputSchema ? JSON.stringify(outputSchema) : null,
                 true
             ];
 
@@ -119,16 +124,20 @@ export class ModuleSync {
         const actions = module.getAllActions();
 
         for (const action of actions) {
+            // Récupérer l'output schema de l'action s'il existe
+            const outputSchema = action.getOutputSchema ? action.getOutputSchema() : null;
+            
             const query = `
                 INSERT INTO service_reactions (
                     service_id, name, display_name, description, 
-                    config_schema, is_active
+                    config_schema, output_schema, is_active
                 )
-                VALUES ($1, $2, $3, $4, $5, $6)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
                 ON CONFLICT (service_id, name) DO UPDATE SET
                     display_name = EXCLUDED.display_name,
                     description = EXCLUDED.description,
                     config_schema = EXCLUDED.config_schema,
+                    output_schema = EXCLUDED.output_schema,
                     is_active = EXCLUDED.is_active,
                     updated_at = CURRENT_TIMESTAMP
             `;
@@ -139,6 +148,7 @@ export class ModuleSync {
                 action.getName().replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
                 action.getDescription(),
                 JSON.stringify({}),
+                outputSchema ? JSON.stringify(outputSchema) : null,
                 true
             ];
 
