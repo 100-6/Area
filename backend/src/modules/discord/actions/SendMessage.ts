@@ -89,40 +89,54 @@ export class SendMessage extends BaseAction {
     /**
      * Remplacer les variables dans le contenu du message
      * Exemple: "Hello {{author.username}}" -> "Hello John"
+     * Supporte aussi les variables des actions précédentes: {{generatedText}}
      */
     private replaceVariables(content: string, context: ActionContext): string {
         let result = content;
 
-        if (context.triggerData) {
-            if (context.triggerData.author) {
-                result = result.replace(/\{\{author\.id\}\}/g, context.triggerData.author.id || '');
-                result = result.replace(/\{\{author\.username\}\}/g, context.triggerData.author.username || '');
-                result = result.replace(/\{\{author\.tag\}\}/g, context.triggerData.author.tag || '');
-            }
-            if (context.triggerData.member) {
-                result = result.replace(/\{\{member\.id\}\}/g, context.triggerData.member.id || '');
-                result = result.replace(/\{\{member\.username\}\}/g, context.triggerData.member.username || '');
-                result = result.replace(/\{\{member\.tag\}\}/g, context.triggerData.member.tag || '');
-            }
-            if (context.triggerData.user) {
-                result = result.replace(/\{\{user\.id\}\}/g, context.triggerData.user.id || '');
-                result = result.replace(/\{\{user\.username\}\}/g, context.triggerData.user.username || '');
-                result = result.replace(/\{\{user\.tag\}\}/g, context.triggerData.user.tag || '');
-            }
-            if (context.triggerData.reaction) {
-                result = result.replace(/\{\{reaction\.emoji\}\}/g, context.triggerData.reaction.emoji || '');
-                result = result.replace(/\{\{reaction\.emojiId\}\}/g, context.triggerData.reaction.emojiId || '');
-            }
-            if (context.triggerData.message) {
-                result = result.replace(/\{\{message\.content\}\}/g, context.triggerData.message.content || '');
-                result = result.replace(/\{\{message\.id\}\}/g, context.triggerData.message.id || '');
-            }
-            if (context.triggerData.guild) {
-                result = result.replace(/\{\{guild\.name\}\}/g, context.triggerData.guild.name || '');
-                result = result.replace(/\{\{guild\.id\}\}/g, context.triggerData.guild.id || '');
+        // Replace previous outputs from other actions
+        if (context.previousOutputs) {
+            console.log('[SendMessage] Previous outputs:', JSON.stringify(context.previousOutputs, null, 2));
+            
+            for (const [nodeId, output] of Object.entries(context.previousOutputs)) {
+                // Flatten the output object to support nested properties
+                const flatOutput = this.flattenObject(output);
+                
+                for (const [key, value] of Object.entries(flatOutput)) {
+                    if (value !== null && value !== undefined) {
+                        // Replace both with and without nodeId prefix
+                        const regex1 = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+                        const regex2 = new RegExp(`\\{\\{${nodeId}\\.${key}\\}\\}`, 'g');
+                        
+                        result = result.replace(regex1, String(value));
+                        result = result.replace(regex2, String(value));
+                    }
+                }
             }
         }
+
         return result;
+    }
+
+    /**
+     * Flatten nested object into dot notation
+     * { a: { b: 'value' } } => { 'a.b': 'value' }
+     */
+    private flattenObject(obj: any, prefix = ''): Record<string, any> {
+        let flattened: Record<string, any> = {};
+        
+        for (const key in obj) {
+            const value = obj[key];
+            const newKey = prefix ? `${prefix}.${key}` : key;
+            
+            if (value && typeof value === 'object' && !Array.isArray(value)) {
+                Object.assign(flattened, this.flattenObject(value, newKey));
+            } else {
+                flattened[newKey] = value;
+            }
+        }
+        
+        return flattened;
     }
 
     async execute(config: ActionConfig, context: ActionContext): Promise<ActionResult> {

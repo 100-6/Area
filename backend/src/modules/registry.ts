@@ -2,6 +2,7 @@ import { BaseModule } from './_base/BaseModule';
 import { timerModule } from './timer/service';
 import { consoleModule } from './console/service';
 import { discordModule } from './discord/service';
+import { openaiModule } from './openai/service';
 import 'colors';
 
 /**
@@ -39,6 +40,7 @@ class ModuleRegistry {
             await this.registerModule(timerModule);
             await this.registerModule(consoleModule);
             await this.registerModule(discordModule);
+            await this.registerModule(openaiModule);
             this.initialized = true;
             console.log(`[Registry] Successfully initialized ${this.modules.size} module(s)`.green.bold);
         } catch (error) {
