@@ -160,6 +160,16 @@ export const FIELD_TYPE_MAPPING: Record<string, FieldTypeConfig> = {
       }
       return { isValid: true }
     }
+  },
+  discord_channel: {
+    component: 'ConfigDiscordChannel',
+    defaultValue: '',
+    validator: (value: any, parameter: ActionParameter) => {
+      if (parameter.required && (!value || value.toString().trim() === '')) {
+        return { isValid: false, error: 'Veuillez sélectionner un channel' }
+      }
+      return { isValid: true }
+    }
   }
 }
 

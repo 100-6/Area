@@ -200,10 +200,10 @@ export const useServiceManagement = () => {
             parameters: [
               {
                 name: 'channelId',
-                type: 'string',
+                type: 'discord_channel',
                 required: true,
-                description: 'ID du channel Discord à surveiller',
-                placeholder: '123456789012345678'
+                description: 'Channel Discord à surveiller',
+                placeholder: 'Sélectionnez un channel'
               }
             ],
             triggers: ['message_created']
@@ -222,10 +222,10 @@ export const useServiceManagement = () => {
             parameters: [
               {
                 name: 'channelId',
-                type: 'string',
+                type: 'discord_channel',
                 required: true,
-                description: 'ID du channel Discord à surveiller',
-                placeholder: '123456789012345678'
+                description: 'Channel Discord à surveiller',
+                placeholder: 'Sélectionnez un channel'
               },
               {
                 name: 'emoji',
@@ -246,10 +246,10 @@ export const useServiceManagement = () => {
             parameters: [
               {
                 name: 'channelId',
-                type: 'string',
+                type: 'discord_channel',
                 required: true,
-                description: 'ID du channel Discord où envoyer le message',
-                placeholder: '123456789012345678'
+                description: 'Channel Discord où envoyer le message',
+                placeholder: 'Sélectionnez un channel'
               },
               {
                 name: 'content',
