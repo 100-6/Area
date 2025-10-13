@@ -17,21 +17,16 @@ jobs:
 
       - name: Add mirror remote & Push
         env:
-          MIRROR_REPO_URL: ${{ secrets.MIRROR_REPO_URL }}  # ex: https://github.com/EpitechPGE3-2025/G-DEV-500-PAR-5-1-bsarea-34.git
-          MIRROR_TOKEN:    ${{ secrets.MIRROR_TOKEN }}     # PAT avec droits write sur le repo cible
+          MIRROR_REPO_URL: ${{ secrets.MIRROR_REPO_URL }}
+          MIRROR_TOKEN:    ${{ secrets.MIRROR_TOKEN }}
         run: |
           set -euo pipefail
           [ -n "${MIRROR_REPO_URL:-}" ] || { echo "MIRROR_REPO_URL manquant"; exit 1; }
           [ -n "${MIRROR_TOKEN:-}" ]    || { echo "MIRROR_TOKEN manquant";    exit 1; }
 
-          # Injecte le token dans l'URL
           AUTH_URL="${MIRROR_REPO_URL/https:\/\//https:\/\/x-access-token:${MIRROR_TOKEN}@}"
 
           git remote remove mirror 2>/dev/null || true
           git remote add mirror "$AUTH_URL"
-
-          # Affiche la cible (sans token) pour debug
-          echo "Push vers: ${MIRROR_REPO_URL}"
-
           git push --prune mirror 'refs/heads/*:refs/heads/*'
           git push --tags mirror
