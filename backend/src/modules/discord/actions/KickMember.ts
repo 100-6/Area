@@ -49,6 +49,20 @@ export class KickMember extends BaseAction {
         };
     }
 
+    getOutputSchema(): any {
+        return {
+            type: 'object',
+            properties: {
+                userId: { type: 'string', description: 'ID of kicked user' },
+                userTag: { type: 'string', description: 'Discord tag of kicked user' },
+                username: { type: 'string', description: 'Username of kicked user' },
+                guildId: { type: 'string', description: 'Server (guild) ID' },
+                guildName: { type: 'string', description: 'Server (guild) name' },
+                reason: { type: 'string', description: 'Reason for kick' }
+            }
+        };
+    }
+
     getRequiredScopes(): string[] {
         return ['bot'];
     }

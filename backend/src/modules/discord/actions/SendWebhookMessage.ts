@@ -42,6 +42,18 @@ export class SendWebhookMessage extends BaseAction {
         };
     }
 
+    getOutputSchema(): any {
+        return {
+            type: 'object',
+            properties: {
+                webhookUrl: { type: 'string', description: 'Webhook URL used' },
+                content: { type: 'string', description: 'Content that was sent' },
+                username: { type: 'string', description: 'Username used for the webhook' },
+                sentAt: { type: 'string', format: 'date-time', description: 'When message was sent' }
+            }
+        };
+    }
+
     getRequiredScopes(): string[] {
         return []; // Pas besoin de permissions spécifiques
     }
@@ -96,6 +108,14 @@ export class SendWebhookMessage extends BaseAction {
             throw new Error(`Failed to send webhook message: ${response.status} ${response.statusText} - ${errorText}`);
         }
 
-        return { success: true };
+        return { 
+            success: true,
+            data: {
+                webhookUrl: config.webhookUrl,
+                content: payload.content,
+                username: payload.username,
+                sentAt: new Date().toISOString()
+            }
+        };
     }
 }

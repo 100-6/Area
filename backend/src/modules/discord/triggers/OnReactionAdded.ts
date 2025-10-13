@@ -61,6 +61,45 @@ export class OnReactionAdded extends BaseTrigger {
         };
     }
 
+    getOutputSchema(): any {
+        return {
+            type: 'object',
+            properties: {
+                reaction: {
+                    type: 'object',
+                    properties: {
+                        emoji: { type: 'string', description: 'Emoji character or name' },
+                        emojiId: { type: 'string', description: 'Custom emoji ID (if custom emoji)' },
+                        emojiAnimated: { type: 'boolean', description: 'Whether emoji is animated' }
+                    }
+                },
+                message: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', description: 'Message ID' },
+                        content: { type: 'string', description: 'Message content' },
+                        authorId: { type: 'string', description: 'Original message author ID' },
+                        channelId: { type: 'string', description: 'Channel ID' }
+                    }
+                },
+                user: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', description: 'User ID who added the reaction' },
+                        tag: { type: 'string', description: 'User Discord tag' },
+                        username: { type: 'string', description: 'User username' }
+                    }
+                },
+                guild: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', description: 'Server (guild) ID' }
+                    }
+                }
+            }
+        };
+    }
+
     validate(config: TriggerConfig): boolean {
         if (!config.channelId)
             throw new Error('channelId is required');

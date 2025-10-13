@@ -55,6 +55,22 @@ export class AddRole extends BaseAction {
         };
     }
 
+    getOutputSchema(): any {
+        return {
+            type: 'object',
+            properties: {
+                userId: { type: 'string', description: 'User ID who received the role' },
+                userTag: { type: 'string', description: 'User Discord tag' },
+                roleId: { type: 'string', description: 'Role ID that was added' },
+                roleName: { type: 'string', description: 'Role name' },
+                guildId: { type: 'string', description: 'Server (guild) ID' },
+                guildName: { type: 'string', description: 'Server (guild) name' },
+                alreadyHad: { type: 'boolean', description: 'Whether user already had the role' },
+                message: { type: 'string', description: 'Status message' }
+            }
+        };
+    }
+
     getRequiredScopes(): string[] {
         return ['bot'];
     }

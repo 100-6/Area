@@ -61,6 +61,36 @@ export class OnMessageCreated extends BaseTrigger {
         };
     }
 
+    getOutputSchema(): any {
+        return {
+            type: 'object',
+            properties: {
+                message: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', description: 'Message ID' },
+                        content: { type: 'string', description: 'Message content text' },
+                        channelId: { type: 'string', description: 'Channel ID where message was posted' },
+                        channelName: { type: 'string', description: 'Channel name' },
+                        guildId: { type: 'string', description: 'Server (guild) ID' },
+                        guildName: { type: 'string', description: 'Server (guild) name' },
+                        timestamp: { type: 'string', format: 'date-time', description: 'Message timestamp' },
+                        hasAttachments: { type: 'boolean', description: 'Whether message has attachments' },
+                        attachments: { type: 'array', description: 'Array of attachments' }
+                    }
+                },
+                author: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', description: 'Author user ID' },
+                        tag: { type: 'string', description: 'Author Discord tag (username#discriminator)' },
+                        username: { type: 'string', description: 'Author username' }
+                    }
+                }
+            }
+        };
+    }
+
     validate(config: TriggerConfig): boolean {
         if (!config.channelId)
             throw new Error('channelId is required');
