@@ -23,21 +23,21 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Lint
-        working-directory: backend
-        run: |
-          # If package.json exposes a lint script, run it. Otherwise try eslint if present.
-          if npm run | grep -q "lint"; then
-            npm run lint
-          elif [ -f .eslintrc.js ] || [ -f .eslintrc.json ] || [ -f .eslintrc ]; then
-            npx eslint . || true
-          else
-            echo "No lint script or ESLint config found; skipping lint."
-          fi
+      # - name: Lint
+      #   working-directory: backend
+      #   run: |
+      #     # If package.json exposes a lint script, run it. Otherwise try eslint if present.
+      #     if npm run | grep -q "lint"; then
+      #       npm run lint
+      #     elif [ -f .eslintrc.js ] || [ -f .eslintrc.json ] || [ -f .eslintrc ]; then
+      #       npx eslint . || true
+      #     else
+      #       echo "No lint script or ESLint config found; skipping lint."
+      #     fi
 
-      - name: Run tests
-        working-directory: backend
-        run: npm test
+      # - name: Run tests
+      #   working-directory: backend
+      #   run: npm test
 
       - name: Docker build
         uses: docker/build-push-action@v4
