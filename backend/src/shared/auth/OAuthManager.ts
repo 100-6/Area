@@ -4,6 +4,7 @@ import { GitHubProvider } from './oauth/providers/GitHubProvider';
 import { GitLabProvider } from './oauth/providers/GitLabProvider';
 import { DropboxProvider } from './oauth/providers/DropboxProvider';
 import { DiscordProvider } from './oauth/providers/DiscordProvider';
+import { SlackProvider } from './oauth/providers/SlackProvider';
 import { User } from '../../core/models/User';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
 
@@ -27,6 +28,7 @@ export class OAuthManager {
     private gitLabProvider: GitLabProvider;
     private dropboxProvider: DropboxProvider;
     private discordProvider: DiscordProvider;
+    private slackProvider: SlackProvider;
 
     constructor() {
         this.googleProvider = new GoogleProvider();
@@ -34,6 +36,7 @@ export class OAuthManager {
         this.gitLabProvider = new GitLabProvider();
         this.dropboxProvider = new DropboxProvider();
         this.discordProvider = new DiscordProvider();
+        this.slackProvider = new SlackProvider();
     }
 
     /**
@@ -137,6 +140,7 @@ export class OAuthManager {
     getProvidersStatus(): {
         google: { isConfigured: boolean; status: any };
         discord: { isConfigured: boolean; status: any };
+        slack: { isConfigured: boolean; status: any };
     } {
         return {
             google: {
@@ -146,6 +150,10 @@ export class OAuthManager {
             discord: {
                 isConfigured: this.discordProvider.isConfigured(),
                 status: this.discordProvider.getConfigStatus()
+            },
+            slack: {
+                isConfigured: this.slackProvider.isConfigured(),
+                status: this.slackProvider.getConfigStatus()
             }
         };
     }
@@ -273,6 +281,32 @@ export class OAuthManager {
      */
     isDropboxConfigured(): boolean {
         return !!(process.env.DROPBOX_CLIENT_ID && process.env.DROPBOX_CLIENT_SECRET);
+    }
+
+    /**
+     * Generate Slack OAuth URL
+     */
+    getSlackAuthUrl(): string {
+        return this.slackProvider.getAuthUrl();
+    }
+
+    /**
+     * Handle Slack OAuth callback
+     */
+    async handleSlackCallback(code: string): Promise<OAuthUser> {
+        try {
+            const slackProfile = await this.slackProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('slack', slackProfile);
+        } catch (error) {
+            throw new Error(`Slack OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Check if Slack OAuth is configured
+     */
+    isSlackConfigured(): boolean {
+        return this.slackProvider.isConfigured();
     }
 
 }

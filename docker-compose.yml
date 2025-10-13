@@ -94,6 +94,9 @@ services:
       - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
       - DISCORD_REDIRECT_URI=${DISCORD_REDIRECT_URI}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - SLACK_CLIENT_ID=${SLACK_CLIENT_ID}
+      - SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET}
+      - SLACK_REDIRECT_URI=${SLACK_REDIRECT_URI}
     volumes:
       - ./backend/src:/app/src:ro
       - ./backend/package.json:/app/package.json:ro
@@ -173,6 +176,9 @@ services:
       - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
       - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
       - DISCORD_REDIRECT_URI=${DISCORD_REDIRECT_URI}
+      - SLACK_CLIENT_ID=${SLACK_CLIENT_ID}
+      - SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET}
+      - SLACK_REDIRECT_URI=${SLACK_REDIRECT_URI}
     networks:
       - area_network
     depends_on:
