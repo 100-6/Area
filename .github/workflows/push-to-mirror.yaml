@@ -18,7 +18,7 @@ jobs:
 
       - name: Add mirror remote & Push
         env:
-          MIRROR_REPO: ${{ secrets.MIRROR_REPO_URL }}
+          MIRROR_REPO_URL: ${{ secrets.MIRROR_REPO_URL }}
           MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
         run: |
           if [ -z "${MIRROR_REPO_URL}" ]; then
