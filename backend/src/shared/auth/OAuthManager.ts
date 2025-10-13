@@ -39,15 +39,15 @@ export class OAuthManager {
     /**
      * Generate Google OAuth URL
      */
-    getGoogleAuthUrl(): string {
-        return this.googleProvider.getAuthUrl();
+    getGoogleAuthUrl(state?: string): string {
+        return this.googleProvider.getAuthUrl(state);
     }
 
     /**
      * Generate Discord OAuth URL
      */
-    getDiscordAuthUrl(): string {
-        return this.discordProvider.getAuthUrl();
+    getDiscordAuthUrl(state?: string): string {
+        return this.discordProvider.getAuthUrl(state);
     }
 
     /**
@@ -153,8 +153,8 @@ export class OAuthManager {
     /**
      * Generate GitHub OAuth URL
      */
-    getGitHubAuthUrl(): string {
-        return this.gitHubProvider.getAuthUrl();
+    getGitHubAuthUrl(state?: string): string {
+        return this.gitHubProvider.getAuthUrl(state);
     }
 
     /**
@@ -226,8 +226,8 @@ export class OAuthManager {
     /**
      * Generate GitLab OAuth URL
      */
-    getGitLabAuthUrl(): string {
-        return this.gitLabProvider.getAuthUrl();
+    getGitLabAuthUrl(state?: string): string {
+        return this.gitLabProvider.getAuthUrl(state);
     }
 
     /**
@@ -252,8 +252,8 @@ export class OAuthManager {
     /**
      * Generate Dropbox OAuth URL
      */
-    getDropboxAuthUrl(): string {
-        return this.dropboxProvider.getAuthUrl();
+    getDropboxAuthUrl(state?: string): string {
+        return this.dropboxProvider.getAuthUrl(state);
     }
 
     /**

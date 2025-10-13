@@ -133,7 +133,15 @@ export class AuthController {
      */
     public discordLogin = async (req: Request, res: Response): Promise<void> => {
         try {
-            const authUrl = this.authService.getDiscordAuthUrl();
+            const token = req.query.token as string | undefined;
+            const isMobile = this.isMobileRequest(req);
+            let state: string | undefined;
+
+            if (token || isMobile) {
+                const stateData = { token, isMobile };
+                state = Buffer.from(JSON.stringify(stateData)).toString('base64');
+            }
+            const authUrl = this.authService.getDiscordAuthUrl(state);
             res.redirect(authUrl);
         } catch (error) {
             console.error('Discord OAuth redirect error:'.red, error);
@@ -150,10 +158,18 @@ export class AuthController {
      */
     public discordCallback = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { code, error } = req.query;
-            const isMobile = this.isMobileRequest(req);
-            const redirectUrl = this.getRedirectUrl(isMobile);
+            const { code, error, state } = req.query;
+            let stateData: { token?: string; isMobile?: boolean } = {};
 
+            if (state && typeof state === 'string') {
+                try {
+                    stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+                } catch (e) {
+                    console.warn('Failed to parse state:', e);
+                }
+            }
+            const isMobile = stateData.isMobile || this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
             if (error) {
                 console.error('Discord OAuth error:', error);
                 res.redirect(`${redirectUrl}/auth/error?error=${error}`);
@@ -163,9 +179,14 @@ export class AuthController {
                 res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
                 return;
             }
-            const result = await this.authService.handleDiscordCallback(code as string);
-            // Can't reliably set HttpOnly cookie cross-domain via redirect without same-site alignment; send token in URL as before + (optional) plan for frontend to hit /api/auth/transfer to set cookie server-side.
-            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=discord&refresh=${result.refreshToken}`);
+            const isAlreadyAuthenticated = await this.authService.verifyJWT(stateData.token);
+            if (isAlreadyAuthenticated) {
+                await this.authService.handleDiscordCallback(code as string);
+                res.redirect(`${redirectUrl}/service/success?service=discord`);
+            } else {
+                const result = await this.authService.handleDiscordCallback(code as string);
+                res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=discord&refresh=${result.refreshToken}`);
+            }
         } catch (error) {
             console.error('Discord OAuth callback error:'.red, error);
             const isMobile = this.isMobileRequest(req);
@@ -194,8 +215,15 @@ export class AuthController {
      */
     public googleLogin = async (req: Request, res: Response): Promise<void> => {
         try {
-            const authUrl = this.authService.getGoogleAuthUrl();
+            const token = req.query.token as string | undefined;
+            const isMobile = this.isMobileRequest(req);
+            let state: string | undefined;
 
+            if (token || isMobile) {
+                const stateData = { token, isMobile };
+                state = Buffer.from(JSON.stringify(stateData)).toString('base64');
+            }
+            const authUrl = this.authService.getGoogleAuthUrl(state);
             res.redirect(authUrl);
         } catch (error) {
             console.error('Google OAuth redirect error:'.red, error);
@@ -212,10 +240,18 @@ export class AuthController {
      */
     public googleCallback = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { code, error } = req.query;
-            const isMobile = this.isMobileRequest(req);
-            const redirectUrl = this.getRedirectUrl(isMobile);
+            const { code, error, state } = req.query;
+            let stateData: { token?: string; isMobile?: boolean } = {};
 
+            if (state && typeof state === 'string') {
+                try {
+                    stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+                } catch (e) {
+                    console.warn('Failed to parse state:', e);
+                }
+            }
+            const isMobile = stateData.isMobile || this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
             if (error) {
                 console.error('Google OAuth error:', error);
                 res.redirect(`${redirectUrl}/auth/error?error=${error}`);
@@ -225,8 +261,14 @@ export class AuthController {
                 res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
                 return;
             }
-            const result = await this.authService.handleGoogleCallback(code as string);
-            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=google&refresh=${result.refreshToken}`);
+            const isAlreadyAuthenticated = await this.authService.verifyJWT(stateData.token);
+            if (isAlreadyAuthenticated) {
+                await this.authService.handleGoogleCallback(code as string);
+                res.redirect(`${redirectUrl}/service/success?service=google`);
+            } else {
+                const result = await this.authService.handleGoogleCallback(code as string);
+                res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=google&refresh=${result.refreshToken}`);
+            }
         } catch (error) {
             console.error('Google OAuth callback error:'.red, error);
             const isMobile = this.isMobileRequest(req);
@@ -255,7 +297,15 @@ export class AuthController {
      */
     public gitHubLogin = async (req: Request, res: Response): Promise<void> => {
         try {
-            const authUrl = this.authService.getGitHubAuthUrl();
+            const token = req.query.token as string | undefined;
+            const isMobile = this.isMobileRequest(req);
+            let state: string | undefined;
+
+            if (token || isMobile) {
+                const stateData = { token, isMobile };
+                state = Buffer.from(JSON.stringify(stateData)).toString('base64');
+            }
+            const authUrl = this.authService.getGitHubAuthUrl(state);
             res.redirect(authUrl);
         } catch (error) {
             console.error('GitHub OAuth redirect error:'.red, error);
@@ -272,10 +322,18 @@ export class AuthController {
      */
     public gitHubCallback = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { code, error } = req.query;
-            const isMobile = this.isMobileRequest(req);
-            const redirectUrl = this.getRedirectUrl(isMobile);
+            const { code, error, state } = req.query;
+            let stateData: { token?: string; isMobile?: boolean } = {};
 
+            if (state && typeof state === 'string') {
+                try {
+                    stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+                } catch (e) {
+                    console.warn('Failed to parse state:', e);
+                }
+            }
+            const isMobile = stateData.isMobile || this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
             if (error) {
                 console.error('GitHub OAuth error:', error);
                 res.redirect(`${redirectUrl}/auth/error?error=${error}`);
@@ -285,8 +343,14 @@ export class AuthController {
                 res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
                 return;
             }
-            const result = await this.authService.handleGitHubCallback(code as string);
-            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=github&refresh=${result.refreshToken}`);
+            const isAlreadyAuthenticated = await this.authService.verifyJWT(stateData.token);
+            if (isAlreadyAuthenticated) {
+                await this.authService.handleGitHubCallback(code as string);
+                res.redirect(`${redirectUrl}/service/success?service=github`);
+            } else {
+                const result = await this.authService.handleGitHubCallback(code as string);
+                res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=github&refresh=${result.refreshToken}`);
+            }
         } catch (error) {
             console.error('GitHub OAuth callback error:'.red, error);
             const isMobile = this.isMobileRequest(req);
@@ -315,8 +379,15 @@ export class AuthController {
      */
     public gitLabLogin = async (req: Request, res: Response): Promise<void> => {
         try {
-            const authUrl = this.authService.getGitLabAuthUrl();
+            const token = req.query.token as string | undefined;
+            const isMobile = this.isMobileRequest(req);
+            let state: string | undefined;
 
+            if (token || isMobile) {
+                const stateData = { token, isMobile };
+                state = Buffer.from(JSON.stringify(stateData)).toString('base64');
+            }
+            const authUrl = this.authService.getGitLabAuthUrl(state);
             res.redirect(authUrl);
         } catch (error) {
             console.error('GitLab OAuth redirect error:'.red, error);
@@ -333,10 +404,18 @@ export class AuthController {
      */
     public gitLabCallback = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { code, error } = req.query;
-            const isMobile = this.isMobileRequest(req);
-            const redirectUrl = this.getRedirectUrl(isMobile);
+            const { code, error, state } = req.query;
+            let stateData: { token?: string; isMobile?: boolean } = {};
 
+            if (state && typeof state === 'string') {
+                try {
+                    stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+                } catch (e) {
+                    console.warn('Failed to parse state:', e);
+                }
+            }
+            const isMobile = stateData.isMobile || this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
             if (error) {
                 console.error('GitLab OAuth error:', error);
                 res.redirect(`${redirectUrl}/auth/error?error=${error}`);
@@ -346,8 +425,14 @@ export class AuthController {
                 res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
                 return;
             }
-            const result = await this.authService.handleGitLabCallback(code as string);
-            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=gitlab&refresh=${result.refreshToken}`);
+            const isAlreadyAuthenticated = await this.authService.verifyJWT(stateData.token);
+            if (isAlreadyAuthenticated) {
+                await this.authService.handleGitLabCallback(code as string);
+                res.redirect(`${redirectUrl}/service/success?service=gitlab`);
+            } else {
+                const result = await this.authService.handleGitLabCallback(code as string);
+                res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=gitlab&refresh=${result.refreshToken}`);
+            }
         } catch (error) {
             console.error('GitLab OAuth callback error:'.red, error);
             const isMobile = this.isMobileRequest(req);
@@ -376,8 +461,15 @@ export class AuthController {
      */
     public dropboxLogin = async (req: Request, res: Response): Promise<void> => {
         try {
-            const authUrl = this.authService.getDropboxAuthUrl();
+            const token = req.query.token as string | undefined;
+            const isMobile = this.isMobileRequest(req);
+            let state: string | undefined;
 
+            if (token || isMobile) {
+                const stateData = { token, isMobile };
+                state = Buffer.from(JSON.stringify(stateData)).toString('base64');
+            }
+            const authUrl = this.authService.getDropboxAuthUrl(state);
             res.redirect(authUrl);
         } catch (error) {
             console.error('Dropbox OAuth redirect error:'.red, error);
@@ -394,10 +486,18 @@ export class AuthController {
      */
     public dropboxCallback = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { code, error } = req.query;
-            const isMobile = this.isMobileRequest(req);
-            const redirectUrl = this.getRedirectUrl(isMobile);
+            const { code, error, state } = req.query;
+            let stateData: { token?: string; isMobile?: boolean } = {};
 
+            if (state && typeof state === 'string') {
+                try {
+                    stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+                } catch (e) {
+                    console.warn('Failed to parse state:', e);
+                }
+            }
+            const isMobile = stateData.isMobile || this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
             if (error) {
                 console.error('Dropbox OAuth error:', error);
                 res.redirect(`${redirectUrl}/auth/error?error=${error}`);
@@ -407,8 +507,14 @@ export class AuthController {
                 res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
                 return;
             }
-            const result = await this.authService.handleDropboxCallback(code as string);
-            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=dropbox&refresh=${result.refreshToken}`);
+            const isAlreadyAuthenticated = await this.authService.verifyJWT(stateData.token);
+            if (isAlreadyAuthenticated) {
+                await this.authService.handleDropboxCallback(code as string);
+                res.redirect(`${redirectUrl}/service/success?service=dropbox`);
+            } else {
+                const result = await this.authService.handleDropboxCallback(code as string);
+                res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=dropbox&refresh=${result.refreshToken}`);
+            }
         } catch (error) {
             console.error('Dropbox OAuth callback error:'.red, error);
             const isMobile = this.isMobileRequest(req);

@@ -51,8 +51,8 @@ export class GoogleProvider implements IOAuthProvider {
         return 'google';
     }
 
-    getAuthUrl(): string {
-        const state = crypto.randomBytes(32).toString('hex');
+    getAuthUrl(customState?: string): string {
+        const state = customState || crypto.randomBytes(32).toString('hex');
         const params = new URLSearchParams({
             client_id: this.clientId,
             redirect_uri: this.redirectUri,

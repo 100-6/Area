@@ -43,13 +43,14 @@ export class GitLabProvider implements IOAuthProvider {
         return 'gitlab';
     }
 
-    getAuthUrl(): string {
+    getAuthUrl(customState?: string): string {
+        const state = customState || 'gitlab-oauth';
         const params = new URLSearchParams({
             client_id: this.clientId,
             redirect_uri: this.redirectUri,
             response_type: 'code',
             scope: 'read_user',
-            state: 'gitlab-oauth'
+            state: state
         });
 
         return `${this.baseUrl}/oauth/authorize?${params.toString()}`;
