@@ -10,6 +10,7 @@ class NodeConfigScreen extends StatefulWidget {
   final String serviceName;
   final String actionName;
   final String description;
+  final Map<String, dynamic>? existingConfig;
 
   const NodeConfigScreen({
     super.key,
@@ -17,6 +18,7 @@ class NodeConfigScreen extends StatefulWidget {
     required this.serviceName,
     required this.actionName,
     required this.description,
+    this.existingConfig,
   });
 
   @override
@@ -43,9 +45,30 @@ class _NodeConfigScreenState extends State<NodeConfigScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Pré-remplir la configuration si existante
+    if (widget.existingConfig != null) {
+      _config.addAll(widget.existingConfig!);
+      // Pré-remplir les controllers pour les champs texte
+      widget.existingConfig!.forEach((key, value) {
+        if (value is String || value is int) {
+          _controllers[key] = TextEditingController(text: value.toString());
+        }
+      });
+      // Pré-sélectionner le guildId si présent
+      if (_config['guildId'] != null) {
+        _selectedGuildId = _config['guildId'].toString();
+      }
+    }
+
     // Charger les données Discord si nécessaire
     if (widget.serviceName == 'discord') {
       _loadDiscordGuilds();
+      // Si un guildId existe déjà, charger les channels et roles
+      if (_selectedGuildId != null) {
+        _loadDiscordChannels(_selectedGuildId!);
+        _loadDiscordRoles(_selectedGuildId!);
+      }
     }
   }
 
@@ -508,7 +531,10 @@ class _NodeConfigScreenState extends State<NodeConfigScreen> {
     required String hint,
     bool required = false,
   }) {
-    _controllers[key] = TextEditingController();
+    // Ne créer le controller que s'il n'existe pas déjà (pré-rempli dans initState)
+    if (!_controllers.containsKey(key)) {
+      _controllers[key] = TextEditingController();
+    }
 
     return Card(
       child: Padding(
@@ -552,7 +578,10 @@ class _NodeConfigScreenState extends State<NodeConfigScreen> {
     int? min,
     int? max,
   }) {
-    _controllers[key] = TextEditingController();
+    // Ne créer le controller que s'il n'existe pas déjà (pré-rempli dans initState)
+    if (!_controllers.containsKey(key)) {
+      _controllers[key] = TextEditingController();
+    }
 
     return Card(
       child: Padding(
@@ -604,7 +633,10 @@ class _NodeConfigScreenState extends State<NodeConfigScreen> {
     required String label,
     required String hint,
   }) {
-    _controllers[key] = TextEditingController();
+    // Ne créer le controller que s'il n'existe pas déjà (pré-rempli dans initState)
+    if (!_controllers.containsKey(key)) {
+      _controllers[key] = TextEditingController();
+    }
 
     return Card(
       child: Padding(
@@ -697,7 +729,10 @@ class _NodeConfigScreenState extends State<NodeConfigScreen> {
     bool required = false,
     int? maxLength,
   }) {
-    _controllers[key] = TextEditingController();
+    // Ne créer le controller que s'il n'existe pas déjà (pré-rempli dans initState)
+    if (!_controllers.containsKey(key)) {
+      _controllers[key] = TextEditingController();
+    }
 
     return Card(
       child: Padding(
@@ -742,8 +777,11 @@ class _NodeConfigScreenState extends State<NodeConfigScreen> {
     required String description,
     bool defaultValue = false,
   }) {
-    bool value = defaultValue;
-    _config[key] = value;
+    // Utiliser la valeur existante si disponible, sinon la valeur par défaut
+    bool value = _config.containsKey(key) ? (_config[key] as bool? ?? defaultValue) : defaultValue;
+    if (!_config.containsKey(key)) {
+      _config[key] = value;
+    }
 
     return Card(
       child: Padding(

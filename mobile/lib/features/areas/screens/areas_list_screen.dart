@@ -12,7 +12,7 @@ class AreasListScreen extends StatefulWidget {
   State<AreasListScreen> createState() => _AreasListScreenState();
 }
 
-class _AreasListScreenState extends State<AreasListScreen> {
+class _AreasListScreenState extends State<AreasListScreen> with WidgetsBindingObserver {
   final AreaService _areaService = AreaService();
   List<Area> _areas = [];
   bool _isLoading = true;
@@ -21,7 +21,23 @@ class _AreasListScreenState extends State<AreasListScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadAreas();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Refresh quand l'app revient au premier plan
+    if (state == AppLifecycleState.resumed) {
+      _loadAreas();
+    }
   }
 
   Future<void> _loadAreas() async {

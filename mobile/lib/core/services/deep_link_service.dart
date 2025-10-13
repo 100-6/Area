@@ -51,7 +51,8 @@ class DeepLinkService {
 
     print('OAuth callback - Path: $path, Params: $queryParams');
 
-    if (path == '/auth/success') {
+    // Gérer les variantes de "success" (avec faute de frappe du backend)
+    if (path == '/auth/success' || path == '/auth/succes') {
       final token = queryParams['token'];
       final refreshToken = queryParams['refresh'];
       final provider = queryParams['provider'];
@@ -61,7 +62,14 @@ class DeepLinkService {
       } else {
         _handleOAuthError('Token manquant');
       }
-    } else if (path == '/auth/error') {
+    } else if (path == '/service/success' || path == '/service/succes') {
+      // Connexion à un service externe (Discord, GitHub, etc.)
+      final provider = queryParams['provider'];
+      final serviceName = queryParams['service'];
+
+      print('Service OAuth connecté: $serviceName / $provider');
+      _handleServiceConnected(serviceName ?? provider ?? 'unknown');
+    } else if (path == '/auth/error' || path == '/service/error') {
       final error = queryParams['error'] ?? queryParams['message'] ?? 'Erreur OAuth inconnue';
       _handleOAuthError(error);
     }
@@ -93,6 +101,14 @@ class DeepLinkService {
       print('Erreur lors de la connexion OAuth: $e');
       _handleOAuthError(e.toString());
     }
+  }
+
+  /// Gère la connexion réussie à un service
+  void _handleServiceConnected(String serviceName) {
+    print('Service $serviceName connecté avec succès');
+    // Le service est maintenant connecté
+    // L'utilisateur peut fermer le navigateur et revenir à l'app
+    // La prochaine fois qu'il vérifiera le statut du service, il sera connecté
   }
 
   /// Gère les erreurs OAuth

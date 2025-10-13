@@ -36,6 +36,33 @@ class OAuthService {
     }
   }
 
+  /// Lance le flux OAuth pour connecter un service externe (Discord, GitHub, etc.)
+  /// Utilisé pour connecter un service à utiliser dans les Areas, pas pour se connecter à l'app
+  /// Note: Réutilise les routes OAuth existantes (/api/auth/discord, etc.) mais le backend
+  /// redirigera vers /service/success au lieu de /auth/success pour ne pas créer de session
+  Future<OAuthResult> connectService(String serviceName) async {
+    try {
+      final authUrl = _getServiceAuthUrl(serviceName);
+
+      // Ouvrir l'URL dans le navigateur externe avec paramètre mobile
+      final uri = Uri.parse('$authUrl?mobile=true');
+
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+
+        // Le callback sera géré via deep linking
+        return OAuthResult.pending();
+      } else {
+        return OAuthResult.error('Impossible d\'ouvrir le navigateur');
+      }
+    } catch (e) {
+      return OAuthResult.error('Erreur OAuth: ${e.toString()}');
+    }
+  }
+
   /// Obtient l'URL d'authentification pour un provider
   String _getAuthUrl(OAuthProvider provider) {
     final baseUrl = ApiConstants.baseUrl;
@@ -52,6 +79,14 @@ class OAuthService {
       case OAuthProvider.dropbox:
         return '$baseUrl/api/auth/dropbox';
     }
+  }
+
+  /// Obtient l'URL OAuth pour connecter un service externe
+  /// Utilise les routes OAuth existantes (/api/auth/discord, etc.)
+  String _getServiceAuthUrl(String serviceName) {
+    final baseUrl = ApiConstants.baseUrl;
+    // Réutilise les routes OAuth existantes
+    return '$baseUrl/api/auth/${serviceName.toLowerCase()}';
   }
 
 }

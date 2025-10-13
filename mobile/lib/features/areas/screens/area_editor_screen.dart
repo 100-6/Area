@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/area.dart';
 import '../models/workflow_node.dart';
+import '../models/service_info.dart';
 import '../services/area_service.dart';
 import '../../auth/data/auth_repository.dart';
+import '../utils/node_config_helper.dart';
 import 'service_selector_screen.dart';
-import 'node_config_screen.dart';
 
 class AreaEditorScreen extends StatefulWidget {
   final String? areaId;
@@ -22,7 +22,6 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
   final TextEditingController _descriptionController = TextEditingController();
 
   bool _isLoading = false;
-  Area? _area;
   WorkflowNode? _triggerNode;
   List<WorkflowNode> _actionNodes = [];
 
@@ -52,7 +51,6 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
       );
 
       setState(() {
-        _area = area;
         _nameController.text = area.name;
         _descriptionController.text = area.description ?? '';
         _triggerNode = nodes.firstWhere(
@@ -164,47 +162,114 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
     }
   }
 
-  Future<void> _selectTrigger() async {
-    // Étape 1: Sélectionner le service/trigger
-    final result = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const ServiceSelectorScreen(nodeType: 'trigger'),
-      ),
-    );
-
-    if (result != null && mounted) {
-      // Étape 2: Configurer les paramètres
-      final config = await Navigator.push<Map<String, dynamic>>(
-        context,
-        MaterialPageRoute(
-          builder: (context) => NodeConfigScreen(
-            nodeType: 'trigger',
-            serviceName: result['service'],
-            actionName: result['name'],
-            description: result['description'],
-          ),
-        ),
+  Future<void> _editTrigger() async {
+    // Si un trigger existe déjà, permettre de le modifier
+    if (_triggerNode != null) {
+      // Aller directement à la configuration avec les données existantes
+      final config = await NodeConfigHelper.openConfigScreen(
+        context: context,
+        nodeType: 'trigger',
+        serviceName: _triggerNode!.serviceId ?? '',
+        actionName: _triggerNode!.actionId ?? '',
+        description: _getTriggerDisplayText(),
+        existingConfig: _triggerNode!.config,
       );
 
       if (config != null) {
         setState(() {
-          // Créer le node avec la configuration
+          // Mettre à jour la configuration du trigger existant
           _triggerNode = WorkflowNode(
-            id: 'temp_trigger',
-            areaId: widget.areaId ?? 'new',
+            id: _triggerNode!.id,
+            areaId: _triggerNode!.areaId,
             nodeType: 'trigger',
-            serviceId: result['service'],
-            actionId: result['name'],
+            serviceId: _triggerNode!.serviceId,
+            actionId: _triggerNode!.actionId,
             config: config,
-            positionX: 100,
-            positionY: 100,
-            label: '${result['service']}: ${result['description']}',
-            createdAt: DateTime.now(),
+            positionX: _triggerNode!.positionX,
+            positionY: _triggerNode!.positionY,
+            label: _triggerNode!.label,
+            createdAt: _triggerNode!.createdAt,
             updatedAt: DateTime.now(),
           );
         });
       }
+    } else {
+      // Créer un nouveau trigger
+      // Étape 1: Sélectionner le service/trigger
+      final result = await Navigator.push<Map<String, dynamic>>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const ServiceSelectorScreen(nodeType: 'trigger'),
+        ),
+      );
+
+      if (result != null && mounted) {
+        // Étape 2: Configurer les paramètres avec le helper
+        final item = result['item'];
+        final serviceAction = item is ServiceAction ? item : null;
+
+        final config = await NodeConfigHelper.openConfigScreen(
+          context: context,
+          nodeType: 'trigger',
+          serviceName: result['service'],
+          actionName: result['name'],
+          description: result['description'],
+          serviceAction: serviceAction,
+        );
+
+        if (config != null) {
+          setState(() {
+            // Créer le node avec la configuration
+            _triggerNode = WorkflowNode(
+              id: 'temp_trigger',
+              areaId: widget.areaId ?? 'new',
+              nodeType: 'trigger',
+              serviceId: result['service'],
+              actionId: result['name'],
+              config: config,
+              positionX: 100,
+              positionY: 100,
+              label: '${result['service']}: ${result['description']}',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            );
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _editAction(WorkflowNode node) async {
+    // Modifier une action existante
+    final config = await NodeConfigHelper.openConfigScreen(
+      context: context,
+      nodeType: 'action',
+      serviceName: node.serviceId ?? '',
+      actionName: node.reactionId ?? '',
+      description: _getActionDisplayText(node),
+      existingConfig: node.config,
+    );
+
+    if (config != null) {
+      setState(() {
+        // Trouver l'index de l'action et la mettre à jour
+        final index = _actionNodes.indexOf(node);
+        if (index != -1) {
+          _actionNodes[index] = WorkflowNode(
+            id: node.id,
+            areaId: node.areaId,
+            nodeType: 'action',
+            serviceId: node.serviceId,
+            reactionId: node.reactionId,
+            config: config,
+            positionX: node.positionX,
+            positionY: node.positionY,
+            label: node.label,
+            createdAt: node.createdAt,
+            updatedAt: DateTime.now(),
+          );
+        }
+      });
     }
   }
 
@@ -218,17 +283,17 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
     );
 
     if (result != null && mounted) {
-      // Étape 2: Configurer les paramètres
-      final config = await Navigator.push<Map<String, dynamic>>(
-        context,
-        MaterialPageRoute(
-          builder: (context) => NodeConfigScreen(
-            nodeType: 'action',
-            serviceName: result['service'],
-            actionName: result['name'],
-            description: result['description'],
-          ),
-        ),
+      // Étape 2: Configurer les paramètres avec le helper
+      final item = result['item'];
+      final serviceReaction = item is ServiceReaction ? item : null;
+
+      final config = await NodeConfigHelper.openConfigScreen(
+        context: context,
+        nodeType: 'action',
+        serviceName: result['service'],
+        actionName: result['name'],
+        description: result['description'],
+        serviceReaction: serviceReaction,
       );
 
       if (config != null) {
@@ -390,7 +455,7 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: _selectTrigger,
+        onTap: () => _editTrigger(),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -556,63 +621,67 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
       child: Card(
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: () => _editAction(node),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.check_circle, color: Colors.green, size: 28),
                 ),
-                child: const Icon(Icons.check_circle, color: Colors.green, size: 28),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'THEN',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _getActionDisplayText(node),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (node.config.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          _formatActionConfig(node),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[600],
-                          ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'THEN',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
                         ),
                       ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        _getActionDisplayText(node),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (node.config.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            _formatActionConfig(node),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.grey),
-                onPressed: () {
-                  setState(() {
-                    _actionNodes.remove(node);
-                  });
-                },
-              ),
-            ],
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.grey),
+                  onPressed: () {
+                    setState(() {
+                      _actionNodes.remove(node);
+                    });
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),

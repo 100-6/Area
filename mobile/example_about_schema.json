@@ -1,0 +1,218 @@
+{
+  "server": {
+    "services": [
+      {
+        "name": "discord",
+        "actions": [
+          {
+            "name": "on_message_created",
+            "description": "When a message is created",
+            "configSchema": {
+              "fields": [
+                {
+                  "key": "guildId",
+                  "type": "discord_guild",
+                  "label": "Discord Server",
+                  "required": true
+                },
+                {
+                  "key": "channelId",
+                  "type": "discord_channel",
+                  "label": "Channel",
+                  "required": true,
+                  "dependsOn": "guildId"
+                },
+                {
+                  "key": "keyword",
+                  "type": "text",
+                  "label": "Keyword (optional)",
+                  "hint": "Only trigger if message contains this keyword",
+                  "required": false
+                },
+                {
+                  "key": "authorId",
+                  "type": "text",
+                  "label": "Author ID (optional)",
+                  "hint": "Only trigger for messages from this user",
+                  "required": false
+                },
+                {
+                  "key": "ignoreBots",
+                  "type": "boolean",
+                  "label": "Ignore bots",
+                  "hint": "Ignore messages from bots",
+                  "default": true
+                }
+              ],
+              "outputSchema": {
+                "author.id": "string",
+                "author.username": "string",
+                "content": "string",
+                "channel.id": "string",
+                "guild.id": "string"
+              }
+            }
+          },
+          {
+            "name": "on_member_join",
+            "description": "When a member joins",
+            "configSchema": {
+              "fields": [
+                {
+                  "key": "guildId",
+                  "type": "discord_guild",
+                  "label": "Discord Server",
+                  "required": true
+                }
+              ],
+              "outputSchema": {
+                "member.id": "string",
+                "member.username": "string",
+                "guild.id": "string"
+              }
+            }
+          }
+        ],
+        "reactions": [
+          {
+            "name": "send_message",
+            "description": "Send a message",
+            "configSchema": {
+              "fields": [
+                {
+                  "key": "guildId",
+                  "type": "discord_guild",
+                  "label": "Discord Server",
+                  "required": true
+                },
+                {
+                  "key": "channelId",
+                  "type": "discord_channel",
+                  "label": "Channel",
+                  "required": true,
+                  "dependsOn": "guildId"
+                },
+                {
+                  "key": "content",
+                  "type": "textarea",
+                  "label": "Message Content",
+                  "hint": "Message to send (supports variables like {{author.username}})",
+                  "required": true,
+                  "maxLength": 2000
+                },
+                {
+                  "key": "replyToMessageId",
+                  "type": "text",
+                  "label": "Reply to Message ID (optional)",
+                  "hint": "Reply to a specific message",
+                  "required": false
+                }
+              ]
+            }
+          },
+          {
+            "name": "add_role",
+            "description": "Add a role to a member",
+            "configSchema": {
+              "fields": [
+                {
+                  "key": "guildId",
+                  "type": "discord_guild",
+                  "label": "Discord Server",
+                  "required": true
+                },
+                {
+                  "key": "userId",
+                  "type": "text",
+                  "label": "User ID",
+                  "hint": "Discord user ID (17-19 digits, supports variables like {{author.id}})",
+                  "required": true
+                },
+                {
+                  "key": "roleId",
+                  "type": "discord_role",
+                  "label": "Role",
+                  "required": true,
+                  "dependsOn": "guildId"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "timer",
+        "actions": [
+          {
+            "name": "every_x_minutes",
+            "description": "Every X minutes",
+            "configSchema": {
+              "fields": [
+                {
+                  "key": "interval",
+                  "type": "number",
+                  "label": "Interval (minutes)",
+                  "hint": "Enter interval in minutes (1-1440)",
+                  "required": true,
+                  "min": 1,
+                  "max": 1440
+                }
+              ]
+            }
+          },
+          {
+            "name": "daily_at_time",
+            "description": "Daily at specific time",
+            "configSchema": {
+              "fields": [
+                {
+                  "key": "time",
+                  "type": "time",
+                  "label": "Time",
+                  "hint": "HH:mm (e.g., 09:00)",
+                  "required": true
+                },
+                {
+                  "key": "timezone",
+                  "type": "dropdown",
+                  "label": "Timezone",
+                  "options": ["Europe/Paris", "America/New_York", "Asia/Tokyo"],
+                  "default": "Europe/Paris"
+                }
+              ]
+            }
+          }
+        ],
+        "reactions": []
+      },
+      {
+        "name": "console",
+        "actions": [],
+        "reactions": [
+          {
+            "name": "log",
+            "description": "Log a message",
+            "configSchema": {
+              "fields": [
+                {
+                  "key": "message",
+                  "type": "text",
+                  "label": "Message",
+                  "hint": "Enter the message to log",
+                  "required": true
+                },
+                {
+                  "key": "level",
+                  "type": "dropdown",
+                  "label": "Log Level",
+                  "options": ["info", "warn", "error", "success"],
+                  "default": "info"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

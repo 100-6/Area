@@ -156,6 +156,7 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
             service: service,
             name: name,
             description: description,
+            item: item,
           );
         }),
         const SizedBox(height: 16),
@@ -167,6 +168,7 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
     required ServiceInfo service,
     required String name,
     required String description,
+    required dynamic item,
   }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -202,6 +204,7 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
                   'service': service.name,
                   'name': name,
                   'description': description,
+                  'item': item,
                 });
                 return;
               }
@@ -213,8 +216,8 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
               );
 
               if (shouldConnect == true && mounted) {
-                // Lancer le flux OAuth
-                final result = await _oauthService.signInWithProvider(provider);
+                // Lancer le flux OAuth pour connecter le service (pas pour se connecter à l'app)
+                final result = await _oauthService.connectService(service.name);
 
                 if (result.isSuccess || result.isPending) {
                   if (mounted) {
@@ -251,6 +254,7 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
               'service': service.name,
               'name': name,
               'description': description,
+              'item': item,
             });
           }
         },
@@ -359,8 +363,7 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
 
   /// Vérifie si un service nécessite une connexion OAuth
   bool _requiresOAuthConnection(String serviceName) {
-    // Discord utilise un bot backend, pas d'OAuth individuel
-    final oauthServices = ['github', 'gitlab', 'dropbox', 'google'];
+    final oauthServices = ['discord', 'github', 'gitlab', 'dropbox', 'google'];
     return oauthServices.contains(serviceName.toLowerCase());
   }
 

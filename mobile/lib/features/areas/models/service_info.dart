@@ -1,3 +1,5 @@
+import 'config_schema.dart';
+
 class ServiceInfo {
   final String name;
   final List<ServiceAction> actions;
@@ -33,16 +35,21 @@ class ServiceInfo {
 class ServiceAction {
   final String name;
   final String description;
+  final ConfigSchema? configSchema;
 
   ServiceAction({
     required this.name,
     required this.description,
+    this.configSchema,
   });
 
   factory ServiceAction.fromJson(Map<String, dynamic> json) {
     return ServiceAction(
       name: json['name'] as String,
       description: json['description'] as String,
+      configSchema: json['configSchema'] != null
+          ? ConfigSchema.fromJson(json['configSchema'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -50,6 +57,7 @@ class ServiceAction {
     return {
       'name': name,
       'description': description,
+      if (configSchema != null) 'configSchema': configSchema!.toJson(),
     };
   }
 }
@@ -57,16 +65,21 @@ class ServiceAction {
 class ServiceReaction {
   final String name;
   final String description;
+  final ConfigSchema? configSchema;
 
   ServiceReaction({
     required this.name,
     required this.description,
+    this.configSchema,
   });
 
   factory ServiceReaction.fromJson(Map<String, dynamic> json) {
     return ServiceReaction(
       name: json['name'] as String,
       description: json['description'] as String,
+      configSchema: json['configSchema'] != null
+          ? ConfigSchema.fromJson(json['configSchema'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -74,6 +87,7 @@ class ServiceReaction {
     return {
       'name': name,
       'description': description,
+      if (configSchema != null) 'configSchema': configSchema!.toJson(),
     };
   }
 }
