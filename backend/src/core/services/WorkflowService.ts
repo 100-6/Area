@@ -147,7 +147,10 @@ export class WorkflowService {
             error.code = 'NODE_NOT_FOUND';
             throw error;
         }
-        const node = await this.workflowModel.updateNode(nodeId, data);
+        const serviceId = data.serviceId ? await this.workflowModel.resolveServiceId(data.serviceId) : undefined;
+        const actionId = data.actionId && (serviceId || existingNode.serviceId) ? await this.workflowModel.resolveActionId(serviceId || existingNode.serviceId!, data.actionId) : undefined;
+        const reactionId = data.reactionId && (serviceId || existingNode.serviceId) ? await this.workflowModel.resolveReactionId(serviceId || existingNode.serviceId!, data.reactionId) : undefined;
+        const node = await this.workflowModel.updateNode(nodeId, {...data, serviceId, actionId, reactionId});
         console.log(`[WorkflowService] Node updated: ${nodeId}`.green);
         return node;
     }
