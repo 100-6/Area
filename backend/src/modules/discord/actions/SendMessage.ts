@@ -51,6 +51,18 @@ export class SendMessage extends BaseAction {
         };
     }
 
+    getOutputSchema(): any {
+        return {
+            type: 'object',
+            properties: {
+                messageId: { type: 'string', description: 'ID of the sent message' },
+                channelId: { type: 'string', description: 'Channel ID where message was sent' },
+                content: { type: 'string', description: 'Content of the sent message' },
+                timestamp: { type: 'string', format: 'date-time', description: 'When message was sent' }
+            }
+        };
+    }
+
     getRequiredScopes(): string[] {
         return ['bot']; // Nécessite le bot Discord
     }

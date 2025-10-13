@@ -21,6 +21,21 @@ export class FetchArticleAction extends BaseAction {
         };
     }
 
+    getOutputSchema(): any {
+        return {
+            type: 'object',
+            properties: {
+                title: { type: 'string', description: 'Article title' },
+                body: { type: 'string', description: 'Article body text' },
+                author: { type: 'string', description: 'Article author name' },
+                publishedAt: { type: 'string', format: 'date-time', description: 'Publication date' },
+                url: { type: 'string', format: 'uri', description: 'Article URL' },
+                imageUrl: { type: 'string', format: 'uri', description: 'Article image URL' },
+                tags: { type: 'array', items: { type: 'string' }, description: 'Article tags' }
+            }
+        };
+    }
+
     getRequiredScopes(): string[] {
         return [];
     }
@@ -73,6 +88,29 @@ export class FormatArticleAction extends BaseAction {
         return {
             template: { type: 'string', required: true },
             includeImage: { type: 'boolean', default: false }
+        };
+    }
+
+    getOutputSchema(): any {
+        return {
+            type: 'object',
+            properties: {
+                formattedText: { type: 'string', description: 'Formatted article text using the template' },
+                length: { type: 'number', description: 'Length of the formatted text in characters' },
+                originalArticle: { 
+                    type: 'object', 
+                    description: 'Original article data passed through',
+                    properties: {
+                        title: { type: 'string' },
+                        body: { type: 'string' },
+                        author: { type: 'string' },
+                        publishedAt: { type: 'string', format: 'date-time' },
+                        url: { type: 'string', format: 'uri' },
+                        imageUrl: { type: 'string', format: 'uri' },
+                        tags: { type: 'array', items: { type: 'string' } }
+                    }
+                }
+            }
         };
     }
 
@@ -159,6 +197,18 @@ export class SendNotificationAction extends BaseAction {
         return {
             message: { type: 'string', required: true },
             minLength: { type: 'number', default: 0 }
+        };
+    }
+
+    getOutputSchema(): any {
+        return {
+            type: 'object',
+            properties: {
+                sent: { type: 'boolean', description: 'Whether the notification was sent' },
+                message: { type: 'string', description: 'Final notification message (with resolved placeholders)' },
+                timestamp: { type: 'string', format: 'date-time', description: 'When notification was sent' },
+                reason: { type: 'string', description: 'Reason if notification was not sent' }
+            }
         };
     }
 

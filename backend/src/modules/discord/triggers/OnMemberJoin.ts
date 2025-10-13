@@ -48,6 +48,33 @@ export class OnMemberJoin extends BaseTrigger {
         };
     }
 
+    getOutputSchema(): any {
+        return {
+            type: 'object',
+            properties: {
+                member: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', description: 'Member user ID' },
+                        tag: { type: 'string', description: 'Member Discord tag (username#discriminator)' },
+                        username: { type: 'string', description: 'Member username' },
+                        avatarUrl: { type: 'string', description: 'Member avatar URL' },
+                        joinedAt: { type: 'string', format: 'date-time', description: 'When member joined the server' },
+                        accountCreatedAt: { type: 'string', format: 'date-time', description: 'When account was created' },
+                        isBot: { type: 'boolean', description: 'Whether member is a bot' }
+                    }
+                },
+                guild: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', description: 'Server (guild) ID' },
+                        name: { type: 'string', description: 'Server (guild) name' }
+                    }
+                }
+            }
+        };
+    }
+
     validate(config: TriggerConfig): boolean {
         if (!config.guildId)
             throw new Error('guildId is required');
