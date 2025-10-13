@@ -43,12 +43,13 @@ export class GitHubProvider implements IOAuthProvider {
         return 'github';
     }
 
-    getAuthUrl(): string {
+    getAuthUrl(customState?: string): string {
+        const state = customState || 'github-oauth';
         const params = new URLSearchParams({
             client_id: this.clientId,
             redirect_uri: this.redirectUri,
             scope: 'user:email',
-            state: 'github-oauth'
+            state: state
         });
 
         return `https://github.com/login/oauth/authorize?${params.toString()}`;

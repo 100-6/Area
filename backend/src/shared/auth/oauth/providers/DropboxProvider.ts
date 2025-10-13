@@ -58,14 +58,14 @@ export class DropboxProvider implements IOAuthProvider {
         return 'dropbox';
     }
 
-    getAuthUrl(): string {
-        const state = crypto.randomBytes(32).toString('hex');
+    getAuthUrl(customState?: string): string {
+        const state = customState || crypto.randomBytes(32).toString('hex');
         const params = new URLSearchParams({
             client_id: this.clientId,
             redirect_uri: this.redirectUri,
             response_type: 'code',
             state: state,
-            token_access_type: 'offline' // Pour obtenir un refresh token
+            token_access_type: 'offline'
         });
 
         return `https://www.dropbox.com/oauth2/authorize?${params.toString()}`;

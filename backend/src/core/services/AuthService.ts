@@ -68,10 +68,10 @@ class AuthService {
             registration_method: 'email',
             email_verified: false
         });
-    const token = this.jwtManager.generateToken({userId: newUser.id, email: newUser.email});
-    const refreshToken = this.jwtManager.generateRefreshToken({ userId: newUser.id, email: newUser.email });
-    const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    await UserSession.create(newUser.id, refreshToken, refreshExpiry);
+        const token = this.jwtManager.generateToken({ userId: newUser.id, email: newUser.email });
+        const refreshToken = this.jwtManager.generateRefreshToken({ userId: newUser.id, email: newUser.email });
+        const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        await UserSession.create(newUser.id, refreshToken, refreshExpiry);
         console.log(`SUCCESS: New user registered: ${email} (ID: ${newUser.id})`.green);
         return {
             user: {
@@ -107,10 +107,10 @@ class AuthService {
         if (!isPasswordValid)
             throw new Error('INVALID_CREDENTIALS');
         await User.updateLastLogin(user.id);
-    const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
-    const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
-    const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    await UserSession.create(user.id, refreshToken, refreshExpiry);
+        const token = this.jwtManager.generateToken({ userId: user.id, email: user.email });
+        const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
+        const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        await UserSession.create(user.id, refreshToken, refreshExpiry);
         console.log(`SUCCESS: User logged in: ${email} (ID: ${user.id})`.green);
         return {
             user: {
@@ -128,10 +128,10 @@ class AuthService {
     /**
      * Obtenir l'URL d'authentification Discord
      */
-    getDiscordAuthUrl(): string {
+    getDiscordAuthUrl(state?: string): string {
         if (!this.oauthManager.isDiscordConfigured())
             throw new Error('DISCORD_OAUTH_NOT_CONFIGURED');
-        return this.oauthManager.getDiscordAuthUrl();
+        return this.oauthManager.getDiscordAuthUrl(state);
     }
 
     /**
@@ -145,7 +145,7 @@ class AuthService {
                 throw new Error('INVALID_OAUTH_USER_DATA');
             if (!user.is_active)
                 throw new Error('ACCOUNT_INACTIVE');
-            const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+            const token = this.jwtManager.generateToken({ userId: user.id, email: user.email });
             const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
             const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
             await UserSession.create(user.id, refreshToken, refreshExpiry);
@@ -172,10 +172,10 @@ class AuthService {
     /**
      * Obtenir l'URL d'authentification Google
      */
-    getGoogleAuthUrl(): string {
+    getGoogleAuthUrl(state?: string): string {
         if (!this.oauthManager.isGoogleConfigured())
             throw new Error('GOOGLE_OAUTH_NOT_CONFIGURED');
-        return this.oauthManager.getGoogleAuthUrl();
+        return this.oauthManager.getGoogleAuthUrl(state);
     }
 
     /**
@@ -189,7 +189,7 @@ class AuthService {
                 throw new Error('INVALID_OAUTH_USER_DATA');
             if (!user.is_active)
                 throw new Error('ACCOUNT_INACTIVE');
-            const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+            const token = this.jwtManager.generateToken({ userId: user.id, email: user.email });
             const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
             const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
             await UserSession.create(user.id, refreshToken, refreshExpiry);
@@ -219,17 +219,18 @@ class AuthService {
     async refreshAccessToken(refreshToken: string): Promise<{ token: string; user: { id: string; email: string } }> {
         try {
             const decoded = this.jwtManager.verifyRefreshToken(refreshToken);
-            if (!decoded.userId || !decoded.email) throw new Error('INVALID_REFRESH_TOKEN');
+
+            if (!decoded.userId || !decoded.email)
+                throw new Error('INVALID_REFRESH_TOKEN');
             const user = await User.findById(decoded.userId);
-            if (!user || !user.is_active) throw new Error('USER_NOT_FOUND_OR_INACTIVE');
-            // For now we simply issue a new access token; we do NOT generate a new refresh token in this commit (no rotation yet)
+            if (!user || !user.is_active)
+                throw new Error('USER_NOT_FOUND_OR_INACTIVE');
             const newAccessToken = this.jwtManager.generateToken({ userId: user.id, email: user.email });
             return { token: newAccessToken, user: { id: user.id, email: user.email } };
         } catch (error) {
             if (error instanceof Error) {
-                if (['Refresh token expired', 'Invalid refresh token', 'Refresh token verification failed', 'USER_NOT_FOUND_OR_INACTIVE'].includes(error.message)) {
+                if (['Refresh token expired', 'Invalid refresh token', 'Refresh token verification failed', 'USER_NOT_FOUND_OR_INACTIVE'].includes(error.message))
                     throw error;
-                }
             }
             throw new Error('REFRESH_FAILED');
         }
@@ -245,13 +246,30 @@ class AuthService {
 
             if (!user || !user.is_active)
                 throw new Error('USER_NOT_FOUND_OR_INACTIVE');
-            return {userId: decoded.userId, email: decoded.email};
+            return { userId: decoded.userId, email: decoded.email };
         } catch (error) {
             if (error instanceof Error && (error.message === 'Token expired' || error.message === 'Invalid token' || error.message === 'Token verification failed'))
                 throw error;
             if (error instanceof Error && error.message === 'USER_NOT_FOUND_OR_INACTIVE')
                 throw error;
             throw new Error('TOKEN_VERIFICATION_FAILED');
+        }
+    }
+
+    /**
+     * Vérifier un token JWT sans lever d'exception (retourne true/false)
+     * Utilisé pour vérifier si un utilisateur est déjà authentifié lors d'un callback OAuth
+     */
+    async verifyJWT(token: string | undefined): Promise<boolean> {
+        if (!token)
+            return false;
+
+        try {
+            const decoded = this.jwtManager.verifyToken(token);
+            const user = await User.findById(decoded.userId);
+            return !!(user && user.is_active);
+        } catch (error) {
+            return false;
         }
     }
 
@@ -270,7 +288,7 @@ class AuthService {
         } else {
             const passwordValidation = PasswordManager.validatePasswordStrength(data.password);
             if (!passwordValidation.isValid)
-                passwordValidation.errors.forEach(errorMsg => {errors.push({ field: 'password', message: errorMsg });});
+                passwordValidation.errors.forEach(errorMsg => { errors.push({ field: 'password', message: errorMsg }); });
         }
         if (!data.firstName)
             errors.push({ field: 'firstName', message: 'First name is required' });
@@ -330,16 +348,14 @@ class AuthService {
     async refreshTokens(refreshToken: string): Promise<{ token: string; refreshToken: string }> {
         if (!refreshToken)
             throw new Error('NO_REFRESH_TOKEN');
-        // Verify & decode refresh token
+
         try {
-            const decoded = this.jwtManager.verifyToken(refreshToken); // will throw if expired/invalid
+            const decoded = this.jwtManager.verifyToken(refreshToken);
             if (decoded.type !== 'refresh')
                 throw new Error('INVALID_REFRESH_TOKEN');
-            // Check session in DB
             const session = await UserSession.findActiveByToken(refreshToken);
             if (!session)
                 throw new Error('REFRESH_SESSION_NOT_FOUND');
-            // Issue new tokens
             const newAccessToken = this.jwtManager.generateToken({ userId: decoded.userId, email: decoded.email });
             const newRefreshToken = this.jwtManager.generateRefreshToken({ userId: decoded.userId, email: decoded.email });
             const newExpiry = this.jwtManager.getTokenExpiry(newRefreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -366,10 +382,10 @@ class AuthService {
     /**
      * Obtenir l'URL d'authentification GitHub
      */
-    getGitHubAuthUrl(): string {
+    getGitHubAuthUrl(state?: string): string {
         if (!this.oauthManager.isGitHubConfigured())
             throw new Error('GITHUB_OAUTH_NOT_CONFIGURED');
-        return this.oauthManager.getGitHubAuthUrl();
+        return this.oauthManager.getGitHubAuthUrl(state);
     }
 
     /**
@@ -383,14 +399,11 @@ class AuthService {
                 throw new Error('INVALID_OAUTH_USER_DATA');
             if (!user.is_active)
                 throw new Error('ACCOUNT_INACTIVE');
-
-            const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+            const token = this.jwtManager.generateToken({ userId: user.id, email: user.email });
             const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
             const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
             await UserSession.create(user.id, refreshToken, refreshExpiry);
-            
             console.log(`SUCCESS: GitHub OAuth login: ${user.email} (ID: ${user.id})`.green);
-
             return {
                 user: {
                     id: user.id,
@@ -420,10 +433,10 @@ class AuthService {
     /**
      * Obtenir l'URL d'authentification GitLab
      */
-    getGitLabAuthUrl(): string {
+    getGitLabAuthUrl(state?: string): string {
         if (!this.oauthManager.isGitLabConfigured())
             throw new Error('GITLAB_OAUTH_NOT_CONFIGURED');
-        return this.oauthManager.getGitLabAuthUrl();
+        return this.oauthManager.getGitLabAuthUrl(state);
     }
 
     /**
@@ -437,14 +450,11 @@ class AuthService {
                 throw new Error('INVALID_OAUTH_USER_DATA');
             if (!user.is_active)
                 throw new Error('ACCOUNT_INACTIVE');
-
-            const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+            const token = this.jwtManager.generateToken({ userId: user.id, email: user.email });
             const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
             const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
             await UserSession.create(user.id, refreshToken, refreshExpiry);
-            
             console.log(`SUCCESS: GitLab OAuth login: ${user.email} (ID: ${user.id})`.green);
-
             return {
                 user: {
                     id: user.id,
@@ -474,10 +484,10 @@ class AuthService {
     /**
      * Obtenir l'URL d'authentification Dropbox
      */
-    getDropboxAuthUrl(): string {
+    getDropboxAuthUrl(state?: string): string {
         if (!this.oauthManager.isDropboxConfigured())
             throw new Error('DROPBOX_OAUTH_NOT_CONFIGURED');
-        return this.oauthManager.getDropboxAuthUrl();
+        return this.oauthManager.getDropboxAuthUrl(state);
     }
 
     /**
@@ -491,14 +501,11 @@ class AuthService {
                 throw new Error('INVALID_OAUTH_USER_DATA');
             if (!user.is_active)
                 throw new Error('ACCOUNT_INACTIVE');
-
-            const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
+            const token = this.jwtManager.generateToken({ userId: user.id, email: user.email });
             const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
             const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
             await UserSession.create(user.id, refreshToken, refreshExpiry);
-            
             console.log(`SUCCESS: Dropbox OAuth login: ${user.email} (ID: ${user.id})`.green);
-
             return {
                 user: {
                     id: user.id,
