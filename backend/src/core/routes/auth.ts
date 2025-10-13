@@ -26,4 +26,7 @@ router.get('/gitlab/callback', authController.gitLabCallback);
 router.get('/dropbox', authController.dropboxLogin);
 router.get('/dropbox/callback', authController.dropboxCallback);
 
+router.get('/slack', authController.slackLogin);
+router.get('/slack/callback', authController.slackCallback);
+
 export default router;
