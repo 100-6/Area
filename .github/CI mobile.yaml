@@ -1,0 +1,22 @@
+name: CI mobile
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+    - name: Docker build
+      uses: docker/build-push-action@v4
+      with:
+        context: ./mobile
+        file: ./mobile/Dockerfile
+        push: false
