@@ -13,10 +13,12 @@ class DeepLinkService {
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
   AuthRepository? _authRepository;
+  Function(String serviceName)? _onServiceConnected;
 
   /// Initialise le service avec l'AuthRepository
-  void initialize(AuthRepository authRepository) {
+  void initialize(AuthRepository authRepository, {Function(String)? onServiceConnected}) {
     _authRepository = authRepository;
+    _onServiceConnected = onServiceConnected;
   }
 
   /// Démarre l'écoute des deep links
@@ -106,9 +108,11 @@ class DeepLinkService {
   /// Gère la connexion réussie à un service
   void _handleServiceConnected(String serviceName) {
     print('Service $serviceName connecté avec succès');
-    // Le service est maintenant connecté
-    // L'utilisateur peut fermer le navigateur et revenir à l'app
-    // La prochaine fois qu'il vérifiera le statut du service, il sera connecté
+
+    // Appeler le callback si défini
+    if (_onServiceConnected != null) {
+      _onServiceConnected!(serviceName);
+    }
   }
 
   /// Gère les erreurs OAuth

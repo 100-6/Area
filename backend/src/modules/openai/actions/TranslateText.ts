@@ -22,8 +22,16 @@ export class TranslateText extends BaseAction {
     getConfigSchema(): any {
         return {
             type: 'object',
-            required: ['text', 'targetLanguage'],
+            required: ['apiKey', 'text', 'targetLanguage'],
             properties: {
+                apiKey: {
+                    type: 'string',
+                    title: 'OpenAI API Key',
+                    description: 'Your OpenAI API key (starts with sk-)',
+                    minLength: 20,
+                    pattern: '^sk-',
+                    example: 'sk-...'
+                },
                 text: {
                     type: 'string',
                     title: 'Text',

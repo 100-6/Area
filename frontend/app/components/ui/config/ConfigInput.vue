@@ -7,8 +7,7 @@
 
     <UInput
       :id="fieldId"
-      :key="fieldId"
-      :model-value="props.value || ''"
+      :model-value="value"
       :placeholder="props.parameter.placeholder || ''"
       :disabled="disabled"
       :class="{ 'error': !!error }"
@@ -16,7 +15,6 @@
       @blur="handleBlur"
       style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);"
     />
-
 
     <div v-if="props.parameter.description" class="config-description">
       {{ props.parameter.description }}
@@ -42,29 +40,30 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
+// Générer un ID unique pour le champ
 const fieldId = computed(() => `config-${props.parameter.name}-${Math.random().toString(36).substr(2, 9)}`)
 
+// Gérer les changements de valeur
 const handleInput = (newValue: string) => {
   emit('update:value', newValue)
   validateField(newValue)
 }
 
+// Valider lors de la perte de focus
 const handleBlur = () => {
   validateField(props.value)
 }
 
+// Valider le champ
 const validateField = (currentValue: any) => {
   const validation = ConfigurationValidator.validateParameter(currentValue, props.parameter)
   emit('validate', validation.isValid, validation.error)
 }
 
+// Valider à l'initialisation
 onMounted(() => {
   validateField(props.value)
 })
-
-watch(() => props.value, (newValue, oldValue) => {
-
-}, { immediate: true })
 </script>
 
 <style scoped>
