@@ -144,8 +144,6 @@ export class WorkflowController {
             return next(error);
         }
         try {
-            // Vérifier si on doit éviter de redémarrer les triggers (lors de la modification d'un workflow)
-
             const connection = await this.workflowService.createConnection(areaId, {
                 sourceNodeId,
                 targetNodeId,

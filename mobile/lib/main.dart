@@ -36,8 +36,14 @@ class _AutoAppState extends State<AutoApp> {
     // Le router doit être créé après l'initialisation du provider
     _router = AppRouter.router(_authProvider);
 
-    // Initialiser le service de deep links avec l'AuthRepository
-    _deepLinkService.initialize(_authRepository);
+    // Initialiser le service de deep links avec l'AuthRepository et le callback
+    _deepLinkService.initialize(
+      _authRepository,
+      onServiceConnected: (serviceName) {
+        // Callback quand un service est connecté via OAuth
+        print('Service $serviceName connecté ! Le deep link ramène automatiquement à l\'app.');
+      },
+    );
     _deepLinkService.startListening();
     _deepLinkService.checkInitialLink();
 

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/services/oauth_service.dart';
+import '../../../core/services/service_connection_service.dart';
+import '../../auth/data/auth_repository.dart';
 
 /// Écran de gestion des connexions aux services
 class ServicesScreen extends StatefulWidget {
@@ -11,8 +14,10 @@ class ServicesScreen extends StatefulWidget {
 
 class _ServicesScreenState extends State<ServicesScreen> {
   final OAuthService _oauthService = OAuthService();
+  final ServiceConnectionService _connectionService = ServiceConnectionService();
   final Map<OAuthProvider, bool> _connectedServices = {};
   final Map<OAuthProvider, bool> _loadingServices = {};
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -21,12 +26,43 @@ class _ServicesScreenState extends State<ServicesScreen> {
   }
 
   Future<void> _loadConnectedServices() async {
-    // TODO: Implémenter la récupération des services connectés depuis l'API
-    // Pour l'instant, on considère que tous les services sont déconnectés
-    for (var provider in OAuthService.availableProviders) {
-      _connectedServices[provider] = false;
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final authRepo = context.read<AuthRepository>();
+      final token = await authRepo.getToken();
+
+      if (token == null) {
+        // Pas de token, tous déconnectés
+        for (var provider in OAuthService.availableProviders) {
+          _connectedServices[provider] = false;
+        }
+      } else {
+        // Vérifier chaque service
+        for (var provider in OAuthService.availableProviders) {
+          final serviceName = provider.name; // discord, github, etc.
+          final isConnected = await _connectionService.isServiceConnected(
+            serviceName: serviceName,
+            token: token,
+          );
+          _connectedServices[provider] = isConnected;
+        }
+      }
+    } catch (e) {
+      print('Erreur lors du chargement des services: $e');
+      // En cas d'erreur, tous déconnectés
+      for (var provider in OAuthService.availableProviders) {
+        _connectedServices[provider] = false;
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-    setState(() {});
   }
 
   Future<void> _connectService(OAuthProvider provider) async {
@@ -35,7 +71,23 @@ class _ServicesScreenState extends State<ServicesScreen> {
     });
 
     try {
-      final result = await _oauthService.signInWithProvider(provider);
+      final authRepo = context.read<AuthRepository>();
+      final token = await authRepo.getToken();
+
+      if (token == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vous devez être connecté'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      final result = await _oauthService.connectService(provider.name, userToken: token);
 
       if (result.isSuccess || result.isPending) {
         if (mounted) {
@@ -46,6 +98,10 @@ class _ServicesScreenState extends State<ServicesScreen> {
               behavior: SnackBarBehavior.floating,
             ),
           );
+
+          // Attendre un peu puis recharger la liste
+          await Future.delayed(const Duration(seconds: 3));
+          _loadConnectedServices();
         }
       } else if (result.error != null) {
         if (mounted) {
@@ -113,62 +169,64 @@ class _ServicesScreenState extends State<ServicesScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            // Header
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Services connectés',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : CustomScrollView(
+                slivers: [
+                  // Header
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Services connectés',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Gérez vos connexions aux différents services',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Gérez vos connexions aux différents services',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
+                  ),
+
+                  // Liste des services
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final provider = OAuthService.availableProviders[index];
+                          final isConnected = _connectedServices[provider] ?? false;
+                          final isLoading = _loadingServices[provider] ?? false;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _buildServiceCard(
+                              provider,
+                              isConnected,
+                              isLoading,
+                            ),
+                          );
+                        },
+                        childCount: OAuthService.availableProviders.length,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+
+                  const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+                ],
               ),
-            ),
-
-            // Liste des services
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final provider = OAuthService.availableProviders[index];
-                    final isConnected = _connectedServices[provider] ?? false;
-                    final isLoading = _loadingServices[provider] ?? false;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _buildServiceCard(
-                        provider,
-                        isConnected,
-                        isLoading,
-                      ),
-                    );
-                  },
-                  childCount: OAuthService.availableProviders.length,
-                ),
-              ),
-            ),
-
-            const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
-          ],
-        ),
       ),
     );
   }
@@ -246,28 +304,6 @@ class _ServicesScreenState extends State<ServicesScreen> {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: isConnected ? Colors.green : Colors.grey,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        isConnected ? 'Connecté' : 'Déconnecté',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isConnected ? Colors.green : Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),

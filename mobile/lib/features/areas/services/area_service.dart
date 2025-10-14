@@ -85,6 +85,23 @@ class AreaService {
     );
   }
 
+  /// Mettre à jour la configuration d'un workflow node
+  Future<void> updateWorkflowNode({
+    required String nodeId,
+    required Map<String, dynamic> config,
+    String? label,
+    required String token,
+  }) async {
+    await _apiService.patch(
+      '/api/workflows/nodes/$nodeId',
+      body: {
+        'config': config,
+        if (label != null) 'label': label,
+      },
+      headers: {'Authorization': 'Bearer $token'},
+    );
+  }
+
   /// Supprimer une AREA
   Future<void> deleteArea({
     required String areaId,

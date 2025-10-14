@@ -39,13 +39,19 @@ class OAuthService {
   /// Lance le flux OAuth pour connecter un service externe (Discord, GitHub, etc.)
   /// Utilisé pour connecter un service à utiliser dans les Areas, pas pour se connecter à l'app
   /// Note: Réutilise les routes OAuth existantes (/api/auth/discord, etc.) mais le backend
-  /// redirigera vers /service/success au lieu de /auth/success pour ne pas créer de session
-  Future<OAuthResult> connectService(String serviceName) async {
+  /// redirigera vers /service/success au lieu de /auth/success si l'utilisateur est déjà authentifié
+  Future<OAuthResult> connectService(String serviceName, {String? userToken}) async {
     try {
       final authUrl = _getServiceAuthUrl(serviceName);
 
-      // Ouvrir l'URL dans le navigateur externe avec paramètre mobile
-      final uri = Uri.parse('$authUrl?mobile=true');
+      // Construire l'URL avec mobile=true et le token JWT pour que le backend
+      // puisse détecter que l'utilisateur est déjà authentifié
+      var url = '$authUrl?mobile=true';
+      if (userToken != null) {
+        url += '&token=$userToken';
+      }
+
+      final uri = Uri.parse(url);
 
       if (await canLaunchUrl(uri)) {
         await launchUrl(
