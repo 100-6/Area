@@ -145,13 +145,12 @@ export class WorkflowController {
         }
         try {
             // Vérifier si on doit éviter de redémarrer les triggers (lors de la modification d'un workflow)
-            const skipTriggerStart = req.query.skipTriggerStart === 'true' || req.headers['x-skip-trigger-start'] === 'true';
 
             const connection = await this.workflowService.createConnection(areaId, {
                 sourceNodeId,
                 targetNodeId,
                 condition
-            }, skipTriggerStart);
+            });
 
             res.status(201).json({
                 success: true,
