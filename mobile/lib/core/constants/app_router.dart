@@ -28,6 +28,13 @@ class AppRouter {
             state.matchedLocation == AppRoutes.area ||
             state.matchedLocation == AppRoutes.settings;
 
+        // Gérer les deep links OAuth (ne pas les traiter comme des routes)
+        if (state.matchedLocation.startsWith('/auth/') || 
+            state.matchedLocation.startsWith('/service/')) {
+          // Rediriger vers le dashboard (le DeepLinkService gère le callback)
+          return isLoggedIn ? AppRoutes.dashboard : AppRoutes.login;
+        }
+
         // Si l'utilisateur n'est pas connecté et n'est pas sur une page de connexion,
         // rediriger vers la page de connexion
         if (!isLoggedIn && !isLoggingIn && state.matchedLocation != AppRoutes.splash) {

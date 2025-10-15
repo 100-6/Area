@@ -111,25 +111,14 @@ class _ResponsiveNavbarState extends State<ResponsiveNavbar>
         child: Container(
           height: _config.height,
           decoration: BoxDecoration(
-            color: _config.backgroundColor?.withValues(alpha: 0.1),
+            color: Colors.white.withValues(alpha: 0.7),
             borderRadius: _config.borderRadius,
-            border: Border(
-              top: BorderSide(
-                color: Colors.white.withValues(alpha: 0.5),
-                width: 0.8,
-              ),
-            ),
             boxShadow: [
               BoxShadow(
-                color: _config.shadowColor ?? Colors.black.withValues(alpha: 0.15),
+                color: _config.shadowColor ?? Colors.black.withValues(alpha: 0.08),
                 blurRadius: _config.shadowBlurRadius * 1.5,
                 offset: _config.shadowOffset,
                 spreadRadius: _config.shadowSpreadRadius,
-              ),
-              BoxShadow(
-                color: Colors.white.withValues(alpha: 0.1),
-                blurRadius: 8,
-                offset: const Offset(0, -2),
               ),
             ],
           ),

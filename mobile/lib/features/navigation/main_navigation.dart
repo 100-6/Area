@@ -58,10 +58,7 @@ class _MainNavigationState extends State<MainNavigation> {
     selectedFontWeight: FontWeight.w600,
     animationDuration: const Duration(milliseconds: 300),
     animationCurve: Curves.easeInOutCubic,
-    borderRadius: const BorderRadius.only(
-      topLeft: Radius.circular(32),
-      topRight: Radius.circular(32),
-    ),
+    borderRadius: BorderRadius.zero,
     showLabels: true,
     showBadges: true,
     showRipple: true,
@@ -88,9 +85,7 @@ class _MainNavigationState extends State<MainNavigation> {
         currentRoute: _currentRoute,
         onItemTap: _onItemTap,
         config: _navbarConfig,
-        badges: const {
-          'profile': 2, // Example badge count
-        },
+        badges: const {},
       ),
     );
   }
