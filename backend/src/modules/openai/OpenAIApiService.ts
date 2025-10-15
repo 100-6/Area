@@ -39,6 +39,38 @@ export class OpenAIApiService {
     }
 
     /**
+     * Check if model is a reasoning model (o-series)
+     * Reasoning models have different parameter requirements
+     */
+    private isReasoningModel(model: string): boolean {
+        return model.startsWith('o1-') || model.startsWith('o3-') || model.startsWith('o4-');
+    }
+
+    /**
+     * Check if model supports system messages
+     * Some models like reasoning models don't support system messages
+     */
+    private supportsSystemMessage(model: string): boolean {
+        return !this.isReasoningModel(model);
+    }
+
+    /**
+     * Check if model uses max_completion_tokens instead of max_tokens
+     * GPT-5 and o-series use max_completion_tokens
+     */
+    private usesCompletionTokens(model: string): boolean {
+        return model.startsWith('gpt-5') || this.isReasoningModel(model);
+    }
+
+    /**
+     * Check if model supports temperature parameter
+     * GPT-5 and reasoning models (o-series) don't support custom temperature
+     */
+    private supportsTemperature(model: string): boolean {
+        return !this.isReasoningModel(model) && !model.startsWith('gpt-5');
+    }
+
+    /**
      * Générer du texte avec GPT
      */
     async generateText(
@@ -57,9 +89,11 @@ export class OpenAIApiService {
         finishReason: string;
     }> {
         try {
+            const model = options.model || 'gpt-4o-mini';
             const messages: any[] = [];
 
-            if (options.systemMessage) {
+            // System messages are not supported for reasoning models
+            if (options.systemMessage && this.supportsSystemMessage(model)) {
                 messages.push({
                     role: 'system',
                     content: options.systemMessage
@@ -71,14 +105,31 @@ export class OpenAIApiService {
                 content: prompt
             });
 
+            // Build request body based on model capabilities
+            const requestBody: any = {
+                model,
+                messages
+            };
+
+            // Handle token limits based on model
+            if (this.usesCompletionTokens(model)) {
+                // GPT-5 and o-series use max_completion_tokens
+                if (options.maxTokens) {
+                    requestBody.max_completion_tokens = options.maxTokens;
+                }
+            } else {
+                // Standard models use max_tokens
+                requestBody.max_tokens = options.maxTokens || 500;
+            }
+
+            // Temperature only for non-reasoning models and non-GPT-5 models
+            if (this.supportsTemperature(model) && options.temperature !== undefined) {
+                requestBody.temperature = options.temperature;
+            }
+
             const response = await this.apiClient.post(
                 '/chat/completions',
-                {
-                    model: options.model || 'gpt-3.5-turbo',
-                    messages,
-                    max_tokens: options.maxTokens || 500,
-                    temperature: options.temperature || 0.7
-                },
+                requestBody,
                 {
                     headers: this.getAuthHeaders(apiKey)
                 }
@@ -122,7 +173,7 @@ Respond in JSON format: {"sentiment": "...", "score": 0.0, "explanation": "..."}
 Text: "${text}"`;
 
             const response = await this.generateText(apiKey, prompt, {
-                model: 'gpt-3.5-turbo',
+                model: 'gpt-4o-mini',  // Use gpt-4o-mini as it supports temperature
                 maxTokens: 150,
                 temperature: 0.3,
                 systemMessage: 'You are a sentiment analysis expert. Always respond with valid JSON.'
@@ -174,7 +225,7 @@ Text: "${text}"`;
 ${text}`;
 
             const response = await this.generateText(apiKey, prompt, {
-                model: 'gpt-3.5-turbo',
+                model: 'gpt-4o-mini',  // Use gpt-4o-mini as it supports temperature
                 maxTokens: length === 'short' ? 100 : length === 'medium' ? 200 : 400,
                 temperature: 0.5
             });
@@ -223,7 +274,7 @@ Text: "${text}"
 Respond in JSON format: {"translatedText": "...", "detectedLanguage": "..."}`;
 
             const response = await this.generateText(apiKey, prompt, {
-                model: 'gpt-3.5-turbo',
+                model: 'gpt-4o-mini',  // Use gpt-4o-mini as it supports temperature
                 maxTokens: Math.min(text.length * 2, 2000),
                 temperature: 0.3,
                 systemMessage: 'You are a professional translator. Always respond with valid JSON.'
@@ -268,7 +319,7 @@ Text: "${text}"
 Format: {"keywords": ["keyword1", "keyword2", ...], "topics": ["topic1", "topic2", ...]}`;
 
             const response = await this.generateText(apiKey, prompt, {
-                model: 'gpt-3.5-turbo',
+                model: 'gpt-4o-mini',  // Use gpt-4o-mini as it supports temperature
                 maxTokens: 300,
                 temperature: 0.3,
                 systemMessage: 'You are a text analysis expert. Always respond with valid JSON.'

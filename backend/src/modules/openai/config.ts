@@ -43,21 +43,36 @@ export default {
                         type: 'string',
                         title: 'Model',
                         description: 'GPT model to use',
-                        enum: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-                        default: 'gpt-3.5-turbo'
+                        enum: [
+                            'gpt-5-pro',
+                            'gpt-5',
+                            'gpt-5-mini',
+                            'gpt-5-nano',
+                            'gpt-4.1',
+                            'gpt-4.1-mini',
+                            'gpt-4.1-nano',
+                            'gpt-4o',
+                            'gpt-4o-mini',
+                            'gpt-4-turbo',
+                            'gpt-4',
+                            'o4-mini',
+                            'o1-preview',
+                            'o1-mini'
+                        ],
+                        default: 'gpt-4o-mini'
                     },
                     maxTokens: {
                         type: 'number',
                         title: 'Max Tokens',
-                        description: 'Maximum tokens in the response',
+                        description: 'Maximum tokens in the response (uses max_completion_tokens for GPT-5 and o-series)',
                         default: 500,
                         minimum: 1,
-                        maximum: 4000
+                        maximum: 16000
                     },
                     temperature: {
                         type: 'number',
                         title: 'Temperature',
-                        description: 'Creativity level (0-2)',
+                        description: 'Creativity level (0-2). Not supported by GPT-5 and o-series models - will be ignored.',
                         default: 0.7,
                         minimum: 0,
                         maximum: 2
@@ -65,7 +80,7 @@ export default {
                     systemMessage: {
                         type: 'string',
                         title: 'System Message (optional)',
-                        description: 'System message to set context',
+                        description: 'System message to set context (not applicable for o-series reasoning models)',
                         maxLength: 1000,
                         example: 'You are a helpful assistant'
                     }
