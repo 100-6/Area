@@ -180,7 +180,6 @@ const canConfirm = computed(() => {
 const getFieldComponent = (type: string) => {
   const fieldConfig = FIELD_TYPE_MAPPING[type]
   if (!fieldConfig) {
-    console.warn(`Unknown field type: ${type}, using ConfigInput as fallback`)
     return ConfigInput
   }
 

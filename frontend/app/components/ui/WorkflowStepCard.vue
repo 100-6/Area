@@ -234,7 +234,6 @@ const endDrag = () => {
 }
 
 const duplicateStep = () => {
-  console.log('Duplicate step:', props.blockId)
 }
 
 // Cleanup

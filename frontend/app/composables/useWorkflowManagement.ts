@@ -147,6 +147,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     // Récupérer le bloc mis à jour - assurer la réactivité
     const refreshedBlock = workflowBlocks.value.find(b => b.id === blockId) || block
 
+<<<<<<< HEAD
     console.log('Configuring block after refresh:', blockId, 'Config:', refreshedBlock.config)
     console.log('Block details:', {
       serviceId: refreshedBlock.serviceId,
@@ -156,6 +157,14 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       configKeys: Object.keys(refreshedBlock.config || {}),
       configValues: refreshedBlock.config
     })
+=======
+    const serviceName = refreshedBlock.serviceName || block.service.name || block.service
+    const resolvedService = await resolveService(serviceName)
+    if (!resolvedService) {
+      console.error('Cannot resolve service:', serviceName)
+      return
+    }
+>>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
 
     // Trouver l'action ou réaction correspondante
     let selectedAction: any = undefined
@@ -239,7 +248,6 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
   const updateBlockConfiguration = (blockId: string, config: ServiceConfiguration) => {
     const block = workflowBlocks.value.find(b => b.id === blockId)
     if (!block) {
-      console.warn('Block not found for configuration update:', blockId)
       return
     }
 
@@ -251,8 +259,6 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
 
     block.config = { ...config.parameters }
-
-    console.log('Block configuration updated:', blockId, block.config)
   }
 
   const getBlockConnectionState = (blockId: string) => {
@@ -363,11 +369,6 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
         throw new Error('Aucun bloc dans le workflow')
       }
 
-      console.log('Saving workflow with block positions:', workflowBlocks.value.map(b => ({
-        id: b.id,
-        service: b.service.name,
-        position: b.position
-      })))
 
       // Save to backend with current positions
       const result = await workflowApi.saveWorkflowToBackend(
@@ -387,6 +388,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
   }
 
+<<<<<<< HEAD
   /**
    * Service mapping cache
    */
@@ -403,8 +405,11 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
    * Resolve service identifier (name) to a frontend service object
    */
   const resolveService = (serviceName: string): Service | null => {
+=======
+  const resolveService = async (serviceName: string): Promise<Service | null> => {
+>>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
     const { getAvailableServices } = useServiceManagement()
-    const services = getAvailableServices()
+    const services = await getAvailableServices()
 
     // Recherche directe par nom ou ID
     const service = services.find(s =>
@@ -412,13 +417,10 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       s.name?.toLowerCase() === serviceName.toLowerCase()
     )
 
-    if (!service) {
-      console.warn(`[WorkflowManagement] Service not found: ${serviceName}`)
-    }
-
     return service || null
   }
 
+<<<<<<< HEAD
   /**
    * Map backend node to frontend block
    */
@@ -432,11 +434,18 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     } else if (node.serviceId) {
       // Plus besoin de mapping - le backend devrait toujours fournir serviceName maintenant
       console.warn(`[WorkflowManagement] Node has serviceId but no serviceName - this should not happen with the updated backend:`, node.serviceId)
+=======
+  const mapBackendNodeToBlock = async (node: BackendWorkflowNode): Promise<WorkflowBlockData | null> => {
+    let service: Service | null = null
+
+    if (node.serviceName) {
+      service = await resolveService(node.serviceName)
+    } else if (node.serviceId) {
+>>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
       return null
     }
 
     if (!service) {
-      console.warn(`Service not found for node:`, node)
       return null
     }
 
@@ -482,18 +491,22 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       workflowBlocks.value = []
       connections.value = []
 
+<<<<<<< HEAD
       // Map backend nodes to frontend blocks
       const mappedBlocks = workflow.nodes
         .map(mapBackendNodeToBlock)
         .filter((block): block is WorkflowBlockData => block !== null)
+=======
+      const mappedBlocks = await Promise.all(
+        workflow.nodes.map(node => mapBackendNodeToBlock(node))
+      )
+>>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
 
-      workflowBlocks.value = mappedBlocks
+      workflowBlocks.value = mappedBlocks.filter((block): block is WorkflowBlockData => block !== null)
 
       connections.value = workflow.connections.map(mapBackendConnectionToFrontend)
 
       currentAreaId.value = areaId
-
-      console.log(`[WorkflowManagement] Loaded ${workflowBlocks.value.length} blocks and ${connections.value.length} connections`)
 
       nextTick(() => {
         connections.value = [...connections.value]
@@ -508,6 +521,56 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
   }
 
+<<<<<<< HEAD
+=======
+  const updateBlockConfig = async (blockId: string, newConfig: ServiceConfiguration) => {
+    const blockIndex = workflowBlocks.value.findIndex(b => b.id === blockId)
+    if (blockIndex === -1) {
+      return
+    }
+
+    const block = workflowBlocks.value[blockIndex]
+    if (!block) {
+      return
+    }
+
+    const updatedBlock: WorkflowBlockData = {
+      id: block.id,
+      service: newConfig.service,
+      position: block.position,
+      type: block.type,
+      config: newConfig.parameters,
+      actionId: newConfig.selectedAction?.id,
+      reactionId: newConfig.selectedReaction?.id,
+      serviceId: newConfig.service.id,
+      label: newConfig.service.name
+    }
+
+    workflowBlocks.value[blockIndex] = updatedBlock
+
+    if (currentAreaId.value && block.id.startsWith('node-')) {
+      try {
+        isSaving.value = true
+        saveError.value = null
+
+        await workflowApi.updateNode(block.id.replace('node-', ''), {
+          config: newConfig.parameters,
+          actionId: newConfig.selectedAction?.id,
+          reactionId: newConfig.selectedReaction?.id,
+          serviceId: newConfig.service.id,
+          label: newConfig.service.name
+        })
+
+      } catch (err: any) {
+        saveError.value = err.message || 'Erreur lors de la mise à jour'
+        throw err
+      } finally {
+        isSaving.value = false
+      }
+    }
+  }
+
+>>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
   return {
     // State
     workflowBlocks: readonly(workflowBlocks),

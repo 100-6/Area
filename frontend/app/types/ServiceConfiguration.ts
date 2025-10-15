@@ -100,7 +100,7 @@ export const FIELD_TYPE_MAPPING: Record<string, FieldTypeConfig> = {
     validator: () => ({ isValid: true }) // Les boolean sont toujours valides
   },
   select: {
-    component: 'ConfigSelect',
+    component: 'ConfigSelectMenu',
     defaultValue: null,
     validator: (value: any, parameter: ActionParameter) => {
       if (parameter.required && (!value || value === '')) {

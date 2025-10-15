@@ -44,7 +44,200 @@ export const useServiceManagement = () => {
     }
   }
 
-  const getAvailableServices = (): Service[] => {
+  const getAvailableServices = async (): Promise<Service[]> => {
+    try {
+      const { public: config } = useRuntimeConfig()
+      const backendUrl = config.backendUrl
+
+      // Récupérer le token d'authentification
+      const authToken = useCookie('auth-token')
+      if (!authToken.value) {
+        return getFallbackServices()
+      }
+
+      const headers = {
+        'Authorization': `Bearer ${authToken.value}`,
+        'Content-Type': 'application/json'
+      }
+
+      const modulesListResponse = await $fetch(`${backendUrl}/api/modules?_t=${Date.now()}`, { headers })
+
+      if (!modulesListResponse.success || !modulesListResponse.modules) {
+        return getFallbackServices()
+      }
+
+      const modulesWithDetails = await Promise.all(
+        modulesListResponse.modules.map(async (moduleInfo: any) => {
+          try {
+            const moduleDetails = await $fetch(`${backendUrl}/api/modules/${moduleInfo.name}`, { headers })
+            return moduleDetails
+          } catch (error) {
+            return null
+          }
+        })
+      )
+
+      const validModules = modulesWithDetails.filter(module => module?.success && module)
+
+      return transformBackendModulesToServices(validModules.map(m => m))
+    } catch (error) {
+      return getFallbackServices()
+    }
+  }
+
+  const transformBackendModulesToServices = (modules: any[]): Service[] => {
+
+    const categoryMapping: Record<string, Service['category']> = {
+      'timer': 'automation',
+      'console': 'development',
+      'discord': 'communication',
+      'openai': 'productivity',
+      'email': 'communication'
+    }
+
+    const iconMapping: Record<string, string> = {
+      'timer': 'i-heroicons-clock',
+      'console': 'i-heroicons-computer-desktop',
+      'discord': 'i-logos-discord-icon',
+      'openai': 'i-logos-openai-icon',
+      'email': 'i-heroicons-envelope'
+    }
+
+    return modules.map(moduleResponse => {
+      const module = moduleResponse.success ? moduleResponse : moduleResponse
+
+
+      const moduleName = module.moduleName || module.name
+      const service: Service = {
+        id: moduleName,
+        name: module.displayName || moduleName,
+        slug: moduleName,
+        description: module.description || '',
+        icon: iconMapping[moduleName] || 'i-heroicons-cog',
+        color: module.color || '#6B7280',
+        isActive: module.isActive !== false,
+        category: categoryMapping[moduleName] || 'other',
+        authType: mapAuthType(module.authType),
+        actions: transformBackendTriggers(module.triggers || []),
+        reactions: transformBackendActions(module.actions || [])
+      }
+
+
+      return service
+    })
+  }
+
+  const mapAuthType = (backendAuthType: string): Service['authType'] => {
+    switch (backendAuthType) {
+      case 'oauth2': return 'oauth'
+      case 'api_key': return 'api_key'
+      case 'webhook': return 'webhook'
+      case 'none':
+      default: return 'none'
+    }
+  }
+
+  const transformBackendTriggers = (triggers: any[]): ServiceAction[] => {
+    return triggers.map(trigger => {
+      const transformed = {
+        id: trigger.name,
+        name: trigger.description || trigger.displayName || trigger.name,
+        description: trigger.description || '',
+        parameters: transformConfigSchemaToParameters(trigger.configSchema),
+        triggers: [trigger.type || 'webhook']
+      }
+      return transformed
+    })
+  }
+
+  const transformBackendActions = (actions: any[]): ServiceReaction[] => {
+    return actions.map(action => {
+      const transformed = {
+        id: action.name,
+        name: action.description || action.displayName || action.name,
+        description: action.description || '',
+        parameters: transformConfigSchemaToParameters(action.configSchema),
+        requiredData: action.requiredScopes || []
+      }
+      return transformed
+    })
+  }
+
+  const transformConfigSchemaToParameters = (configSchema: any): ActionParameter[] => {
+    if (!configSchema || !configSchema.properties) {
+      return []
+    }
+
+    const required = configSchema.required || []
+
+    return Object.entries(configSchema.properties).map(([name, prop]: [string, any]) => {
+      const parameter: ActionParameter = {
+        name,
+        type: mapSchemaTypeToParameterType(prop, name),
+        required: required.includes(name),
+        description: prop.description || prop.title || '',
+        placeholder: prop.example || prop.placeholder
+      }
+
+      if (prop.enum) {
+        parameter.options = prop.enum
+      }
+
+      if (prop.pattern || prop.minimum !== undefined || prop.maximum !== undefined) {
+        parameter.validation = {}
+        if (prop.pattern) parameter.validation.pattern = prop.pattern
+        if (prop.minimum !== undefined) parameter.validation.min = prop.minimum
+        if (prop.maximum !== undefined) parameter.validation.max = prop.maximum
+      }
+
+      return parameter
+    })
+  }
+
+  const mapSchemaTypeToParameterType = (prop: any, fieldName: string): ActionParameter['type'] => {
+    if (fieldName.toLowerCase().includes('channel')) {
+      return 'discord_channel'
+    }
+    if (fieldName.toLowerCase().includes('email')) {
+      return 'email'
+    }
+    if (fieldName.toLowerCase().includes('url')) {
+      return 'url'
+    }
+
+    if (fieldName.toLowerCase().includes('model') && prop.enum) {
+      const description = prop.description?.toLowerCase() || ''
+      if (description.includes('gpt') || description.includes('openai')) {
+        return 'select'
+      }
+    }
+
+    switch (prop.type) {
+      case 'boolean':
+        return 'boolean'
+      case 'number':
+      case 'integer':
+        return 'number'
+      case 'string':
+        if (prop.format === 'date-time' || prop.format === 'date' || prop.format === 'time') {
+          return 'date'
+        }
+        if (prop.format === 'email') {
+          return 'email'
+        }
+        if (prop.format === 'uri' || prop.format === 'url') {
+          return 'url'
+        }
+        if (prop.enum) {
+          return 'select'
+        }
+        return 'string'
+      default:
+        return 'string'
+    }
+  }
+
+  const getFallbackServices = (): Service[] => {
     return [
       {
         id: 'timer',
@@ -67,84 +260,14 @@ export const useServiceManagement = () => {
                 type: 'string',
                 required: true,
                 description: 'Heure de déclenchement (format HH:mm)',
-                placeholder: '09:00',
-                validation: { pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$' }
-              },
-              {
-                name: 'timezone',
-                type: 'select',
-                required: false,
-                description: 'Fuseau horaire',
-                options: ['Europe/Paris', 'America/New_York', 'Asia/Tokyo', 'UTC']
-              }
-            ],
-            triggers: ['schedule']
-          },
-          {
-            id: 'every_weekday',
-            name: 'Tous les jours de la semaine',
-            description: 'Lundi à vendredi à une heure donnée',
-            parameters: [
-              {
-                name: 'time',
-                type: 'string',
-                required: true,
-                description: 'Heure de déclenchement (format HH:mm)',
-                placeholder: '09:00',
-                validation: { pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$' }
-              }
-            ],
-            triggers: ['schedule']
-          },
-          {
-            id: 'every_x_minutes',
-            name: 'Toutes les X minutes',
-            description: 'Se répète à interval régulier',
-            parameters: [
-              {
-                name: 'interval',
-                type: 'number',
-                required: true,
-                description: 'Intervalle en minutes',
-                placeholder: '30',
-                validation: { min: 1, max: 1440 }
-              }
-            ],
-            triggers: ['schedule']
-          },
-          {
-            id: 'specific_date',
-            name: 'À une date précise',
-            description: 'Se déclenche une seule fois à une date et heure précises',
-            parameters: [
-              {
-                name: 'datetime',
-                type: 'date',
-                required: true,
-                description: 'Date et heure de déclenchement',
-                placeholder: '2025-12-31T23:59:00'
-              }
-            ],
-            triggers: ['schedule']
-          },
-          {
-            id: 'custom_cron',
-            name: 'Expression cron personnalisée',
-            description: 'Pour les utilisateurs avancés : définir une expression cron',
-            parameters: [
-              {
-                name: 'cronExpression',
-                type: 'string',
-                required: true,
-                description: 'Expression cron (format: minute hour day month weekday)',
-                placeholder: '0 9 * * 1-5',
-                validation: { pattern: '^(\\*|([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])|\\*/[0-9]+)\\s+(\\*|([0-9]|1[0-9]|2[0-3])|\\*/[0-9]+)\\s+(\\*|([1-9]|1[0-9]|2[0-9]|3[0-1])|\\*/[0-9]+)\\s+(\\*|([1-9]|1[0-2])|\\*/[0-9]+)\\s+(\\*|([0-6])|\\*/[0-9]+)$' }
+                placeholder: '09:00'
               }
             ],
             triggers: ['schedule']
           }
         ],
         reactions: []
+<<<<<<< HEAD
       },
       {
         id: 'console',
@@ -356,18 +479,21 @@ export const useServiceManagement = () => {
             requiredData: []
           }
         ]
+=======
+>>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
       }
     ]
   }
 
   const fetchServicesWithCategories = async () => {
-    const services = getAvailableServices()
+    const services = await getAvailableServices()
     const categories = [
       { id: 'communication', name: 'Communication', icon: 'i-heroicons-chat-bubble-left-right' },
       { id: 'development', name: 'Développement', icon: 'i-heroicons-code-bracket' },
       { id: 'productivity', name: 'Productivité', icon: 'i-heroicons-chart-bar' },
       { id: 'automation', name: 'Automation', icon: 'i-heroicons-clock' },
-      { id: 'storage', name: 'Stockage', icon: 'i-heroicons-cloud' }
+      { id: 'storage', name: 'Stockage', icon: 'i-heroicons-cloud' },
+      { id: 'other', name: 'Autres', icon: 'i-heroicons-ellipsis-horizontal' }
     ]
 
     return { services, categories }
@@ -377,7 +503,6 @@ export const useServiceManagement = () => {
    * OAuth service authentication - ready for backend integration
    */
   const authenticateService = async (serviceId: string) => {
-    console.log('Authenticating service:', serviceId)
     // TODO: Replace with actual OAuth flow
     return Promise.resolve({ success: true, authUrl: null })
   }
@@ -386,7 +511,6 @@ export const useServiceManagement = () => {
    * Check if service is properly connected - ready for backend integration
    */
   const checkServiceConnection = async (serviceId: string) => {
-    console.log('Checking service connection:', serviceId)
     // TODO: Replace with actual API call
     return Promise.resolve(true)
   }
@@ -452,8 +576,6 @@ export const useServiceManagement = () => {
     isEditingConfiguration.value = true
     pendingServiceCallback.value = callback
     showConfigModal.value = true
-
-    console.log('editServiceConfiguration - setting currentConfiguration:', currentConfiguration.value)
   }
 
   return {

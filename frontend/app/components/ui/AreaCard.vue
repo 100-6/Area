@@ -154,7 +154,6 @@ const emit = defineEmits<Emits>()
  */
 const handleCardClick = (event: Event) => {
   // Ignore the event object, just use the area ID
-  console.log('AreaCard click - area.id:', props.area.id, typeof props.area.id)
   emit('configure', props.area.id)
 }
 

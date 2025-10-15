@@ -52,8 +52,16 @@
           </UButton>
         </div>
 
+        <!-- Loading state -->
+        <div v-if="isLoadingServices" class="flex items-center justify-center py-8">
+          <div class="flex items-center gap-3">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span style="color: var(--text-secondary);">Chargement des services...</span>
+          </div>
+        </div>
+
         <!-- Liste des services -->
-        <div class="grid gap-3 max-h-96 overflow-y-auto" :class="selectedCategory === 'all' ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2'">
+        <div v-else class="grid gap-3 max-h-96 overflow-y-auto" :class="selectedCategory === 'all' ? 'grid-cols-3 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2'">
           <div
             v-for="service in filteredServices"
             :key="service.id"
@@ -154,10 +162,23 @@ const categories = [
 ]
 
 const { getAvailableServices } = useServiceManagement()
-const availableServices: Service[] = getAvailableServices()
+const availableServices = ref<Service[]>([])
+const isLoadingServices = ref(false)
+
+onMounted(async () => {
+  try {
+    isLoadingServices.value = true
+    availableServices.value = await getAvailableServices()
+  } catch (error) {
+    console.error('Failed to load services:', error)
+    availableServices.value = []
+  } finally {
+    isLoadingServices.value = false
+  }
+})
 
 const filteredServices = computed(() => {
-  let services = availableServices
+  let services = availableServices.value
 
   if (selectedCategory.value !== 'all') {
     services = services.filter(service => service.category === selectedCategory.value)
@@ -174,7 +195,6 @@ const filteredServices = computed(() => {
   return services
 })
 
-// Méthodes
 const selectService = (service: Service) => {
   if (!service.isActive) return
 

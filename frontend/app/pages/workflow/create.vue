@@ -375,8 +375,12 @@ const handleServiceSelected = (service: Service) => {
   const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
 
   selectServiceWithConfiguration(service, blockType, (config) => {
+<<<<<<< HEAD
     console.log('Adding service block with configuration:', config)
     addServiceBlock(config)
+=======
+    addServiceBlock(config, undefined, blockType)
+>>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
   })
 }
 
