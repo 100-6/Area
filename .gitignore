@@ -6,3 +6,4 @@ build/
 .vscode/
 .github/frontend/node_modules/
 backend/node_modules/
+.github

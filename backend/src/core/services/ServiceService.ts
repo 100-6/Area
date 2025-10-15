@@ -8,7 +8,7 @@ export interface ServiceDTO {
     description?: string;
     iconUrl?: string;
     baseUrl?: string;
-    authType: 'oauth2' | 'api_key' | 'basic' | 'none';
+    authType: 'oauth2' | 'api_key' | 'basic' | 'none' | 'bot_token';
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;

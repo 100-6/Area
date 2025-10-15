@@ -8,6 +8,7 @@ import moduleRoutes from './modules';
 import servicesRoutes from './services';
 import discordRoutes from '../../modules/discord/routes';
 import gmailRoutes from '../../modules/gmail/routes';
+import telegramRoutes from '../../modules/telegram/routes';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use('/api/services', servicesRoutes);
 
 router.use('/api/discord', discordRoutes);
 router.use('/api/gmail', gmailRoutes);
+router.use('/api/telegram', telegramRoutes);
 
 export default router;
