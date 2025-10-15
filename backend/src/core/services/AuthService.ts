@@ -136,10 +136,12 @@ class AuthService {
 
     /**
      * Gérer le callback Discord OAuth
+     * @param code - OAuth authorization code
+     * @param authenticatedUserId - Optional user ID if already authenticated (for linking accounts)
      */
-    async handleDiscordCallback(code: string): Promise<AuthResult> {
+    async handleDiscordCallback(code: string, authenticatedUserId?: string): Promise<AuthResult> {
         try {
-            const user = await this.oauthManager.handleDiscordCallback(code);
+            const user = await this.oauthManager.handleDiscordCallback(code, authenticatedUserId);
 
             if (!user || !user.id || !user.email)
                 throw new Error('INVALID_OAUTH_USER_DATA');
@@ -180,10 +182,12 @@ class AuthService {
 
     /**
      * Gérer le callback Google OAuth
+     * @param code - OAuth authorization code
+     * @param authenticatedUserId - Optional user ID if already authenticated (for linking accounts)
      */
-    async handleGoogleCallback(code: string): Promise<AuthResult> {
+    async handleGoogleCallback(code: string, authenticatedUserId?: string): Promise<AuthResult> {
         try {
-            const user = await this.oauthManager.handleGoogleCallback(code);
+            const user = await this.oauthManager.handleGoogleCallback(code, authenticatedUserId);
 
             if (!user || !user.id || !user.email)
                 throw new Error('INVALID_OAUTH_USER_DATA');
@@ -375,7 +379,7 @@ class AuthService {
      */
     async logout(refreshToken?: string): Promise<void> {
         if (!refreshToken)
-            return; // nothing to do
+            return;
         await UserSession.deactivateByToken(refreshToken);
     }
 
@@ -390,10 +394,12 @@ class AuthService {
 
     /**
      * Gérer le callback GitHub OAuth
+     * @param code - OAuth authorization code
+     * @param authenticatedUserId - Optional user ID if already authenticated (for linking accounts)
      */
-    async handleGitHubCallback(code: string): Promise<AuthResult> {
+    async handleGitHubCallback(code: string, authenticatedUserId?: string): Promise<AuthResult> {
         try {
-            const user = await this.oauthManager.handleGitHubCallback(code);
+            const user = await this.oauthManager.handleGitHubCallback(code, authenticatedUserId);
 
             if (!user || !user.id || !user.email)
                 throw new Error('INVALID_OAUTH_USER_DATA');
@@ -441,10 +447,12 @@ class AuthService {
 
     /**
      * Gérer le callback GitLab OAuth
+     * @param code - OAuth authorization code
+     * @param authenticatedUserId - Optional user ID if already authenticated (for linking accounts)
      */
-    async handleGitLabCallback(code: string): Promise<AuthResult> {
+    async handleGitLabCallback(code: string, authenticatedUserId?: string): Promise<AuthResult> {
         try {
-            const user = await this.oauthManager.handleGitLabCallback(code);
+            const user = await this.oauthManager.handleGitLabCallback(code, authenticatedUserId);
 
             if (!user || !user.id || !user.email)
                 throw new Error('INVALID_OAUTH_USER_DATA');
@@ -492,10 +500,12 @@ class AuthService {
 
     /**
      * Gérer le callback Dropbox OAuth
+     * @param code - OAuth authorization code
+     * @param authenticatedUserId - Optional user ID if already authenticated (for linking accounts)
      */
-    async handleDropboxCallback(code: string): Promise<AuthResult> {
+    async handleDropboxCallback(code: string, authenticatedUserId?: string): Promise<AuthResult> {
         try {
-            const user = await this.oauthManager.handleDropboxCallback(code);
+            const user = await this.oauthManager.handleDropboxCallback(code, authenticatedUserId);
 
             if (!user || !user.id || !user.email)
                 throw new Error('INVALID_OAUTH_USER_DATA');
@@ -530,60 +540,6 @@ class AuthService {
      */
     isDropboxConfigured(): boolean {
         return this.oauthManager.isDropboxConfigured();
-    }
-
-    /**
-     * Obtenir l'URL d'authentification Slack
-     */
-    getSlackAuthUrl(): string {
-        if (!this.oauthManager.isSlackConfigured())
-            throw new Error('SLACK_OAUTH_NOT_CONFIGURED');
-        return this.oauthManager.getSlackAuthUrl();
-    }
-
-    /**
-     * Gérer le callback Slack OAuth
-     */
-    async handleSlackCallback(code: string): Promise<AuthResult> {
-        try {
-            const user = await this.oauthManager.handleSlackCallback(code);
-
-            if (!user || !user.id || !user.email)
-                throw new Error('INVALID_OAUTH_USER_DATA');
-            if (!user.is_active)
-                throw new Error('ACCOUNT_INACTIVE');
-
-            const token = this.jwtManager.generateToken({userId: user.id, email: user.email});
-            const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
-            const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-            await UserSession.create(user.id, refreshToken, refreshExpiry);
-            
-            console.log(`SUCCESS: Slack OAuth login: ${user.email} (ID: ${user.id})`.green);
-
-            return {
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    firstName: user.first_name || '',
-                    lastName: user.last_name || '',
-                    createdAt: user.created_at
-                },
-                token,
-                refreshToken
-            };
-        } catch (error) {
-            console.error('Slack OAuth callback error:'.red, error);
-            if (error instanceof Error)
-                throw error;
-            throw new Error('OAUTH_CALLBACK_FAILED');
-        }
-    }
-
-    /**
-     * Vérifier si Slack OAuth est configuré
-     */
-    isSlackConfigured(): boolean {
-        return this.oauthManager.isSlackConfigured();
     }
 }
 

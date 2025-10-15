@@ -25,16 +25,8 @@ export class GenerateText extends BaseAction {
     getConfigSchema(): any {
         return {
             type: 'object',
-            required: ['apiKey', 'prompt'],
+            required: ['prompt'],
             properties: {
-                apiKey: {
-                    type: 'string',
-                    title: 'OpenAI API Key',
-                    description: 'Your OpenAI API key (starts with sk-)',
-                    minLength: 20,
-                    pattern: '^sk-',
-                    example: 'sk-...'
-                },
                 prompt: {
                     type: 'string',
                     title: 'Prompt',
@@ -46,36 +38,21 @@ export class GenerateText extends BaseAction {
                     type: 'string',
                     title: 'Model',
                     description: 'GPT model to use',
-                    enum: [
-                        'gpt-5-pro',
-                        'gpt-5',
-                        'gpt-5-mini',
-                        'gpt-5-nano',
-                        'gpt-4.1',
-                        'gpt-4.1-mini',
-                        'gpt-4.1-nano',
-                        'gpt-4o',
-                        'gpt-4o-mini',
-                        'gpt-4-turbo',
-                        'gpt-4',
-                        'o4-mini',
-                        'o1-preview',
-                        'o1-mini'
-                    ],
-                    default: 'gpt-4o-mini'
+                    enum: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+                    default: 'gpt-3.5-turbo'
                 },
                 maxTokens: {
                     type: 'number',
                     title: 'Max Tokens',
-                    description: 'Maximum tokens in the response (uses max_completion_tokens for GPT-5 and o-series)',
+                    description: 'Maximum tokens in the response',
                     default: 500,
                     minimum: 1,
-                    maximum: 16000
+                    maximum: 4000
                 },
                 temperature: {
                     type: 'number',
                     title: 'Temperature',
-                    description: 'Creativity level (0-2). Not supported by GPT-5 and o-series models - will be ignored.',
+                    description: 'Creativity level (0-2)',
                     default: 0.7,
                     minimum: 0,
                     maximum: 2
@@ -119,125 +96,38 @@ export class GenerateText extends BaseAction {
     }
 
     validate(config: ActionConfig): boolean {
-        if (!config.apiKey || !config.apiKey.startsWith('sk-') || config.apiKey.length < 20) {
+        if (!config.apiKey || !config.apiKey.startsWith('sk-') || config.apiKey.length < 20)
             throw new Error('apiKey is required and must start with "sk-"');
-        }
-
-        if (!config.prompt || config.prompt.length < 1 || config.prompt.length > 4000) {
+        if (!config.prompt || config.prompt.length < 1 || config.prompt.length > 4000)
             throw new Error('prompt must be between 1 and 4000 characters');
-        }
-
-        if (config.maxTokens && (config.maxTokens < 1 || config.maxTokens > 16000)) {
-            throw new Error('maxTokens must be between 1 and 16000');
-        }
-
-        if (config.temperature && (config.temperature < 0 || config.temperature > 2)) {
+        if (config.maxTokens && (config.maxTokens < 1 || config.maxTokens > 4000))
+            throw new Error('maxTokens must be between 1 and 4000');
+        if (config.temperature && (config.temperature < 0 || config.temperature > 2))
             throw new Error('temperature must be between 0 and 2');
-        }
-
         return true;
     }
 
-    /**
-     * Remplacer les variables dans le prompt
-     */
-    private replaceVariables(text: string, context: ActionContext): string {
-        let result = text;
-
-        // Replace trigger data variables
-        if (context.triggerData) {
-            const flattenObject = (obj: any, prefix = ''): Record<string, any> => {
-                let flattened: Record<string, any> = {};
-                for (const key in obj) {
-                    const value = obj[key];
-                    const newKey = prefix ? `${prefix}.${key}` : key;
-                    
-                    if (value && typeof value === 'object' && !Array.isArray(value)) {
-                        Object.assign(flattened, flattenObject(value, newKey));
-                    } else {
-                        flattened[newKey] = value;
-                    }
-                }
-                return flattened;
-            };
-
-            const flatData = flattenObject(context.triggerData);
-            for (const [key, value] of Object.entries(flatData)) {
-                if (value !== null && value !== undefined) {
-                    const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-                    result = result.replace(regex, String(value));
-                }
-            }
-        }
-
-        // Replace previous outputs
-        if (context.previousOutputs) {
-            for (const [nodeId, output] of Object.entries(context.previousOutputs)) {
-                const flatOutput = this.flattenObject(output, nodeId);
-                for (const [key, value] of Object.entries(flatOutput)) {
-                    if (value !== null && value !== undefined) {
-                        const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-                        result = result.replace(regex, String(value));
-                    }
-                }
-            }
-        }
-
-        return result;
-    }
-
-    private flattenObject(obj: any, prefix = ''): Record<string, any> {
-        let flattened: Record<string, any> = {};
-        for (const key in obj) {
-            const value = obj[key];
-            const newKey = prefix ? `${prefix}.${key}` : key;
-            
-            if (value && typeof value === 'object' && !Array.isArray(value)) {
-                Object.assign(flattened, this.flattenObject(value, newKey));
-            } else {
-                flattened[newKey] = value;
-            }
-        }
-        return flattened;
-    }
 
     async execute(config: ActionConfig, context: ActionContext): Promise<ActionResult> {
         const startTime = Date.now();
 
         try {
             console.log(`[GenerateText] Executing for AREA ${context.areaId}`.cyan);
-
-            // Get API key from config
             const apiKey = config.apiKey;
-            if (!apiKey) {
+            if (!apiKey)
                 throw new Error('OpenAI API key is required in configuration');
-            }
-
-            // Replace variables in prompt
             const prompt = this.replaceVariables(config.prompt, context);
-            const systemMessage = config.systemMessage 
-                ? this.replaceVariables(config.systemMessage, context)
-                : undefined;
-
+            const systemMessage = config.systemMessage ? this.replaceVariables(config.systemMessage, context) : undefined;
             console.log(`[GenerateText] Generating text with prompt: "${prompt.substring(0, 50)}..."`.cyan);
-
-            // Generate text
             const result = await this.apiService.generateText(
                 apiKey,
                 prompt,
-                {
-                    model: config.model || 'gpt-4o-mini',
-                    maxTokens: config.maxTokens || 500,
-                    temperature: config.temperature || 0.7,
-                    systemMessage
-                }
+                {model: config.model || 'gpt-3.5-turbo', maxTokens: config.maxTokens || 500, temperature: config.temperature || 0.7, systemMessage}
             );
-
             const executionTime = Date.now() - startTime;
             console.log(`[GenerateText] ✓ Text generated successfully (${result.tokensUsed} tokens)`.green);
             console.log(`[GenerateText] Model: ${result.model}, Finish Reason: ${result.finishReason}`.green);
             console.log(`[GenerateText] Response: "${result.text.substring(0, 100)}..."`.green);
-
             return {
                 success: true,
                 data: {
@@ -251,11 +141,7 @@ export class GenerateText extends BaseAction {
         } catch (error) {
             const executionTime = Date.now() - startTime;
             console.error(`[GenerateText] ❌ Failed to generate text:`.red, error);
-            return {
-                success: false,
-                error: (error as Error).message,
-                executionTime
-            };
+            return {success: false, error: (error as Error).message, executionTime};
         }
     }
 }

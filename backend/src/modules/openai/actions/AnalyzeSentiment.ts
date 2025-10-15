@@ -22,16 +22,8 @@ export class AnalyzeSentiment extends BaseAction {
     getConfigSchema(): any {
         return {
             type: 'object',
-            required: ['apiKey', 'text'],
+            required: ['text'],
             properties: {
-                apiKey: {
-                    type: 'string',
-                    title: 'OpenAI API Key',
-                    description: 'Your OpenAI API key (starts with sk-)',
-                    minLength: 20,
-                    pattern: '^sk-',
-                    example: 'sk-...'
-                },
                 text: {
                     type: 'string',
                     title: 'Text',
@@ -77,51 +69,11 @@ export class AnalyzeSentiment extends BaseAction {
     }
 
     validate(config: ActionConfig): boolean {
-        if (!config.apiKey || !config.apiKey.startsWith('sk-') || config.apiKey.length < 20) {
+        if (!config.apiKey || !config.apiKey.startsWith('sk-') || config.apiKey.length < 20)
             throw new Error('apiKey is required and must start with "sk-"');
-        }
-
-        if (!config.text || config.text.length < 1 || config.text.length > 2000) {
+        if (!config.text || config.text.length < 1 || config.text.length > 2000)
             throw new Error('text must be between 1 and 2000 characters');
-        }
         return true;
-    }
-
-    private replaceVariables(text: string, context: ActionContext): string {
-        let result = text;
-        if (context.triggerData) {
-            const flatData = this.flattenObject(context.triggerData);
-            for (const [key, value] of Object.entries(flatData)) {
-                if (value !== null && value !== undefined) {
-                    result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(value));
-                }
-            }
-        }
-        if (context.previousOutputs) {
-            for (const [nodeId, output] of Object.entries(context.previousOutputs)) {
-                const flatOutput = this.flattenObject(output, nodeId);
-                for (const [key, value] of Object.entries(flatOutput)) {
-                    if (value !== null && value !== undefined) {
-                        result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(value));
-                    }
-                }
-            }
-        }
-        return result;
-    }
-
-    private flattenObject(obj: any, prefix = ''): Record<string, any> {
-        let flattened: Record<string, any> = {};
-        for (const key in obj) {
-            const value = obj[key];
-            const newKey = prefix ? `${prefix}.${key}` : key;
-            if (value && typeof value === 'object' && !Array.isArray(value)) {
-                Object.assign(flattened, this.flattenObject(value, newKey));
-            } else {
-                flattened[newKey] = value;
-            }
-        }
-        return flattened;
     }
 
     async execute(config: ActionConfig, context: ActionContext): Promise<ActionResult> {
@@ -129,39 +81,19 @@ export class AnalyzeSentiment extends BaseAction {
 
         try {
             console.log(`[AnalyzeSentiment] Executing for AREA ${context.areaId}`.cyan);
-
-            // Get API key from config
             const apiKey = config.apiKey;
-            if (!apiKey) {
+            if (!apiKey)
                 throw new Error('OpenAI API key is required in configuration');
-            }
-
             const text = this.replaceVariables(config.text, context);
-
             console.log(`[AnalyzeSentiment] Analyzing sentiment for: "${text.substring(0, 50)}..."`.cyan);
-
-            const result = await this.apiService.analyzeSentiment(
-                apiKey,
-                text,
-                config.includeExplanation !== false
-            );
-
+            const result = await this.apiService.analyzeSentiment(apiKey, text, config.includeExplanation !== false);
             const executionTime = Date.now() - startTime;
             console.log(`[AnalyzeSentiment] ✓ Sentiment: ${result.sentiment} (${result.score})`.green);
-
-            return {
-                success: true,
-                data: result,
-                executionTime
-            };
+            return {success: true, data: result, executionTime};
         } catch (error) {
             const executionTime = Date.now() - startTime;
             console.error(`[AnalyzeSentiment] ❌ Failed:`.red, error);
-            return {
-                success: false,
-                error: (error as Error).message,
-                executionTime
-            };
+            return {success: false, error: (error as Error).message, executionTime};
         }
     }
 }

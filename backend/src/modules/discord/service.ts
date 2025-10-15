@@ -25,7 +25,6 @@ export class DiscordModule extends BaseModule {
             authType: discordConfig.authType as 'oauth2',
             isActive: discordConfig.isActive
         });
-
         this.botClient = DiscordBotClient.getInstance();
     }
 
