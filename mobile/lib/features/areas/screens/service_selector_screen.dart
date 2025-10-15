@@ -217,7 +217,8 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
 
               if (shouldConnect == true && mounted) {
                 // Lancer le flux OAuth pour connecter le service (pas pour se connecter à l'app)
-                final result = await _oauthService.connectService(service.name);
+                // On passe le token JWT pour que le backend sache que l'utilisateur est déjà authentifié
+                final result = await _oauthService.connectService(service.name, userToken: token);
 
                 if (result.isSuccess || result.isPending) {
                   if (mounted) {

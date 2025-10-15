@@ -168,6 +168,7 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
       // Aller directement à la configuration avec les données existantes
       final config = await NodeConfigHelper.openConfigScreen(
         context: context,
+        nodeId: _triggerNode!.id, // Passer le nodeId pour charger via l'API
         nodeType: 'trigger',
         serviceName: _triggerNode!.serviceId ?? '',
         actionName: _triggerNode!.actionId ?? '',
@@ -175,23 +176,49 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
         existingConfig: _triggerNode!.config,
       );
 
-      if (config != null) {
-        setState(() {
-          // Mettre à jour la configuration du trigger existant
-          _triggerNode = WorkflowNode(
-            id: _triggerNode!.id,
-            areaId: _triggerNode!.areaId,
-            nodeType: 'trigger',
-            serviceId: _triggerNode!.serviceId,
-            actionId: _triggerNode!.actionId,
-            config: config,
-            positionX: _triggerNode!.positionX,
-            positionY: _triggerNode!.positionY,
-            label: _triggerNode!.label,
-            createdAt: _triggerNode!.createdAt,
-            updatedAt: DateTime.now(),
-          );
-        });
+      if (config != null && mounted) {
+        // Sauvegarder la configuration via l'API
+        try {
+          final authRepo = context.read<AuthRepository>();
+          final token = await authRepo.getToken();
+
+          if (token != null && mounted) {
+            debugPrint('Saving trigger config to backend: $config');
+            await _areaService.updateWorkflowNode(
+              nodeId: _triggerNode!.id,
+              config: config,
+              token: token,
+            );
+            debugPrint('Trigger config saved successfully');
+          }
+
+          if (mounted) {
+            setState(() {
+              // Mettre à jour la configuration du trigger existant
+              _triggerNode = WorkflowNode(
+                id: _triggerNode!.id,
+                areaId: _triggerNode!.areaId,
+                nodeType: 'trigger',
+                serviceId: _triggerNode!.serviceId,
+                actionId: _triggerNode!.actionId,
+                config: config,
+                positionX: _triggerNode!.positionX,
+                positionY: _triggerNode!.positionY,
+                label: _triggerNode!.label,
+                createdAt: _triggerNode!.createdAt,
+                updatedAt: DateTime.now(),
+              );
+            });
+          }
+        } catch (e) {
+          debugPrint('Error updating trigger: $e');
+          // Afficher un message d'erreur à l'utilisateur
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to update trigger: $e')),
+            );
+          }
+        }
       }
     } else {
       // Créer un nouveau trigger
@@ -243,6 +270,7 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
     // Modifier une action existante
     final config = await NodeConfigHelper.openConfigScreen(
       context: context,
+      nodeId: node.id, // Passer le nodeId pour charger via l'API
       nodeType: 'action',
       serviceName: node.serviceId ?? '',
       actionName: node.reactionId ?? '',
@@ -250,26 +278,53 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
       existingConfig: node.config,
     );
 
-    if (config != null) {
-      setState(() {
-        // Trouver l'index de l'action et la mettre à jour
-        final index = _actionNodes.indexOf(node);
-        if (index != -1) {
-          _actionNodes[index] = WorkflowNode(
-            id: node.id,
-            areaId: node.areaId,
-            nodeType: 'action',
-            serviceId: node.serviceId,
-            reactionId: node.reactionId,
+    if (config != null && mounted) {
+      try {
+        // Sauvegarder la configuration sur le backend via PATCH
+        final authRepo = context.read<AuthRepository>();
+        final token = await authRepo.getToken();
+
+        if (token != null && mounted) {
+          debugPrint('Saving action config to backend: $config');
+          await _areaService.updateWorkflowNode(
+            nodeId: node.id,
             config: config,
-            positionX: node.positionX,
-            positionY: node.positionY,
-            label: node.label,
-            createdAt: node.createdAt,
-            updatedAt: DateTime.now(),
+            token: token,
+          );
+          debugPrint('Action config saved successfully');
+        }
+
+        // Mettre à jour l'état local après la sauvegarde
+        if (mounted) {
+          setState(() {
+            // Trouver l'index de l'action et la mettre à jour
+            final index = _actionNodes.indexOf(node);
+            if (index != -1) {
+              _actionNodes[index] = WorkflowNode(
+                id: node.id,
+                areaId: node.areaId,
+                nodeType: 'action',
+                serviceId: node.serviceId,
+                reactionId: node.reactionId,
+                config: config,
+                positionX: node.positionX,
+                positionY: node.positionY,
+                label: node.label,
+                createdAt: node.createdAt,
+                updatedAt: DateTime.now(),
+              );
+            }
+          });
+        }
+      } catch (e) {
+        debugPrint('Error updating action: $e');
+        // Afficher un message d'erreur à l'utilisateur
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to update action: $e')),
           );
         }
-      });
+      }
     }
   }
 

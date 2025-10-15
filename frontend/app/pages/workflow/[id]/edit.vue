@@ -317,7 +317,6 @@ const {
   deleteBlock,
   configureBlock,
   updateBlockConfiguration,
-  updateBlockConfig,
   getBlockConnectionState,
   getConnectionPath,
   saveWorkflow,
@@ -456,7 +455,7 @@ const handleServiceSelected = (service: Service) => {
 
   selectServiceWithConfiguration(service, blockType, (config) => {
     console.log('Adding service block with configuration at position:', position)
-    addServiceBlock(config, position, blockType)
+    addServiceBlock(config, position)
   })
 }
 
@@ -476,8 +475,7 @@ const handleBlockConfigure = async (blockId: string) => {
         configInfo.blockType,
         configInfo.currentConfig,
         (newConfig: ServiceConfiguration) => {
-          // Utiliser la nouvelle fonction updateBlockConfig qui sauvegarde aussi sur le backend
-          updateBlockConfig(blockId, newConfig)
+          updateBlockConfiguration(blockId, newConfig)
         }
       )
     }

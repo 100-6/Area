@@ -63,26 +63,20 @@ export class WorkflowModel {
     /**
      * Récupérer tous les nœuds d'une AREA avec le nom du service
      */
-    async getNodesByArea(areaId: string): Promise<(WorkflowNode & { serviceName?: string; actionName?: string; reactionName?: string })[]> {
+    async getNodesByArea(areaId: string): Promise<(WorkflowNode & { serviceName?: string })[]> {
         try {
             const query = `
-                SELECT wn.*, s.name AS service_name,
-                       sa.name AS action_name,
-                       sr.name AS reaction_name
+                SELECT wn.*, s.name AS service_name
                 FROM workflow_nodes wn
                 LEFT JOIN services s ON wn.service_id = s.id
-                LEFT JOIN service_actions sa ON wn.action_id = sa.id
-                LEFT JOIN service_reactions sr ON wn.reaction_id = sr.id
                 WHERE wn.area_id = $1
                 ORDER BY wn.created_at ASC
             `;
             const result = await WorkflowModel.db.query(query, [areaId]);
-
+            
             return result.rows.map((row: any) => ({
                 ...this.mapNodeFromDb(row),
-                serviceName: row.service_name || undefined,
-                actionName: row.action_name || undefined,
-                reactionName: row.reaction_name || undefined
+                serviceName: row.service_name || undefined
             }));
         } catch (error) {
             console.error('[WorkflowModel] Failed to get nodes by area:'.red, error);

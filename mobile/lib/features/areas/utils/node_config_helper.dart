@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import '../models/service_info.dart';
 import '../models/config_schema.dart';
-import '../screens/node_config_screen.dart';
-import '../screens/node_config_screen_v2.dart';
+import '../screens/dynamic_node_config_screen.dart';
 
-/// Helper pour gérer la configuration des nodes avec support de l'ancien et nouveau système
+/// Helper pour gérer la configuration des nodes en chargeant dynamiquement depuis l'API
 class NodeConfigHelper {
-  /// Ouvre l'écran de configuration approprié selon si un schéma est disponible
+  /// Ouvre l'écran de configuration en chargeant le schéma depuis l'API /api/modules
   static Future<Map<String, dynamic>?> openConfigScreen({
     required BuildContext context,
+    String? nodeId, // UUID du node pour édition
     required String nodeType,
     required String serviceName,
     required String actionName,
@@ -17,31 +17,12 @@ class NodeConfigHelper {
     ServiceReaction? serviceReaction,
     Map<String, dynamic>? existingConfig,
   }) async {
-    // Déterminer le schéma depuis l'action ou la réaction
-    final configSchema = serviceAction?.configSchema ?? serviceReaction?.configSchema;
-
-    // Si un schéma existe, utiliser le nouveau système
-    if (configSchema != null) {
-      return await Navigator.push<Map<String, dynamic>>(
-        context,
-        MaterialPageRoute(
-          builder: (context) => NodeConfigScreenV2(
-            nodeType: nodeType,
-            serviceName: serviceName,
-            actionName: actionName,
-            description: description,
-            configSchema: configSchema,
-            existingConfig: existingConfig,
-          ),
-        ),
-      );
-    }
-
-    // Sinon, utiliser l'ancien système (fallback)
+    // Utiliser le nouveau système dynamique qui charge depuis l'API
     return await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(
-        builder: (context) => NodeConfigScreen(
+        builder: (context) => DynamicNodeConfigScreen(
+          nodeId: nodeId, // Passer le nodeId si disponible
           nodeType: nodeType,
           serviceName: serviceName,
           actionName: actionName,
