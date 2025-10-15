@@ -14,11 +14,17 @@ class DeepLinkService {
   StreamSubscription<Uri>? _linkSubscription;
   AuthRepository? _authRepository;
   Function(String serviceName)? _onServiceConnected;
+  Function(String error)? _onOAuthError;
 
   /// Initialise le service avec l'AuthRepository
-  void initialize(AuthRepository authRepository, {Function(String)? onServiceConnected}) {
+  void initialize(
+    AuthRepository authRepository, {
+    Function(String)? onServiceConnected,
+    Function(String)? onOAuthError,
+  }) {
     _authRepository = authRepository;
     _onServiceConnected = onServiceConnected;
+    _onOAuthError = onOAuthError;
   }
 
   /// Démarre l'écoute des deep links
@@ -41,7 +47,7 @@ class DeepLinkService {
   void _handleDeepLink(Uri uri) {
     print('Deep link reçu: $uri');
 
-    if (uri.scheme == 'autoarea' && uri.host == 'oauth') {
+    if (uri.scheme == 'autoarea' && (uri.host == 'oauth' || uri.host == 'auth')) {
       _handleOAuthCallback(uri);
     }
   }
@@ -118,8 +124,11 @@ class DeepLinkService {
   /// Gère les erreurs OAuth
   void _handleOAuthError(String error) {
     print('OAuth Error: $error');
-    // TODO: Afficher un message d'erreur à l'utilisateur
-    // Par exemple: SnackBar, Dialog, etc.
+    
+    // Appeler le callback d'erreur si défini
+    if (_onOAuthError != null) {
+      _onOAuthError!(error);
+    }
   }
 
   /// Vérifie et traite le deep link initial (quand l'app est fermée)
