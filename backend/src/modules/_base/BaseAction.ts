@@ -1,3 +1,4 @@
+import { VariableReplacer } from '../../shared/utils/VariableReplacer';
 import 'colors';
 
 /**
@@ -16,7 +17,7 @@ export interface ActionContext {
     triggerData: any;
     executionId: string;
     timestamp: string;
-    previousOutputs?: Record<string, any>; // Outputs des actions précédentes
+    previousOutputs?: Record<string, any>;
 }
 
 /**
@@ -137,5 +138,63 @@ export abstract class BaseAction {
     protected hasRequiredScopes(userScopes: string[]): boolean {
         const requiredScopes = this.getRequiredScopes();
         return requiredScopes.every(scope => userScopes.includes(scope));
+    }
+
+    /**
+     * Replace template variables in a string
+     * Example: "Hello {{author.username}}" with context.triggerData.author.username = "John"
+     *          => "Hello John"
+     *
+     * @param text - Text containing {{variable.path}} patterns
+     * @param context - Action context with triggerData and previousOutputs
+     * @param debug - Enable debug logging (default: false)
+     * @returns Text with all variables replaced
+     */
+    protected replaceVariables(text: string, context: ActionContext, debug: boolean = false): string {
+        return VariableReplacer.replace(text, context, debug);
+    }
+
+    /**
+     * Replace variables in an entire config object (recursively)
+     * Useful for processing the entire action config at once
+     *
+     * @param config - Config object with strings containing {{variable.path}}
+     * @param context - Action context
+     * @param debug - Enable debug logging (default: false)
+     * @returns New config object with all variables replaced
+     */
+    protected replaceVariablesInConfig(config: ActionConfig, context: ActionContext, debug: boolean = false): ActionConfig {
+        return VariableReplacer.replaceInObject(config, context, debug);
+    }
+
+    /**
+     * Get list of available variables from context
+     * Useful for debugging or validation
+     *
+     * @param context - Action context
+     * @returns Array of available variable paths (e.g., ['message.content', 'author.username'])
+     */
+    protected getAvailableVariables(context: ActionContext): string[] {
+        return VariableReplacer.getAvailableVariables(context);
+    }
+
+    /**
+     * Check if a string contains template variables
+     *
+     * @param text - Text to check
+     * @returns true if text contains {{...}} patterns
+     */
+    protected hasVariables(text: string): boolean {
+        return VariableReplacer.hasVariables(text);
+    }
+
+    /**
+     * Extract all variable references from a string
+     *
+     * @param text - Text to extract from
+     * @returns Array of variable paths found (e.g., ['message.content', 'author.tag'])
+     */
+    protected extractVariables(text: string): string[] {
+        return VariableReplacer.extractVariables(text);
     }
 }

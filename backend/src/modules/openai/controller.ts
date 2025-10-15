@@ -138,119 +138,25 @@ export class OpenAIController {
     public getModels = asyncHandler(async (_req: Request, res: Response, _next: NextFunction): Promise<void> => {
         const models = [
             {
-                id: 'gpt-5-pro',
-                name: 'GPT-5 Pro',
-                description: 'The smartest and most precise model',
-                contextWindow: 128000,
-                costPer1kTokens: { input: 15.00, output: 120.00 },
-                category: 'flagship'
+                id: 'gpt-3.5-turbo',
+                name: 'GPT-3.5 Turbo',
+                description: 'Fast and efficient, best for most tasks',
+                contextWindow: 16385,
+                costPer1kTokens: { input: 0.0005, output: 0.0015 }
             },
             {
-                id: 'gpt-5',
-                name: 'GPT-5',
-                description: 'Best model for coding and agentic tasks across industries',
-                contextWindow: 128000,
-                costPer1kTokens: { input: 1.25, output: 10.00 },
-                category: 'flagship'
-            },
-            {
-                id: 'gpt-5-mini',
-                name: 'GPT-5 Mini',
-                description: 'Faster, cheaper version of GPT-5 for well-defined tasks',
-                contextWindow: 128000,
-                costPer1kTokens: { input: 0.25, output: 2.00 },
-                category: 'flagship'
-            },
-            {
-                id: 'gpt-5-nano',
-                name: 'GPT-5 Nano',
-                description: 'Fastest, cheapest version of GPT-5—great for summarization and classification',
-                contextWindow: 128000,
-                costPer1kTokens: { input: 0.05, output: 0.40 },
-                category: 'flagship'
-            },
-            {
-                id: 'gpt-4.1',
-                name: 'GPT-4.1',
-                description: 'Advanced GPT-4.1 model with fine-tuning support',
-                contextWindow: 128000,
-                costPer1kTokens: { input: 3.00, output: 12.00 },
-                category: 'advanced'
-            },
-            {
-                id: 'gpt-4.1-mini',
-                name: 'GPT-4.1 Mini',
-                description: 'Smaller, faster GPT-4.1 variant',
-                contextWindow: 128000,
-                costPer1kTokens: { input: 0.80, output: 3.20 },
-                category: 'advanced'
-            },
-            {
-                id: 'gpt-4.1-nano',
-                name: 'GPT-4.1 Nano',
-                description: 'Most efficient GPT-4.1 variant',
-                contextWindow: 128000,
-                costPer1kTokens: { input: 0.20, output: 0.80 },
-                category: 'advanced'
-            },
-            {
-                id: 'gpt-4o',
-                name: 'GPT-4o',
-                description: 'GPT-4 Omni - multimodal flagship model',
-                contextWindow: 128000,
-                costPer1kTokens: { input: 2.50, output: 10.00 },
-                category: 'standard'
-            },
-            {
-                id: 'gpt-4o-mini',
-                name: 'GPT-4o Mini',
-                description: 'Affordable and intelligent small model for fast, lightweight tasks',
-                contextWindow: 128000,
-                costPer1kTokens: { input: 0.15, output: 0.60 },
-                category: 'standard'
+                id: 'gpt-4',
+                name: 'GPT-4',
+                description: 'Most capable model, best for complex tasks',
+                contextWindow: 8192,
+                costPer1kTokens: { input: 0.03, output: 0.06 }
             },
             {
                 id: 'gpt-4-turbo',
                 name: 'GPT-4 Turbo',
                 description: 'Faster GPT-4 with larger context window',
                 contextWindow: 128000,
-                costPer1kTokens: { input: 10.00, output: 30.00 },
-                category: 'legacy'
-            },
-            {
-                id: 'gpt-4',
-                name: 'GPT-4',
-                description: 'Most capable GPT-4 model',
-                contextWindow: 8192,
-                costPer1kTokens: { input: 30.00, output: 60.00 },
-                category: 'legacy'
-            },
-            {
-                id: 'o4-mini',
-                name: 'o4 Mini',
-                description: 'Reasoning model for complex, multi-step problems (no temperature/system message)',
-                contextWindow: 128000,
-                costPer1kTokens: { input: 4.00, output: 16.00 },
-                category: 'reasoning',
-                notes: 'Does not support temperature or system messages. Uses max_completion_tokens.'
-            },
-            {
-                id: 'o1-preview',
-                name: 'o1 Preview',
-                description: 'Advanced reasoning model for complex tasks (no temperature/system message)',
-                contextWindow: 128000,
-                costPer1kTokens: { input: 15.00, output: 60.00 },
-                category: 'reasoning',
-                notes: 'Does not support temperature or system messages. Uses max_completion_tokens.'
-            },
-            {
-                id: 'o1-mini',
-                name: 'o1 Mini',
-                description: 'Faster reasoning model for STEM tasks (no temperature/system message)',
-                contextWindow: 128000,
-                costPer1kTokens: { input: 3.00, output: 12.00 },
-                category: 'reasoning',
-                notes: 'Does not support temperature or system messages. Uses max_completion_tokens.'
+                costPer1kTokens: { input: 0.01, output: 0.03 }
             }
         ];
 
