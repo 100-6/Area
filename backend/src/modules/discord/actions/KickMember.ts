@@ -79,23 +79,6 @@ export class KickMember extends BaseAction {
         return true;
     }
 
-    /**
-     * Remplacer les variables dans les IDs
-     */
-    private replaceVariables(value: string, context: ActionContext): string {
-        let result = value;
-
-        if (context.triggerData) {
-            if (context.triggerData.member)
-                result = result.replace(/\{\{member\.id\}\}/g, context.triggerData.member.id || '');
-            if (context.triggerData.author)
-                result = result.replace(/\{\{author\.id\}\}/g, context.triggerData.author.id || '');
-            if (context.triggerData.user)
-                result = result.replace(/\{\{user\.id\}\}/g, context.triggerData.user.id || '');
-        }
-
-        return result;
-    }
 
     async execute(config: ActionConfig, context: ActionContext): Promise<ActionResult> {
         const startTime = Date.now();
@@ -105,6 +88,7 @@ export class KickMember extends BaseAction {
             if (!this.botClient.isConnected())
                 throw new Error('Discord bot is not connected');
             const client = this.botClient.getClient();
+            // Use centralized VariableReplacer from BaseAction
             const guildId = this.replaceVariables(config.guildId, context);
             const userId = this.replaceVariables(config.userId, context);
             const guild = await client.guilds.fetch(guildId);

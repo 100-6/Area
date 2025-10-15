@@ -46,7 +46,6 @@ curl -X POST http://localhost:8080/api/openai/connect \
 ## 📖 Documentation
 
 - **[Complete Guide](./OPENAI_MODULE_GUIDE.md)** - Full documentation with examples
-- **[Model Compatibility Guide](./MODEL_COMPATIBILITY_GUIDE.md)** - Model differences and requirements
 - **[Output Schemas](./OUTPUT_SCHEMA.md)** - Data returned by each action
 - **[Config](./config.ts)** - Module configuration
 
@@ -111,65 +110,28 @@ GET /api/openai/models
 ## ⚙️ Configuration
 
 ### Supported Models
-
-#### 🚀 Flagship Models (Recommended)
-- `gpt-5-pro` - Smartest and most precise
-- `gpt-5` - Best for coding and agentic tasks
-- `gpt-5-mini` - Faster, cheaper version
-- `gpt-5-nano` - Fastest for classification
-
-#### 🔧 Advanced Models
-- `gpt-4.1` - Advanced with fine-tuning
-- `gpt-4.1-mini` - Smaller, faster variant
-- `gpt-4.1-nano` - Most efficient variant
-
-#### 🎯 Standard Models
-- `gpt-4o` - Multimodal flagship
-- `gpt-4o-mini` - **Default** - Best price-performance
-
-#### 🧠 Reasoning Models
-- `o1-preview` - Advanced reasoning
-- `o1-mini` - Faster reasoning for STEM
-- `o4-mini` - Latest reasoning model
-
-#### 📦 Legacy Models
-- `gpt-4-turbo` - Faster GPT-4
-- `gpt-4` - Original GPT-4
-
-> **Note:** Reasoning models (o-series) don't support `temperature` or `system` messages. See [Model Compatibility Guide](./MODEL_COMPATIBILITY_GUIDE.md) for details.
+- `gpt-3.5-turbo` - Fast and efficient (default)
+- `gpt-4` - Most capable
+- `gpt-4-turbo` - Larger context window
 
 ### Temperature Settings
 - `0.0-0.3` - Focused, deterministic
 - `0.4-0.7` - Balanced (default: 0.7)
 - `0.8-2.0` - Creative, diverse
-- ⚠️ Not applicable for o-series reasoning models
 
 ### Token Limits
-- Input: Up to 16,000 tokens (configurable)
-- Context Window: 128,000 tokens (most models)
+- Input: Up to 4000 tokens
+- Output: 1-4000 tokens (configurable)
 
 ## 💰 Cost Management
 
-| Model | Input (per 1M) | Output (per 1M) | Best For |
-|-------|---------------|-----------------|----------|
-| **GPT-5 Pro** | $15.00 | $120.00 | Critical tasks requiring highest precision |
-| **GPT-5** | $1.25 | $10.00 | Complex coding and agentic tasks |
-| **GPT-5 Mini** | $0.25 | $2.00 | Well-defined tasks, good balance |
-| **GPT-5 Nano** | $0.05 | $0.40 | Classification, summarization |
-| **GPT-4.1** | $3.00 | $12.00 | Advanced tasks with fine-tuning |
-| **GPT-4.1 Mini** | $0.80 | $3.20 | Efficient advanced tasks |
-| **GPT-4.1 Nano** | $0.20 | $0.80 | Most efficient variant |
-| **GPT-4o** | $2.50 | $10.00 | Multimodal flagship |
-| **GPT-4o Mini** ⭐ | $0.15 | $0.60 | **Default - Best value** |
-| **o4-mini** | $4.00 | $16.00 | Complex reasoning |
-| **o1-preview** | $15.00 | $60.00 | Advanced reasoning |
-| **o1-mini** | $3.00 | $12.00 | STEM reasoning |
+| Model | Input (per 1K) | Output (per 1K) |
+|-------|---------------|-----------------|
+| GPT-3.5 Turbo | $0.0005 | $0.0015 |
+| GPT-4 | $0.03 | $0.06 |
+| GPT-4 Turbo | $0.01 | $0.03 |
 
-**Tips:**
-- 🎯 Use `gpt-4o-mini` as default - best price-performance
-- 💰 Use `gpt-5-nano` for simple tasks - cheapest option
-- 🧠 Use o-series only for complex reasoning tasks
-- 🚀 Reserve `gpt-5-pro` for mission-critical work
+**Tip:** Use GPT-3.5 for most tasks to reduce costs by 60x!
 
 ## 🔐 Security
 

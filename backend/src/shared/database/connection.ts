@@ -21,7 +21,6 @@ class Database {
             connectionTimeoutMillis: 2000,
         });
         this.pool.on('connect', (client: PoolClient) => {
-            console.log('Connected to PostgreSQL database'.green);
             this.isConnected = true;
         });
         this.pool.on('error', (err: Error) => {

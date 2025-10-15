@@ -62,6 +62,7 @@
         <div v-if="selectedActionReaction" class="parameters-configuration">
           <h4 class="parameters-title">Paramètres de configuration</h4>
 
+
           <div v-if="selectedActionReaction.parameters.length === 0" class="no-parameters">
             <UIcon name="i-heroicons-information-circle" class="w-5 h-5" style="color: var(--text-secondary);" />
             <span>Aucun paramètre requis pour cette {{ blockType === 'trigger' ? 'action' : 'réaction' }}</span>
@@ -70,7 +71,7 @@
           <div v-else class="parameters-list">
             <component
               v-for="parameter in selectedActionReaction.parameters"
-              :key="parameter.name"
+              :key="`${selectedActionReaction.id}-${parameter.name}`"
               :is="getFieldComponent(parameter.type)"
               :parameter="parameter"
               :value="parameters[parameter.name]"
@@ -120,14 +121,14 @@ import type { Service, ServiceAction, ServiceReaction } from '~/types'
 import type { ServiceConfiguration, ConfigurationValidation } from '~/types'
 import { ConfigurationValidator, FIELD_TYPE_MAPPING } from '~/types/ServiceConfiguration'
 
-// Import des composants de configuration
 import ConfigInput from '~/components/ui/config/ConfigInput.vue'
 import ConfigNumber from '~/components/ui/config/ConfigNumber.vue'
 import ConfigSelect from '~/components/ui/config/ConfigSelect.vue'
 import ConfigDate from '~/components/ui/config/ConfigDate.vue'
 import ConfigCheckbox from '~/components/ui/config/ConfigCheckbox.vue'
+import ConfigSelectMenu from '~/components/ui/config/ConfigSelectMenu.vue'
+import ConfigDiscordChannel from '~/components/ui/config/ConfigDiscordChannel.vue'
 
-// Props
 interface Props {
   open?: boolean
   service: Service
@@ -135,7 +136,6 @@ interface Props {
   initialConfig?: ServiceConfiguration
 }
 
-// Emits
 interface Emits {
   (e: 'update:open', value: boolean): void
   (e: 'configuration-confirmed', config: ServiceConfiguration): void
@@ -147,7 +147,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-// État local
 const isOpen = computed({
   get: () => props.open,
   set: (value) => emit('update:open', value)
@@ -162,7 +161,6 @@ const validation = ref<ConfigurationValidation>({
   errors: []
 })
 
-// Actions/reactions disponibles selon le type de bloc
 const availableActionReactions = computed((): (ServiceAction | ServiceReaction)[] => {
   if (props.blockType === 'trigger') {
     return props.service.actions || []
@@ -171,16 +169,13 @@ const availableActionReactions = computed((): (ServiceAction | ServiceReaction)[
   }
 })
 
-// Vérifier si on peut confirmer la configuration
 const canConfirm = computed(() => {
   return selectedActionReaction.value && validation.value.isValid
 })
 
-// Obtenir le composant à utiliser pour un type de champ
 const getFieldComponent = (type: string) => {
   const fieldConfig = FIELD_TYPE_MAPPING[type]
   if (!fieldConfig) {
-    console.warn(`Unknown field type: ${type}, using ConfigInput as fallback`)
     return ConfigInput
   }
 
@@ -189,28 +184,25 @@ const getFieldComponent = (type: string) => {
     case 'ConfigSelect': return ConfigSelect
     case 'ConfigDate': return ConfigDate
     case 'ConfigCheckbox': return ConfigCheckbox
+    case 'ConfigSelectMenu': return ConfigSelectMenu
+    case 'ConfigDiscordChannel': return ConfigDiscordChannel
     default: return ConfigInput
   }
 }
 
-// Sélectionner une action/reaction
 const selectActionReaction = (actionReaction: ServiceAction | ServiceReaction) => {
   selectedActionReaction.value = actionReaction
 
-  // Initialiser les paramètres avec des valeurs par défaut
   parameters.value = ConfigurationValidator.initializeParameters(actionReaction)
 
-  // Valider la configuration initiale
   validateConfiguration()
 }
 
-// Mettre à jour un paramètre
 const updateParameter = (paramName: string, value: any) => {
   parameters.value[paramName] = value
   validateConfiguration()
 }
 
-// Mettre à jour la validation d'un paramètre
 const updateValidation = (paramName: string, isValid: boolean, error?: string) => {
   if (!validation.value.parameters[paramName]) {
     validation.value.parameters[paramName] = {
@@ -222,11 +214,9 @@ const updateValidation = (paramName: string, isValid: boolean, error?: string) =
   validation.value.parameters[paramName].isValid = isValid
   validation.value.parameters[paramName].error = error
 
-  // Recalculer la validation globale
   validateConfiguration()
 }
 
-// Valider la configuration complète
 const validateConfiguration = () => {
   if (!selectedActionReaction.value) {
     validation.value = {
@@ -243,7 +233,6 @@ const validateConfiguration = () => {
   )
 }
 
-// Confirmer la configuration
 const confirmConfiguration = async () => {
   if (!selectedActionReaction.value || !validation.value.isValid) return
 
@@ -270,11 +259,8 @@ const confirmConfiguration = async () => {
   }
 }
 
-// Fermer le modal
 const closeModal = () => {
-  console.log('ServiceConfigurationModal: closeModal called')
   isOpen.value = false
-  // Reset state when closing
   selectedActionReaction.value = null
   parameters.value = {}
   validation.value = {
@@ -284,78 +270,51 @@ const closeModal = () => {
   }
 }
 
-// Initialiser avec la configuration existante si fournie
 const initializeFromConfig = () => {
-  console.log('ServiceConfigurationModal - initializeFromConfig called')
-  console.log('ServiceConfigurationModal - props.initialConfig:', props.initialConfig)
-
   if (props.initialConfig) {
-    console.log('ServiceConfigurationModal - initializing with existing config')
+    let actionReactionToSelect: ServiceAction | ServiceReaction | null = null
 
     if (props.initialConfig.selectedAction) {
-      console.log('ServiceConfigurationModal - setting selectedAction:', props.initialConfig.selectedAction)
-      selectedActionReaction.value = props.initialConfig.selectedAction
+      actionReactionToSelect = props.initialConfig.selectedAction
     } else if (props.initialConfig.selectedReaction) {
-      console.log('ServiceConfigurationModal - setting selectedReaction:', props.initialConfig.selectedReaction)
-      selectedActionReaction.value = props.initialConfig.selectedReaction
+      actionReactionToSelect = props.initialConfig.selectedReaction
     }
 
-    console.log('ServiceConfigurationModal - setting parameters:', props.initialConfig.parameters)
-    // Force reactive update by clearing then setting
-    parameters.value = {}
-    nextTick(() => {
-      parameters.value = { ...props.initialConfig.parameters }
-      validateConfiguration()
-    })
-  } else if (availableActionReactions.value.length === 1) {
-    console.log('ServiceConfigurationModal - auto-selecting single option:', availableActionReactions.value[0])
-    // Auto-sélectionner s'il n'y a qu'une seule option
+    if (actionReactionToSelect) {
+      selectedActionReaction.value = actionReactionToSelect
+
+      const defaultParams = ConfigurationValidator.initializeParameters(actionReactionToSelect)
+      parameters.value = defaultParams
+
+      if (props.initialConfig.parameters && Object.keys(props.initialConfig.parameters).length > 0) {
+        parameters.value = {
+          ...parameters.value,
+          ...props.initialConfig.parameters
+        }
+      }
+
+      nextTick(() => {
+        validateConfiguration()
+      })
+    }
+  } else if (availableActionReactions.value.length === 1 && availableActionReactions.value[0]) {
     selectActionReaction(availableActionReactions.value[0])
   }
 }
 
-// Watcher pour réagir aux changements de initialConfig (pour l'édition)
-watch(() => props.initialConfig, (newConfig, oldConfig) => {
-  console.log('ServiceConfigurationModal - initialConfig changed:', {
-    newConfig,
-    oldConfig,
-    modalOpen: props.open,
-    hasNewConfig: !!newConfig,
-    parametersChanged: JSON.stringify(newConfig?.parameters) !== JSON.stringify(oldConfig?.parameters)
-  })
-  if (newConfig && props.open) {
-    console.log('ServiceConfigurationModal - reinitializing from config due to prop change')
-    initializeFromConfig()
-  }
-}, { deep: true, immediate: true })
-
-// Watcher spécifique pour les paramètres
-watch(() => props.initialConfig?.parameters, (newParams, oldParams) => {
-  console.log('ServiceConfigurationModal - parameters changed:', {
-    newParams,
-    oldParams,
-    modalOpen: props.open
-  })
-  if (newParams && props.open && JSON.stringify(newParams) !== JSON.stringify(oldParams)) {
-    console.log('ServiceConfigurationModal - reinitializing due to parameters change')
-    initializeFromConfig()
-  }
-}, { deep: true })
-
-// Initialiser quand le modal s'ouvre
-watch(() => props.open, (isOpen) => {
-  console.log('ServiceConfigurationModal - modal open state changed:', isOpen)
-  if (isOpen) {
-    console.log('ServiceConfigurationModal - modal opened, initializing from config')
-    // Forcer la réinitialisation à chaque ouverture pour prendre en compte les nouvelles données du backend
-    initializeFromConfig()
+watch(() => props.open, (isOpen, wasOpen) => {
+  if (isOpen && !wasOpen) {
+    nextTick(() => {
+      initializeFromConfig()
+    })
   }
 })
 
-// Initialiser au montage si déjà ouvert
 onMounted(() => {
   if (props.open) {
-    initializeFromConfig()
+    nextTick(() => {
+      initializeFromConfig()
+    })
   }
 })
 </script>

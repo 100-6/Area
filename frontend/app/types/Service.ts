@@ -37,7 +37,7 @@ export interface ServiceReaction {
 
 export interface ActionParameter {
   name: string
-  type: 'string' | 'number' | 'boolean' | 'email' | 'url' | 'date' | 'select'
+  type: 'string' | 'number' | 'boolean' | 'email' | 'url' | 'date' | 'select' | 'discord_channel'
   required: boolean
   description: string
   placeholder?: string

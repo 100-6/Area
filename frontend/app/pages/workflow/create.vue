@@ -375,8 +375,7 @@ const handleServiceSelected = (service: Service) => {
   const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
 
   selectServiceWithConfiguration(service, blockType, (config) => {
-    console.log('Adding service block with configuration:', config)
-    addServiceBlock(config)
+    addServiceBlock(config, undefined, blockType)
   })
 }
 
@@ -477,7 +476,7 @@ onMounted(async () => {
     handlePreSelectedService(route, (service) => {
       const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
       selectServiceWithConfiguration(service, blockType, (config) => {
-        addServiceBlock(config)
+        addServiceBlock(config, undefined, blockType)
       })
     })
   }

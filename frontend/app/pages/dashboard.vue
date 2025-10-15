@@ -250,7 +250,6 @@ const cancelDelete = () => {
 }
 
 const handleConfigureArea = (areaId: string) => {
-  console.log('Configure area called with:', areaId, typeof areaId)
   navigateTo(`/workflow/${areaId}/edit`)
 }
 

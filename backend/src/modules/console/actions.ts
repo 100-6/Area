@@ -53,25 +53,9 @@ export class ConsoleLogAction extends BaseAction {
     }
 
     async execute(config: any, context: any): Promise<any> {
-        let message = config.message || 'No message provided';
+        const rawMessage = config.message || 'No message provided';
         const level = config.level || 'info';
-
-        // ✨ Support des placeholders avec les outputs précédents
-        const previousOutputs = context.previousOutputs || {};
-        
-        // Collecter toutes les données disponibles
-        const allData: any = {};
-        for (const nodeId in previousOutputs) {
-            Object.assign(allData, previousOutputs[nodeId]);
-        }
-
-        // Remplacer les placeholders {{key}} par les valeurs
-        for (const [key, value] of Object.entries(allData)) {
-            const placeholder = `{{${key}}}`;
-            if (message.includes(placeholder)) {
-                message = message.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), String(value));
-            }
-        }
+        const message = this.replaceVariables(rawMessage, context);
 
         switch (level) {
             case 'success':
@@ -86,9 +70,6 @@ export class ConsoleLogAction extends BaseAction {
             default:
                 console.log(`[Console Action] ${message}`.cyan);
         }
-        return { 
-            success: true,
-            data: { message, level } 
-        };
+        return { success: true, data: { message, level } };
     }
 }

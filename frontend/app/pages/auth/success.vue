@@ -118,7 +118,6 @@ onMounted(async () => {
       const { verifyToken } = useAuth()
       await verifyToken()
     } catch (userError) {
-      console.warn('Could not verify token immediately:', userError)
     }
 
     // Petite pause pour l'UX

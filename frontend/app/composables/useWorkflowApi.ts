@@ -70,8 +70,6 @@ export const useWorkflowApi = () => {
         throw new Error('Token d\'authentification manquant')
       }
 
-      console.log('WorkflowApi - getWorkflow called with areaId:', areaId, typeof areaId)
-      console.log('WorkflowApi - URL will be:', `/api/workflows/${areaId}`)
 
       const response = await $fetch<{ success: boolean; workflow: BackendWorkflow }>(`/api/workflows/${areaId}`, {
         baseURL: backendUrl,
@@ -318,64 +316,108 @@ export const useWorkflowApi = () => {
 
       let area: AreaData
 
-      // Create or use existing area
       if (existingAreaId) {
-        console.log('[WorkflowApi] Updating existing workflow:', existingAreaId)
         
-        // Get existing workflow
         const existingWorkflow = await getWorkflow(existingAreaId)
         
-        // Build sets for comparison
         const existingNodeMap = new Map(existingWorkflow.nodes.map(n => [n.id, n]))
         const currentBlockMap = new Map(blocks.map(b => [b.id, b]))
         const existingConnMap = new Map(existingWorkflow.connections.map(c => [c.id!, c]))
         
-        // 1. UPDATE existing nodes that are still present
         const nodesToUpdate = blocks.filter(b => existingNodeMap.has(b.id))
-        console.log('[WorkflowApi] Updating', nodesToUpdate.length, 'nodes')
         for (const block of nodesToUpdate) {
           const nodeDto = mapBlockToNode(block)
           await updateNode(block.id, nodeDto)
         }
         
-        // 2. CREATE new nodes
         const nodesToCreate = blocks.filter(b => !existingNodeMap.has(b.id))
-        console.log('[WorkflowApi] Creating', nodesToCreate.length, 'new nodes')
         const nodeIdMap = new Map<string, string>()
         
-        // Keep existing node IDs in the map
         nodesToUpdate.forEach(b => nodeIdMap.set(b.id, b.id))
         
-        // Create new nodes and map their IDs
         for (const block of nodesToCreate) {
           const nodeDto = mapBlockToNode(block)
           const createdNode = await createNode(existingAreaId, nodeDto)
           nodeIdMap.set(block.id, createdNode.id)
         }
         
-        // 3. DELETE removed nodes
         const nodesToDelete = existingWorkflow.nodes.filter(n => !currentBlockMap.has(n.id))
-        console.log('[WorkflowApi] Deleting', nodesToDelete.length, 'nodes')
         for (const node of nodesToDelete) {
           await deleteNode(node.id)
         }
         
-        // 4. Handle connections - delete all and recreate (simpler than diff)
-        console.log('[WorkflowApi] Recreating', connections.length, 'connections')
+        let shouldRestart = false
+        try {
+          const areaResponse = await $fetch<{ success: boolean; area: AreaData }>(`/api/areas/${existingAreaId}`, {
+            baseURL: backendUrl,
+            headers: {
+              'Authorization': `Bearer ${authToken.value}`
+            }
+          })
+          shouldRestart = areaResponse.success && areaResponse.area.is_active
+        } catch (err) {
+        }
+
+        if (shouldRestart) {
+          try {
+            const authToken = useCookie('auth-token')
+            await $fetch(`/api/areas/${existingAreaId}/toggle`, {
+              method: 'PUT',
+              baseURL: backendUrl,
+              headers: {
+                'Authorization': `Bearer ${authToken.value}`,
+                'Content-Type': 'application/json'
+              },
+              body: { isActive: false }
+            })
+          } catch (err) {
+          }
+        }
+
         for (const conn of existingWorkflow.connections) {
           if (conn.id) {
             await deleteConnection(conn.id)
           }
         }
-        
+
         for (const connection of connections) {
           const connectionDto = mapConnectionToDto(connection, nodeIdMap)
-          await createConnection(existingAreaId, connectionDto)
+
+          const authToken = useCookie('auth-token')
+          const response = await $fetch<{ success: boolean; connection: BackendWorkflowConnection }>(`/api/workflows/${existingAreaId}/connections`, {
+            method: 'POST',
+            baseURL: backendUrl,
+            headers: {
+              'Authorization': `Bearer ${authToken.value}`,
+              'Content-Type': 'application/json',
+              'X-Skip-Trigger-Start': 'true'
+            },
+            body: connectionDto
+          })
+
+          if (response.success) {
+            connection.id = response.connection.id
+          }
+        }
+
+        if (shouldRestart) {
+          try {
+            const authToken = useCookie('auth-token')
+            await $fetch(`/api/areas/${existingAreaId}/toggle`, {
+              method: 'PUT',
+              baseURL: backendUrl,
+              headers: {
+                'Authorization': `Bearer ${authToken.value}`,
+                'Content-Type': 'application/json'
+              },
+              body: { isActive: true }
+            })
+          } catch (err) {
+          }
         }
         
         area = { id: existingAreaId } as AreaData
       } else {
-        // New workflow - create everything
         if (!areaData) {
           throw new Error('Area data required for new workflow')
         }
@@ -387,15 +429,16 @@ export const useWorkflowApi = () => {
           const nodeDto = mapBlockToNode(block)
           const createdNode = await createNode(area.id, nodeDto)
           nodeIdMap.set(block.id, createdNode.id)
+          block.id = createdNode.id
         }
         
         for (const connection of connections) {
           const connectionDto = mapConnectionToDto(connection, nodeIdMap)
-          await createConnection(area.id, connectionDto)
+          const createdConnection = await createConnection(area.id, connectionDto)
+          connection.id = createdConnection.id
         }
       }
 
-      console.log('[WorkflowApi] Saved', blocks.length, 'nodes and', connections.length, 'connections')
       return { area, success: true }
     } catch (err: any) {
       error.value = err.message || 'Erreur lors de la sauvegarde du workflow'
@@ -406,11 +449,9 @@ export const useWorkflowApi = () => {
   }
 
   return {
-    // State
     isLoading: readonly(isLoading),
     error: readonly(error),
 
-    // API Methods
     createArea,
     getWorkflow,
     createNode,
@@ -419,13 +460,11 @@ export const useWorkflowApi = () => {
     deleteNode,
     deleteConnection,
 
-    // Mapping utilities
     mapBlockToNode,
     mapConnectionToDto,
     mapNodeToBlock,
     mapConnectionToFrontend,
 
-    // High-level operations
     saveWorkflowToBackend
   }
 }

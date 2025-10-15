@@ -86,58 +86,6 @@ export class SendMessage extends BaseAction {
         return true;
     }
 
-    /**
-     * Remplacer les variables dans le contenu du message
-     * Exemple: "Hello {{author.username}}" -> "Hello John"
-     * Supporte aussi les variables des actions précédentes: {{generatedText}}
-     */
-    private replaceVariables(content: string, context: ActionContext): string {
-        let result = content;
-
-        // Replace previous outputs from other actions
-        if (context.previousOutputs) {
-            console.log('[SendMessage] Previous outputs:', JSON.stringify(context.previousOutputs, null, 2));
-            
-            for (const [nodeId, output] of Object.entries(context.previousOutputs)) {
-                // Flatten the output object to support nested properties
-                const flatOutput = this.flattenObject(output);
-                
-                for (const [key, value] of Object.entries(flatOutput)) {
-                    if (value !== null && value !== undefined) {
-                        // Replace both with and without nodeId prefix
-                        const regex1 = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-                        const regex2 = new RegExp(`\\{\\{${nodeId}\\.${key}\\}\\}`, 'g');
-                        
-                        result = result.replace(regex1, String(value));
-                        result = result.replace(regex2, String(value));
-                    }
-                }
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * Flatten nested object into dot notation
-     * { a: { b: 'value' } } => { 'a.b': 'value' }
-     */
-    private flattenObject(obj: any, prefix = ''): Record<string, any> {
-        let flattened: Record<string, any> = {};
-        
-        for (const key in obj) {
-            const value = obj[key];
-            const newKey = prefix ? `${prefix}.${key}` : key;
-            
-            if (value && typeof value === 'object' && !Array.isArray(value)) {
-                Object.assign(flattened, this.flattenObject(value, newKey));
-            } else {
-                flattened[newKey] = value;
-            }
-        }
-        
-        return flattened;
-    }
 
     async execute(config: ActionConfig, context: ActionContext): Promise<ActionResult> {
         const startTime = Date.now();
@@ -152,7 +100,8 @@ export class SendMessage extends BaseAction {
                 throw new Error(`Channel ${config.channelId} not found`);
             if (!channel.isTextBased())
                 throw new Error(`Channel ${config.channelId} is not a text channel`);
-            const content = this.replaceVariables(config.content, context);
+            // Use centralized VariableReplacer from BaseAction
+            const content = this.replaceVariables(config.content, context, false);
             const messageOptions: any = { content: content };
             if (config.replyToMessageId)
                 messageOptions.reply = { messageReference: config.replyToMessageId };

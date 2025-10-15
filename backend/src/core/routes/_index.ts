@@ -7,6 +7,7 @@ import workflowRoutes from './workflow';
 import moduleRoutes from './modules';
 import servicesRoutes from './services';
 import discordRoutes from '../../modules/discord/routes';
+import gmailRoutes from '../../modules/gmail/routes';
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use('/api/modules', moduleRoutes);
 router.use('/api/services', servicesRoutes);
 
 router.use('/api/discord', discordRoutes);
+router.use('/api/gmail', gmailRoutes);
 
 export default router;

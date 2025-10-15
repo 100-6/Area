@@ -181,7 +181,8 @@ export class AuthController {
             }
             const isAlreadyAuthenticated = await this.authService.verifyJWT(stateData.token);
             if (isAlreadyAuthenticated) {
-                await this.authService.handleDiscordCallback(code as string);
+                const decoded = await this.authService.verifyToken(stateData.token as string);
+                await this.authService.handleDiscordCallback(code as string, decoded.userId);
                 res.redirect(`${redirectUrl}/service/success?service=discord`);
             } else {
                 const result = await this.authService.handleDiscordCallback(code as string);
@@ -263,7 +264,8 @@ export class AuthController {
             }
             const isAlreadyAuthenticated = await this.authService.verifyJWT(stateData.token);
             if (isAlreadyAuthenticated) {
-                await this.authService.handleGoogleCallback(code as string);
+                const decoded = await this.authService.verifyToken(stateData.token as string);
+                await this.authService.handleGoogleCallback(code as string, decoded.userId);
                 res.redirect(`${redirectUrl}/service/success?service=google`);
             } else {
                 const result = await this.authService.handleGoogleCallback(code as string);
@@ -345,7 +347,8 @@ export class AuthController {
             }
             const isAlreadyAuthenticated = await this.authService.verifyJWT(stateData.token);
             if (isAlreadyAuthenticated) {
-                await this.authService.handleGitHubCallback(code as string);
+                const decoded = await this.authService.verifyToken(stateData.token as string);
+                await this.authService.handleGitHubCallback(code as string, decoded.userId);
                 res.redirect(`${redirectUrl}/service/success?service=github`);
             } else {
                 const result = await this.authService.handleGitHubCallback(code as string);
@@ -427,7 +430,8 @@ export class AuthController {
             }
             const isAlreadyAuthenticated = await this.authService.verifyJWT(stateData.token);
             if (isAlreadyAuthenticated) {
-                await this.authService.handleGitLabCallback(code as string);
+                const decoded = await this.authService.verifyToken(stateData.token as string);
+                await this.authService.handleGitLabCallback(code as string, decoded.userId);
                 res.redirect(`${redirectUrl}/service/success?service=gitlab`);
             } else {
                 const result = await this.authService.handleGitLabCallback(code as string);
@@ -509,7 +513,8 @@ export class AuthController {
             }
             const isAlreadyAuthenticated = await this.authService.verifyJWT(stateData.token);
             if (isAlreadyAuthenticated) {
-                await this.authService.handleDropboxCallback(code as string);
+                const decoded = await this.authService.verifyToken(stateData.token as string);
+                await this.authService.handleDropboxCallback(code as string, decoded.userId);
                 res.redirect(`${redirectUrl}/service/success?service=dropbox`);
             } else {
                 const result = await this.authService.handleDropboxCallback(code as string);
@@ -517,67 +522,6 @@ export class AuthController {
             }
         } catch (error) {
             console.error('Dropbox OAuth callback error:'.red, error);
-            const isMobile = this.isMobileRequest(req);
-            const redirectUrl = this.getRedirectUrl(isMobile);
-            let errorMessage = 'Authentication failed';
-            if (error instanceof Error) {
-                switch (error.message) {
-                    case 'INVALID_OAUTH_USER_DATA':
-                        errorMessage = 'Invalid user data received';
-                        break;
-                    case 'ACCOUNT_INACTIVE':
-                        errorMessage = 'Account is inactive';
-                        break;
-                    case 'OAUTH_CALLBACK_FAILED':
-                        errorMessage = 'OAuth authentication failed';
-                        break;
-                }
-            }
-            res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent(errorMessage)}`);
-        }
-    };
-
-    /**
-     * Initiate Slack OAuth
-     * GET /api/auth/slack
-     */
-    public slackLogin = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const authUrl = this.authService.getSlackAuthUrl();
-
-            res.redirect(authUrl);
-        } catch (error) {
-            console.error('Slack OAuth redirect error:'.red, error);
-            if (error instanceof Error && error.message === 'SLACK_OAUTH_NOT_CONFIGURED')
-                res.status(500).json({ error: 'Slack OAuth not configured' });
-            else
-                res.status(500).json({ error: 'Failed to initiate Slack OAuth' });
-        }
-    };
-
-    /**
-     * Handle Slack OAuth callback
-     * GET /api/auth/slack/callback
-     */
-    public slackCallback = async (req: Request, res: Response): Promise<void> => {
-        try {
-            const { code, error } = req.query;
-            const isMobile = this.isMobileRequest(req);
-            const redirectUrl = this.getRedirectUrl(isMobile);
-
-            if (error) {
-                console.error('Slack OAuth error:', error);
-                res.redirect(`${redirectUrl}/auth/error?error=${error}`);
-                return;
-            }
-            if (!code) {
-                res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authorization code missing')}`);
-                return;
-            }
-            const result = await this.authService.handleSlackCallback(code as string);
-            res.redirect(`${redirectUrl}/auth/success?token=${result.token}&provider=slack&refresh=${result.refreshToken}`);
-        } catch (error) {
-            console.error('Slack OAuth callback error:'.red, error);
             const isMobile = this.isMobileRequest(req);
             const redirectUrl = this.getRedirectUrl(isMobile);
             let errorMessage = 'Authentication failed';

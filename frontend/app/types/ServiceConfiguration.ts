@@ -100,7 +100,7 @@ export const FIELD_TYPE_MAPPING: Record<string, FieldTypeConfig> = {
     validator: () => ({ isValid: true }) // Les boolean sont toujours valides
   },
   select: {
-    component: 'ConfigSelect',
+    component: 'ConfigSelectMenu',
     defaultValue: null,
     validator: (value: any, parameter: ActionParameter) => {
       if (parameter.required && (!value || value === '')) {
@@ -157,6 +157,16 @@ export const FIELD_TYPE_MAPPING: Record<string, FieldTypeConfig> = {
         } catch {
           return { isValid: false, error: 'URL invalide' }
         }
+      }
+      return { isValid: true }
+    }
+  },
+  discord_channel: {
+    component: 'ConfigDiscordChannel',
+    defaultValue: '',
+    validator: (value: any, parameter: ActionParameter) => {
+      if (parameter.required && (!value || value.toString().trim() === '')) {
+        return { isValid: false, error: 'Veuillez sélectionner un channel' }
       }
       return { isValid: true }
     }

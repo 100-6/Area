@@ -283,8 +283,6 @@ definePageMeta({
 const route = useRoute()
 const areaId = ref(route.params.id as string)
 
-console.log('Edit page - route.params.id:', route.params.id, typeof route.params.id)
-console.log('Edit page - areaId:', areaId.value, typeof areaId.value)
 
 const isLoading = ref(true)
 const error = ref<string | null>(null)
@@ -317,6 +315,7 @@ const {
   deleteBlock,
   configureBlock,
   updateBlockConfiguration,
+  updateBlockConfig,
   getBlockConnectionState,
   getConnectionPath,
   saveWorkflow,
@@ -382,10 +381,8 @@ const loadExistingWorkflow = async () => {
     isLoading.value = true
     error.value = null
 
-    console.log('Loading workflow for areaId:', areaId.value)
 
     areaData.value = await getAreaByIdFromApi(areaId.value)
-    console.log('Area data loaded:', areaData.value)
 
     await loadWorkflow(areaId.value)
 
@@ -394,25 +391,18 @@ const loadExistingWorkflow = async () => {
 
     nextTick(() => {
       if (workflowBlocks.value.length > 0) {
-        console.log('Loaded blocks positions:', workflowBlocks.value.map(b => ({ id: b.id, position: b.position, service: b.service.name })))
 
         const avgX = workflowBlocks.value.reduce((sum, block) => sum + block.position.x, 0) / workflowBlocks.value.length
         const avgY = workflowBlocks.value.reduce((sum, block) => sum + block.position.y, 0) / workflowBlocks.value.length
 
-        console.log('Calculated center of blocks:', { avgX, avgY })
-        console.log('Current pan:', pan.value)
-        console.log('Current zoom:', zoom.value)
 
         if (Math.abs(avgX) > 1000 || Math.abs(avgY) > 1000) {
-          console.log('Centering view on loaded blocks...')
           pan.value = {
             x: -avgX + 400,
             y: -avgY + 300
           }
-          console.log('New pan:', pan.value)
         }
       } else {
-        console.log('No blocks loaded to center on')
       }
     })
 
@@ -432,13 +422,6 @@ const getNewBlockPosition = () => {
     const worldX = (targetScreenX - pan.value.x) / zoom.value
     const worldY = (targetScreenY - pan.value.y) / zoom.value
 
-    console.log('Calculating world position for center spawn:', {
-      targetScreen: { x: targetScreenX, y: targetScreenY },
-      pan: pan.value,
-      zoom: zoom.value,
-      worldPosition: { x: worldX, y: worldY }
-    })
-
     return { x: worldX, y: worldY }
   } else {
     const lastBlock = workflowBlocks.value[workflowBlocks.value.length - 1]
@@ -454,8 +437,7 @@ const handleServiceSelected = (service: Service) => {
   const position = getNewBlockPosition()
 
   selectServiceWithConfiguration(service, blockType, (config) => {
-    console.log('Adding service block with configuration at position:', position)
-    addServiceBlock(config, position)
+    addServiceBlock(config, position, blockType)
   })
 }
 
@@ -465,8 +447,6 @@ const handleConfigurationConfirmed = (config: ServiceConfiguration) => {
 
 const handleBlockConfigure = async (blockId: string) => {
   try {
-    console.log('handleBlockConfigure called with blockId:', blockId)
-    console.log('handleBlockConfigure - areaId:', areaId.value)
 
     const configInfo = await configureBlock(blockId)
     if (configInfo) {
@@ -475,7 +455,8 @@ const handleBlockConfigure = async (blockId: string) => {
         configInfo.blockType,
         configInfo.currentConfig,
         (newConfig: ServiceConfiguration) => {
-          updateBlockConfiguration(blockId, newConfig)
+          // Utiliser la nouvelle fonction updateBlockConfig qui sauvegarde aussi sur le backend
+          updateBlockConfig(blockId, newConfig)
         }
       )
     }
@@ -507,7 +488,6 @@ const handleSaveWorkflow = async () => {
 
     showSaveModal.value = false
 
-    console.log('Workflow updated successfully!')
 
     areaData.value = { ...areaData.value, ...updatedAreaData }
 
@@ -517,16 +497,13 @@ const handleSaveWorkflow = async () => {
 }
 
 watch(() => route.params.id, (newId) => {
-  console.log('Route params changed - newId:', newId, typeof newId)
   if (newId && typeof newId === 'string' && newId !== '[object PointerEvent]') {
     areaId.value = newId
-    console.log('Updated areaId to:', areaId.value)
     loadExistingWorkflow()
   }
 }, { immediate: true })
 
 onMounted(() => {
-  console.log('Edit page mounted - areaId:', areaId.value)
   if (!areaId.value || areaId.value === '[object PointerEvent]') {
     error.value = 'ID de workflow manquant'
     isLoading.value = false
