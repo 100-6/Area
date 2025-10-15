@@ -11,7 +11,7 @@ export interface ModuleConfig {
     description: string;
     iconUrl?: string;
     color?: string;
-    authType: 'none' | 'oauth2' | 'api_key' | 'basic';
+    authType: 'none' | 'oauth2' | 'api_key' | 'basic' | 'bot_token';
     isActive: boolean;
     
     oauthClientId?: string;
@@ -71,7 +71,7 @@ export abstract class BaseModule {
     /**
      * Type d'authentification requis
      */
-    getAuthType(): 'none' | 'oauth2' | 'api_key' | 'basic' {
+    getAuthType(): 'none' | 'oauth2' | 'api_key' | 'basic' | 'bot_token' {
         return this.config.authType;
     }
 

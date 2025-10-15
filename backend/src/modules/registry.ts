@@ -4,6 +4,7 @@ import { consoleModule } from './console/service';
 import { discordModule } from './discord/service';
 import { openaiModule } from './openai/service';
 import { gmailModule } from './gmail/module';
+import { telegramModule } from './telegram/service';
 import 'colors';
 
 /**
@@ -43,6 +44,8 @@ class ModuleRegistry {
             await this.registerModule(discordModule);
             await this.registerModule(openaiModule);
             await this.registerModule(gmailModule);
+            await this.registerModule(telegramModule);
+            
             this.initialized = true;
             console.log(`[Registry] Successfully initialized ${this.modules.size} module(s)`.green.bold);
         } catch (error) {
