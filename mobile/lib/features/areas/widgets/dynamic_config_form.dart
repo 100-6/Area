@@ -195,30 +195,58 @@ class _DynamicConfigFormState extends State<DynamicConfigForm> {
   }
 
   Widget _buildDisabledField(ConfigField field, String message) {
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.grey[50]!, Colors.grey[100]!],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.grey[300]!,
+          width: 1,
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              field.label,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.lock_outline, color: Colors.grey[600], size: 18),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    field.label,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF666666),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[300]!),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey[200]!),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.grey[600], size: 20),
+                  Icon(Icons.info_outline_rounded, color: Colors.grey[500], size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -239,25 +267,96 @@ class _DynamicConfigFormState extends State<DynamicConfigForm> {
   }
 
   Widget _buildTextField(ConfigField field) {
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Colors.white, Color(0xFFFAFAFA)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              field.label,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4CAF50).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    field.type == ConfigFieldType.email
+                        ? Icons.email_outlined
+                        : field.type == ConfigFieldType.url
+                            ? Icons.link
+                            : Icons.text_fields,
+                    color: const Color(0xFF4CAF50),
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    field.label,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A1A1A),
+                    ),
+                  ),
+                ),
+                if (field.required)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Requis',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red[700],
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _controllers[field.key],
+              style: const TextStyle(fontSize: 15),
               decoration: InputDecoration(
                 hintText: field.hint,
-                border: const OutlineInputBorder(),
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                filled: true,
+                fillColor: const Color(0xFFF8F9FA),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.grey[200]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFF4CAF50), width: 2),
+                ),
+                contentPadding: const EdgeInsets.all(14),
               ),
               keyboardType: field.type == ConfigFieldType.email
                   ? TextInputType.emailAddress
@@ -266,7 +365,7 @@ class _DynamicConfigFormState extends State<DynamicConfigForm> {
                       : TextInputType.text,
               onChanged: (value) => _onFieldChanged(field, value),
               validator: field.required
-                  ? (value) => value == null || value.isEmpty ? 'This field is required' : null
+                  ? (value) => value == null || value.isEmpty ? 'Ce champ est requis' : null
                   : null,
             ),
           ],
@@ -276,31 +375,98 @@ class _DynamicConfigFormState extends State<DynamicConfigForm> {
   }
 
   Widget _buildTextAreaField(ConfigField field) {
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Colors.white, Color(0xFFFAFAFA)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              field.label,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4CAF50).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.notes,
+                    color: Color(0xFF4CAF50),
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    field.label,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A1A1A),
+                    ),
+                  ),
+                ),
+                if (field.required)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Requis',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red[700],
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _controllers[field.key],
               maxLines: 4,
               maxLength: field.maxLength,
+              style: const TextStyle(fontSize: 15),
               decoration: InputDecoration(
                 hintText: field.hint,
-                border: const OutlineInputBorder(),
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                filled: true,
+                fillColor: const Color(0xFFF8F9FA),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.grey[200]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFF4CAF50), width: 2),
+                ),
+                contentPadding: const EdgeInsets.all(14),
               ),
               onChanged: (value) => _onFieldChanged(field, value),
               validator: field.required
-                  ? (value) => value == null || value.isEmpty ? 'This field is required' : null
+                  ? (value) => value == null || value.isEmpty ? 'Ce champ est requis' : null
                   : null,
             ),
           ],
@@ -405,11 +571,39 @@ class _DynamicConfigFormState extends State<DynamicConfigForm> {
   Widget _buildBooleanField(ConfigField field) {
     final value = _config[field.key] as bool? ?? field.defaultValue as bool? ?? false;
 
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Colors.white, Color(0xFFFAFAFA)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Row(
           children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF4CAF50).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                value ? Icons.check_circle : Icons.radio_button_unchecked,
+                color: const Color(0xFF4CAF50),
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -419,6 +613,7 @@ class _DynamicConfigFormState extends State<DynamicConfigForm> {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A1A1A),
                     ),
                   ),
                   if (field.hint != null) ...[
@@ -426,7 +621,7 @@ class _DynamicConfigFormState extends State<DynamicConfigForm> {
                     Text(
                       field.hint!,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         color: Colors.grey[600],
                       ),
                     ),
@@ -436,6 +631,7 @@ class _DynamicConfigFormState extends State<DynamicConfigForm> {
             ),
             Switch(
               value: value,
+              activeColor: const Color(0xFF4CAF50),
               onChanged: (newValue) {
                 setState(() {
                   _config[field.key] = newValue;

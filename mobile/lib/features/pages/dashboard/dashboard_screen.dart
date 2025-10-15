@@ -21,6 +21,11 @@ class DashboardScreen extends StatelessWidget {
 
               const SizedBox(height: 24),
 
+              // Carte avec le robot
+              _buildRobotCard(theme),
+
+              const SizedBox(height: 24),
+
               // Autres éléments du dashboard peuvent être ajoutés ici
             ],
           ),
@@ -118,18 +123,81 @@ class DashboardScreen extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
 
-          // Robot en bas à droite (au-dessus du contenu)
+  Widget _buildRobotCard(ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      height: 240,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF48C774), // Vert moyen
+            const Color(0xFF166534), // Vert foncé
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF48C774).withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Motifs décoratifs en arrière-plan
+          Positioned(
+            top: -20,
+            right: -20,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
           Positioned(
             bottom: -10,
-            right: 0,
+            left: -30,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+
+          // Robot centré
+          Center(
             child: Image.asset(
               'assets/images/retro-robot-jumping.png',
-              width: 120,
-              height: 120,
+              width: 210,
+              height: 210,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
-                return const SizedBox.shrink();
+                return const Icon(
+                  Icons.android,
+                  size: 110,
+                  color: Colors.white,
+                );
               },
             ),
           ),

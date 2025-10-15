@@ -25,6 +25,7 @@ class _AutoAppState extends State<AutoApp> {
   late final AuthProvider _authProvider;
   late final GoRouter _router;
   late final DeepLinkService _deepLinkService;
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
   @override
   void initState() {
@@ -36,12 +37,18 @@ class _AutoAppState extends State<AutoApp> {
     // Le router doit être créé après l'initialisation du provider
     _router = AppRouter.router(_authProvider);
 
-    // Initialiser le service de deep links avec l'AuthRepository et le callback
+    // Initialiser le service de deep links avec l'AuthRepository et les callbacks
     _deepLinkService.initialize(
       _authRepository,
       onServiceConnected: (serviceName) {
         // Callback quand un service est connecté via OAuth
         print('Service $serviceName connecté ! Le deep link ramène automatiquement à l\'app.');
+        _showSuccessMessage('Service $serviceName connecté avec succès !');
+      },
+      onOAuthError: (error) {
+        // Callback en cas d'erreur OAuth
+        print('Erreur OAuth reçue: $error');
+        _showErrorMessage('Échec de l\'authentification: $error');
       },
     );
     _deepLinkService.startListening();
@@ -53,6 +60,57 @@ class _AutoAppState extends State<AutoApp> {
         _authProvider.refresh();
       }
     });
+  }
+
+  /// Affiche un message d'erreur à l'utilisateur
+  void _showErrorMessage(String message) {
+    _scaffoldMessengerKey.currentState?.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontSize: 15),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.red[700],
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'OK',
+          textColor: Colors.white,
+          onPressed: () {},
+        ),
+      ),
+    );
+  }
+
+  /// Affiche un message de succès à l'utilisateur
+  void _showSuccessMessage(String message) {
+    _scaffoldMessengerKey.currentState?.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(fontSize: 15),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF4CAF50),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
@@ -71,6 +129,7 @@ class _AutoAppState extends State<AutoApp> {
         theme: AppTheme.light,
         themeMode: ThemeMode.light,
         routerConfig: _router,
+        scaffoldMessengerKey: _scaffoldMessengerKey,
       ),
     );
   }

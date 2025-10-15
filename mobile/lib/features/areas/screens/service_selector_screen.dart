@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../models/service_info.dart';
 import '../services/area_service.dart';
-import '../widgets/service_connection_dialog.dart';
-import '../../../core/services/oauth_service.dart';
-import '../../../core/services/service_connection_service.dart';
-import '../../auth/data/auth_repository.dart';
+import 'service_actions_screen.dart';
 
 class ServiceSelectorScreen extends StatefulWidget {
   final String nodeType; // 'trigger' or 'action'
@@ -18,8 +14,6 @@ class ServiceSelectorScreen extends StatefulWidget {
 
 class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
   final AreaService _areaService = AreaService();
-  final ServiceConnectionService _connectionService = ServiceConnectionService();
-  final OAuthService _oauthService = OAuthService();
   List<ServiceInfo> _services = [];
   bool _isLoading = true;
   String? _error;
@@ -38,6 +32,10 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
 
     try {
       final services = await _areaService.getAvailableServices();
+      
+      // Trier les services par ordre alphabétique
+      services.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      
       setState(() {
         _services = services;
         _isLoading = false;
@@ -53,336 +51,418 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        title: Text(
-          widget.nodeType == 'trigger' ? 'Choose a Trigger' : 'Choose an Action',
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: Column(
+        children: [
+          _buildModernHeader(context),
+          Expanded(child: _buildBody()),
+        ],
       ),
-      body: _buildBody(),
+    );
+  }
+
+  Widget _buildModernHeader(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 12, 20, 24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF48C774), Color(0xFF166534)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(40),
+          bottomRight: Radius.circular(40),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF48C774).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+                  color: Colors.white,
+                  padding: EdgeInsets.zero,
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      widget.nodeType == 'trigger' ? Icons.flash_on_rounded : Icons.check_circle_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      widget.nodeType == 'trigger' ? 'DÉCLENCHEUR' : 'ACTION',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            widget.nodeType == 'trigger' ? 'Choisir un\nDéclencheur' : 'Choisir une\nAction',
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              height: 1.1,
+              letterSpacing: -1,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_error != null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-            const SizedBox(height: 16),
-            Text(_error!, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadServices,
-              child: const Text('Retry'),
+            const CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4CAF50)),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Chargement des services...',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
       );
     }
 
-    if (_services.isEmpty) {
-      return const Center(
-        child: Text('No services available'),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _services.length,
-      itemBuilder: (context, index) {
-        final service = _services[index];
-        final items = widget.nodeType == 'trigger'
-            ? service.actions
-            : service.reactions;
-
-        if (items.isEmpty) return const SizedBox.shrink();
-
-        return _buildServiceSection(service, items);
-      },
-    );
-  }
-
-  Widget _buildServiceSection(
-    ServiceInfo service,
-    List<dynamic> items,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-          child: Row(
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 32,
-                height: 32,
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: _getServiceColor(service.name).withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.red[50],
+                  shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  _getServiceIcon(service.name),
-                  size: 20,
-                  color: _getServiceColor(service.name),
+                  Icons.error_outline_rounded,
+                  size: 64,
+                  color: Colors.red[400],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(height: 24),
               Text(
-                service.name.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 14,
+                'Erreur',
+                style: TextStyle(
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: _loadServices,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text(
+                  'Réessayer',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4CAF50),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
-        ...items.map((item) {
-          final name = item is ServiceAction ? item.name : (item as ServiceReaction).name;
-          final description = item is ServiceAction ? item.description : (item as ServiceReaction).description;
+      );
+    }
 
-          return _buildItemCard(
-            service: service,
-            name: name,
-            description: description,
-            item: item,
-          );
-        }),
-        const SizedBox(height: 16),
-      ],
+    if (_services.isEmpty) {
+      return Center(
+        child: Text(
+          'Aucun service disponible',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey[600],
+          ),
+        ),
+      );
+    }
+
+    // Filtrer les services qui ont au moins une action/trigger
+    final validServices = _services.where((service) {
+      final items = widget.nodeType == 'trigger'
+          ? service.actions
+          : service.reactions;
+      return items.isNotEmpty;
+    }).toList();
+
+    return GridView.builder(
+      padding: const EdgeInsets.all(20),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.85,
+      ),
+      itemCount: validServices.length,
+      itemBuilder: (context, index) {
+        final service = validServices[index];
+        final items = widget.nodeType == 'trigger'
+            ? service.actions
+            : service.reactions;
+
+        return _buildServiceCard(service, items);
+      },
     );
   }
 
-  Widget _buildItemCard({
-    required ServiceInfo service,
-    required String name,
-    required String description,
-    required dynamic item,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () async {
-          // Vérifier si le service nécessite une connexion OAuth
-          if (_requiresOAuthConnection(service.name)) {
-            final authRepo = context.read<AuthRepository>();
-            final token = await authRepo.getToken();
-
-            if (token == null) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Vous devez être connecté')),
-                );
-              }
-              return;
-            }
-
-            // Vérifier si l'utilisateur est connecté au service
-            final isConnected = await _connectionService.isServiceConnected(
-              serviceName: service.name,
-              token: token,
-            );
-
-            if (!isConnected && mounted) {
-              // Afficher le dialogue pour se connecter
-              final provider = _getOAuthProvider(service.name);
-              if (provider == null) {
-                Navigator.pop(context, {
-                  'service': service.name,
-                  'name': name,
-                  'description': description,
-                  'item': item,
-                });
-                return;
-              }
-
-              final shouldConnect = await ServiceConnectionDialog.show(
-                context,
-                serviceName: service.name,
-                provider: provider,
-              );
-
-              if (shouldConnect == true && mounted) {
-                // Lancer le flux OAuth pour connecter le service (pas pour se connecter à l'app)
-                // On passe le token JWT pour que le backend sache que l'utilisateur est déjà authentifié
-                final result = await _oauthService.connectService(service.name, userToken: token);
-
-                if (result.isSuccess || result.isPending) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Connexion à ${provider.displayName} en cours...',
+  Widget _buildServiceCard(ServiceInfo service, List<dynamic> items) {
+    final serviceColor = _getServiceColor(service.name);
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: serviceColor.withOpacity(0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            spreadRadius: -2,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: serviceColor.withOpacity(0.2),
+          width: 2,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            _navigateToServiceActions(service, items);
+          },
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Grande icône du service
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        serviceColor,
+                        serviceColor.withOpacity(0.7),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: serviceColor.withOpacity(0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    _getServiceIcon(service.name),
+                    size: 32,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Nom du service
+                Text(
+                  service.name.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                    color: serviceColor,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 10),
+                // Badge nombre d'items
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: serviceColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: serviceColor.withOpacity(0.3),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        widget.nodeType == 'trigger' 
+                          ? Icons.flash_on_rounded 
+                          : Icons.play_arrow_rounded,
+                        size: 14,
+                        color: serviceColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${items.length}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: serviceColor,
                         ),
-                        backgroundColor: Colors.blue,
                       ),
-                    );
-                  }
-                  // Attendre un peu puis continuer
-                  await Future.delayed(const Duration(seconds: 2));
-                } else if (result.error != null && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(result.error!),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                  return;
-                }
-              } else {
-                // L'utilisateur a annulé
-                return;
-              }
-            }
-          }
-
-          // Continuer avec la sélection
-          if (mounted) {
-            Navigator.pop(context, {
-              'service': service.name,
-              'name': name,
-              'description': description,
-              'item': item,
-            });
-          }
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: _getServiceColor(service.name).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                    ],
+                  ),
                 ),
-                child: Icon(
-                  widget.nodeType == 'trigger'
-                      ? Icons.flash_on
-                      : Icons.check_circle,
-                  color: widget.nodeType == 'trigger'
-                      ? Colors.blue
-                      : Colors.green,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
+  void _navigateToServiceActions(ServiceInfo service, List<dynamic> items) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ServiceActionsScreen(
+          service: service,
+          items: items,
+          nodeType: widget.nodeType,
+        ),
+      ),
+    ).then((result) {
+      if (result != null) {
+        Navigator.pop(context, result);
+      }
+    });
+  }
+
+
   Color _getServiceColor(String serviceName) {
     switch (serviceName.toLowerCase()) {
       case 'timer':
-        return Colors.purple;
+        return const Color(0xFF9C27B0);
       case 'console':
-        return Colors.orange;
+        return const Color(0xFFFF9800);
       case 'discord':
         return const Color(0xFF5865F2);
       case 'github':
-        return Colors.black;
+        return const Color(0xFF24292E);
       case 'gitlab':
         return const Color(0xFFFC6D26);
       case 'dropbox':
         return const Color(0xFF0061FF);
       case 'google':
         return const Color(0xFF4285F4);
+      case 'openai':
+        return const Color(0xFF10A37F);
       case 'email':
-        return Colors.red;
+        return const Color(0xFFEA4335);
       case 'slack':
         return const Color(0xFF4A154B);
       default:
-        return Colors.blue;
+        return const Color(0xFF2196F3);
     }
   }
 
   IconData _getServiceIcon(String serviceName) {
     switch (serviceName.toLowerCase()) {
       case 'timer':
-        return Icons.schedule;
+        return Icons.schedule_rounded;
       case 'console':
-        return Icons.code;
+        return Icons.terminal_rounded;
       case 'discord':
         return Icons.discord;
       case 'github':
-        return Icons.terminal;
+        return Icons.code_rounded;
       case 'gitlab':
-        return Icons.source;
+        return Icons.source_rounded;
       case 'dropbox':
-        return Icons.cloud;
+        return Icons.cloud_rounded;
       case 'google':
-        return Icons.g_mobiledata;
+        return Icons.g_mobiledata_rounded;
+      case 'openai':
+        return Icons.auto_awesome_rounded;
       case 'email':
-        return Icons.email;
+        return Icons.email_rounded;
       case 'slack':
-        return Icons.chat;
+        return Icons.chat_bubble_rounded;
       default:
-        return Icons.widgets;
+        return Icons.widgets_rounded;
     }
   }
 
-  /// Vérifie si un service nécessite une connexion OAuth
-  bool _requiresOAuthConnection(String serviceName) {
-    final oauthServices = ['discord', 'github', 'gitlab', 'dropbox', 'google'];
-    return oauthServices.contains(serviceName.toLowerCase());
-  }
-
-  /// Obtient le provider OAuth correspondant au nom du service
-  OAuthProvider? _getOAuthProvider(String serviceName) {
-    switch (serviceName.toLowerCase()) {
-      case 'discord':
-        return OAuthProvider.discord;
-      case 'github':
-        return OAuthProvider.github;
-      case 'gitlab':
-        return OAuthProvider.gitlab;
-      case 'dropbox':
-        return OAuthProvider.dropbox;
-      case 'google':
-        return OAuthProvider.google;
-      default:
-        return null;
-    }
-  }
 }
+

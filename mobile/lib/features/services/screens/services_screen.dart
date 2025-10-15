@@ -317,27 +317,30 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             else
-              ElevatedButton(
-                onPressed: isConnected
-                    ? () => _disconnectService(provider)
-                    : () => _connectService(provider),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      isConnected ? Colors.red[400] : Color(provider.color),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
+              SizedBox(
+                width: 110,
+                child: ElevatedButton(
+                  onPressed: isConnected
+                      ? () => _disconnectService(provider)
+                      : () => _connectService(provider),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        isConnected ? Colors.red[400] : Color(provider.color),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: Text(
-                  isConnected ? 'Déconnecter' : 'Connecter',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                  child: Text(
+                    isConnected ? 'Déconnecter' : 'Connecter',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
