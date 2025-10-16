@@ -48,7 +48,7 @@ export class GitHubProvider implements IOAuthProvider {
         const params = new URLSearchParams({
             client_id: this.clientId,
             redirect_uri: this.redirectUri,
-            scope: 'user:email',
+            scope: 'repo user:email',
             state: state
         });
 

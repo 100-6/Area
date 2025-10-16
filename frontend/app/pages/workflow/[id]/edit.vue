@@ -315,6 +315,7 @@ const {
   deleteBlock,
   configureBlock,
   updateBlockConfiguration,
+  updateBlockConfig,
   getBlockConnectionState,
   getConnectionPath,
   saveWorkflow,
@@ -436,12 +437,7 @@ const handleServiceSelected = (service: Service) => {
   const position = getNewBlockPosition()
 
   selectServiceWithConfiguration(service, blockType, (config) => {
-<<<<<<< HEAD
-    console.log('Adding service block with configuration at position:', position)
-    addServiceBlock(config, position)
-=======
     addServiceBlock(config, position, blockType)
->>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
   })
 }
 
@@ -459,7 +455,8 @@ const handleBlockConfigure = async (blockId: string) => {
         configInfo.blockType,
         configInfo.currentConfig,
         (newConfig: ServiceConfiguration) => {
-          updateBlockConfiguration(blockId, newConfig)
+          // Utiliser la nouvelle fonction updateBlockConfig qui sauvegarde aussi sur le backend
+          updateBlockConfig(blockId, newConfig)
         }
       )
     }
