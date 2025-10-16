@@ -7,3 +7,4 @@ build/
 .github/frontend/node_modules/
 backend/node_modules/
 .github
+frontend/node_modules/
