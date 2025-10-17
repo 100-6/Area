@@ -107,8 +107,8 @@ export class ModuleSync {
                 trigger.getName(),
                 trigger.getName().replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
                 trigger.getDescription(),
-                'schedule',
-                JSON.stringify({}),
+                trigger.getType(),
+                JSON.stringify(trigger.getConfigSchema ? trigger.getConfigSchema() : {}),
                 outputSchema ? JSON.stringify(outputSchema) : null,
                 true
             ];
@@ -147,7 +147,7 @@ export class ModuleSync {
                 action.getName(),
                 action.getName().replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
                 action.getDescription(),
-                JSON.stringify({}),
+                JSON.stringify(action.getConfigSchema ? action.getConfigSchema() : {}),
                 outputSchema ? JSON.stringify(outputSchema) : null,
                 true
             ];
