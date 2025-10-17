@@ -69,7 +69,7 @@
             <component
               v-for="parameter in selectedActionReaction.parameters"
               :key="`${selectedActionReaction.id}-${parameter.name}`"
-              :is="getFieldComponent(parameter.type)"
+              :is="getFieldComponent(parameter.type, parameter.name)"
               :parameter="parameter"
               :value="parameters[parameter.name]"
               :error="validation.parameters[parameter.name]?.error"
@@ -123,8 +123,6 @@ import ConfigSelect from '~/components/ui/config/ConfigSelect.vue'
 import ConfigSelectMenu from '~/components/ui/config/ConfigSelectMenu.vue'
 import ConfigDate from '~/components/ui/config/ConfigDate.vue'
 import ConfigCheckbox from '~/components/ui/config/ConfigCheckbox.vue'
-import ConfigSelectMenu from '~/components/ui/config/ConfigSelectMenu.vue'
-import ConfigDiscordChannel from '~/components/ui/config/ConfigDiscordChannel.vue'
 
 interface Props {
   open?: boolean
@@ -170,7 +168,12 @@ const canConfirm = computed(() => {
   return selectedActionReaction.value && validation.value.isValid
 })
 
-const getFieldComponent = (type: string) => {
+const getFieldComponent = (type: string, parameterName?: string) => {
+  // Cas particulier : forcer ConfigSelectMenu pour les champs channelId Discord
+  if (parameterName && parameterName.toLowerCase().includes('channelid')) {
+    return ConfigSelectMenu
+  }
+
   const fieldConfig = FIELD_TYPE_MAPPING[type]
   if (!fieldConfig) {
     return ConfigInput
@@ -182,8 +185,6 @@ const getFieldComponent = (type: string) => {
     case 'ConfigSelectMenu': return ConfigSelectMenu
     case 'ConfigDate': return ConfigDate
     case 'ConfigCheckbox': return ConfigCheckbox
-    case 'ConfigSelectMenu': return ConfigSelectMenu
-    case 'ConfigDiscordChannel': return ConfigDiscordChannel
     default: return ConfigInput
   }
 }
