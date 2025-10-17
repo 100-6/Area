@@ -7,6 +7,7 @@ import { gmailModule } from './gmail/module';
 import { telegramModule } from './telegram/service';
 import { githubModule } from './github/service';
 import { ntfyModule } from './ntfy/service';
+import { rssModule } from './rss/service';
 import 'colors';
 
 /**
@@ -49,6 +50,7 @@ class ModuleRegistry {
             await this.registerModule(telegramModule);
             await this.registerModule(githubModule);
             await this.registerModule(ntfyModule);
+            await this.registerModule(rssModule);
             this.initialized = true;
             console.log(`[Registry] Successfully initialized ${this.modules.size} module(s)`.green.bold);
         } catch (error) {
