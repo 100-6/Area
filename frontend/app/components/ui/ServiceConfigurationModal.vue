@@ -11,7 +11,6 @@
       footer: 'flex items-center gap-1.5 p-4 sm:px-6 bg-white'
     }"
   >
-    <!-- Header personnalisé -->
     <template #header>
       <div style="padding: 1.5rem;">
         <div class="flex items-center gap-3 mb-2">
@@ -30,7 +29,6 @@
 
     <template #body>
       <div class="configuration-content">
-        <!-- Sélection de l'action/reaction -->
         <div v-if="availableActionReactions.length > 1" class="action-selection">
           <label class="config-label">
             {{ blockType === 'trigger' ? 'Action' : 'Réaction' }} à utiliser
@@ -58,7 +56,6 @@
           </div>
         </div>
 
-        <!-- Configuration des paramètres -->
         <div v-if="selectedActionReaction" class="parameters-configuration">
           <h4 class="parameters-title">Paramètres de configuration</h4>
 
@@ -83,7 +80,6 @@
           </div>
         </div>
 
-        <!-- Message d'erreur global -->
         <div v-if="!validation.isValid && validation.errors.length > 0" class="global-errors">
           <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5" />
           <div class="error-list">
@@ -124,6 +120,7 @@ import { ConfigurationValidator, FIELD_TYPE_MAPPING } from '~/types/ServiceConfi
 import ConfigInput from '~/components/ui/config/ConfigInput.vue'
 import ConfigNumber from '~/components/ui/config/ConfigNumber.vue'
 import ConfigSelect from '~/components/ui/config/ConfigSelect.vue'
+import ConfigSelectMenu from '~/components/ui/config/ConfigSelectMenu.vue'
 import ConfigDate from '~/components/ui/config/ConfigDate.vue'
 import ConfigCheckbox from '~/components/ui/config/ConfigCheckbox.vue'
 import ConfigSelectMenu from '~/components/ui/config/ConfigSelectMenu.vue'
@@ -182,6 +179,7 @@ const getFieldComponent = (type: string) => {
   switch (fieldConfig.component) {
     case 'ConfigNumber': return ConfigNumber
     case 'ConfigSelect': return ConfigSelect
+    case 'ConfigSelectMenu': return ConfigSelectMenu
     case 'ConfigDate': return ConfigDate
     case 'ConfigCheckbox': return ConfigCheckbox
     case 'ConfigSelectMenu': return ConfigSelectMenu

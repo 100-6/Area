@@ -153,6 +153,20 @@ export const useWorkflowApi = () => {
     }
   }
 
+  const getModuleDetails = async (identifier: string): Promise<any> => {
+    const authToken = useCookie('auth-token')
+    if (!authToken.value) {
+      throw new Error('Token d\'authentification manquant')
+    }
+
+    return await $fetch(`/api/modules/${identifier}`, {
+      baseURL: backendUrl,
+      headers: {
+        'Authorization': `Bearer ${authToken.value}`
+      }
+    })
+  }
+
   /**
    * Update a workflow node
    */
@@ -346,6 +360,12 @@ export const useWorkflowApi = () => {
           await deleteNode(node.id)
         }
         
+        // 4. Handle connections - if the area is active, stop it, then delete
+        // existing connections and recreate them, finally restart if needed.
+        console.log('[WorkflowApi] Recreating', connections.length, 'connections')
+
+        const authToken = useCookie('auth-token')
+
         let shouldRestart = false
         try {
           const areaResponse = await $fetch<{ success: boolean; area: AreaData }>(`/api/areas/${existingAreaId}`, {
@@ -356,11 +376,11 @@ export const useWorkflowApi = () => {
           })
           shouldRestart = areaResponse.success && areaResponse.area.is_active
         } catch (err) {
+          // ignore
         }
 
         if (shouldRestart) {
           try {
-            const authToken = useCookie('auth-token')
             await $fetch(`/api/areas/${existingAreaId}/toggle`, {
               method: 'PUT',
               baseURL: backendUrl,
@@ -371,9 +391,9 @@ export const useWorkflowApi = () => {
               body: { isActive: false }
             })
           } catch (err) {
+            // ignore
           }
         }
-
         for (const conn of existingWorkflow.connections) {
           if (conn.id) {
             await deleteConnection(conn.id)
@@ -459,6 +479,7 @@ export const useWorkflowApi = () => {
     createConnection,
     deleteNode,
     deleteConnection,
+    getModuleDetails,
 
     mapBlockToNode,
     mapConnectionToDto,

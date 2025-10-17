@@ -27,6 +27,12 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
   const currentAreaId = ref<string | null>(null)
   const isSaving = ref(false)
   const saveError = ref<string | null>(null)
+
+  const isUuid = (value?: string | null): boolean => {
+    if (!value)
+      return false
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  }
   
 
   watch(zoom, () => {
@@ -123,8 +129,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     if (currentAreaId.value) {
       try {
         await refreshBlockFromBackend(blockId)
-      } catch (error) {
-        console.error('Failed to refresh block from backend:', error)
+      } catch (_error) {
       }
     }
 
@@ -133,29 +138,49 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     const serviceName = refreshedBlock.serviceName || block.service.name || block.service
     const resolvedService = await resolveService(serviceName)
     if (!resolvedService) {
-      console.error('Cannot resolve service:', serviceName)
       return
+    }
+
+    let nodeDetails: any = null
+    if (isUuid(refreshedBlock.id)) {
+      try {
+        nodeDetails = await workflowApi.getModuleDetails(refreshedBlock.id)
+      } catch (_error) {
+        nodeDetails = null
+      }
     }
 
     let selectedAction: any = undefined
     let selectedReaction: any = undefined
 
-    if (refreshedBlock.nodeType === 'trigger' && refreshedBlock.actionName) {
-      selectedAction = resolvedService.actions.find(a => a.id === refreshedBlock.actionName)
-    } else if (refreshedBlock.nodeType === 'action' && refreshedBlock.reactionName) {
-      selectedReaction = resolvedService.reactions.find(r => r.id === refreshedBlock.reactionName)
+    if (refreshedBlock.type === 'trigger' && refreshedBlock.actionId) {
+      selectedAction = resolvedService.actions.find(a => a.id === refreshedBlock.actionId)
+      if (!selectedAction && nodeDetails?.triggerName) {
+        selectedAction = resolvedService.actions.find(a => a.id === nodeDetails.triggerName)
+      }
+      if (!selectedAction && nodeDetails?.actionName) {
+        selectedAction = resolvedService.actions.find(a => a.id === nodeDetails.actionName)
+      }
+    } else if (refreshedBlock.type === 'action' && refreshedBlock.reactionId) {
+      selectedReaction = resolvedService.reactions.find(r => r.id === refreshedBlock.reactionId)
+      if (!selectedReaction && nodeDetails?.actionName) {
+        selectedReaction = resolvedService.reactions.find(r => r.id === nodeDetails.actionName)
+      }
+      if (!selectedReaction && nodeDetails?.triggerName) {
+        selectedReaction = resolvedService.reactions.find(r => r.id === nodeDetails.triggerName)
+      }
     }
 
     const finalConfig = {
       service: resolvedService,
       selectedAction,
       selectedReaction,
-      parameters: { ...(refreshedBlock.config || {}) }
+      parameters: { ...(nodeDetails?.currentConfig || refreshedBlock.config || {}) }
     } as ServiceConfiguration
 
     return {
       blockId: refreshedBlock.id,
-      service: refreshedBlock.service,
+      service: resolvedService,
       blockType: refreshedBlock.type,
       currentConfig: finalConfig,
       onConfigurationChanged
@@ -170,8 +195,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     try {
       const workflow = await workflowApi.getWorkflow(currentAreaId.value)
 
-      const backendNode = workflow.nodes.find((node: any) => node.id === blockId)
-
+      const backendNode = workflow.nodes.find(node => node.id === blockId)
       if (!backendNode) {
         return
       }
@@ -183,16 +207,12 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
         workflowBlocks.value[blockIndex] = {
           ...currentBlock,
           actionId: backendNode.actionId,
-          actionName: backendNode.actionName,
           reactionId: backendNode.reactionId,
-          reactionName: backendNode.reactionName,
-          serviceName: backendNode.serviceName,
-          nodeType: backendNode.nodeType,
           config: backendNode.config || {}
         }
+
       }
     } catch (error) {
-      console.error('Error refreshing block from backend:', error)
       throw error
     }
   }
@@ -332,6 +352,16 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
   }
 
+  /**
+   * Initialize service mapping - plus besoin avec les noms
+   */
+  const initializeServiceMapping = async () => {
+    // Using service names directly - no UUID mapping needed
+  }
+
+  /**
+   * Resolve service identifier (name) to a frontend service object
+   */
   const resolveService = async (serviceName: string): Promise<Service | null> => {
     const { getAvailableServices } = useServiceManagement()
     const services = await getAvailableServices()
@@ -344,6 +374,9 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     return service || null
   }
 
+  /**
+   * Map backend node to frontend block
+   */
   const mapBackendNodeToBlock = async (node: BackendWorkflowNode): Promise<WorkflowBlockData | null> => {
     let service: Service | null = null
 
@@ -389,6 +422,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       workflowBlocks.value = []
       connections.value = []
 
+      // Map backend nodes to frontend blocks
       const mappedBlocks = await Promise.all(
         workflow.nodes.map(node => mapBackendNodeToBlock(node))
       )
@@ -458,13 +492,13 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       }
     }
   }
-
   return {
     workflowBlocks: readonly(workflowBlocks),
     connections: readonly(connections),
     currentAreaId: readonly(currentAreaId),
     isSaving: readonly(isSaving),
     saveError: readonly(saveError),
+
     nextCardPosition,
     addServiceBlock,
     updateBlockPosition,
@@ -473,9 +507,13 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     updateBlockConfig,
     getBlockConnectionState,
     getConnectionPath,
+
     saveWorkflow,
     loadWorkflow,
     serializeWorkflow,
-    updateBlockConfiguration
+    initializeServiceMapping,
+
+    updateBlockConfiguration,
+    updateBlockConfig
   }
 }

@@ -139,8 +139,9 @@ export const useServiceManagement = () => {
 
   const transformBackendTriggers = (triggers: any[]): ServiceAction[] => {
     return triggers.map(trigger => {
+      const identifier = trigger.id || trigger.uuid || trigger.name
       const transformed = {
-        id: trigger.name,
+        id: identifier,
         name: trigger.description || trigger.displayName || trigger.name,
         description: trigger.description || '',
         parameters: transformConfigSchemaToParameters(trigger.configSchema),
@@ -152,8 +153,9 @@ export const useServiceManagement = () => {
 
   const transformBackendActions = (actions: any[]): ServiceReaction[] => {
     return actions.map(action => {
+      const identifier = action.id || action.uuid || action.name
       const transformed = {
-        id: action.name,
+        id: identifier,
         name: action.description || action.displayName || action.name,
         description: action.description || '',
         parameters: transformConfigSchemaToParameters(action.configSchema),
