@@ -8,6 +8,7 @@ import { telegramModule } from './telegram/service';
 import { githubModule } from './github/service';
 import { ntfyModule } from './ntfy/service';
 import { rssModule } from './rss/service';
+import { webhookModule } from './webhook/service';
 import 'colors';
 
 /**
@@ -51,6 +52,7 @@ class ModuleRegistry {
             await this.registerModule(githubModule);
             await this.registerModule(ntfyModule);
             await this.registerModule(rssModule);
+            await this.registerModule(webhookModule);
             this.initialized = true;
             console.log(`[Registry] Successfully initialized ${this.modules.size} module(s)`.green.bold);
         } catch (error) {
