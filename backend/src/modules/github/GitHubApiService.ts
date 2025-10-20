@@ -48,6 +48,24 @@ export interface GitHubIssue {
 }
 
 /**
+ * Interface representing a GitHub branch returned by the API
+ * @interface GitHubBranch
+ * @property {string} name - Branch name
+ * @property {Object} commit - Commit information
+ * @property {string} commit.sha - SHA of the latest commit on this branch
+ * @property {string} commit.url - API URL of the commit
+ * @property {boolean} protected - Whether the branch is protected
+ */
+export interface GitHubBranch {
+    name: string;
+    commit: {
+        sha: string;
+        url: string;
+    };
+    protected: boolean;
+}
+
+/**
  * Abstraction service to interact with the GitHub REST API v3
  * Centralizes all API calls to GitHub to facilitate maintenance
  * and error handling.
@@ -176,6 +194,48 @@ export class GitHubApiService {
             return await response.json() as GitHubIssue;
         } catch (error) {
             console.error('[GitHub API] Error creating issue:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Fetches all branches from a GitHub repository
+     * 
+     * @async
+     * @param {string} owner - Repository owner name (username or organization)
+     * @param {string} repo - Repository name
+     * @param {string} accessToken - User's GitHub OAuth token (scope: repo)
+     * @param {number} [perPage=100] - Number of branches to retrieve per page (1-100)
+     * @returns {Promise<GitHubBranch[]>} List of branches
+     * @throws {Error} If the GitHub API returns an error (401, 404, etc.)
+     * @example
+     * const branches = await githubApi.getBranches('octocat', 'Hello-World', 'ghp_abc123...');
+     * console.log(branches.map(b => b.name)); // ['main', 'develop', 'feature/xyz']
+     */
+    async getBranches(
+        owner: string,
+        repo: string,
+        accessToken: string,
+        perPage: number = 100
+    ): Promise<GitHubBranch[]> {
+        try {
+            const url = `${this.baseUrl}/repos/${owner}/${repo}/branches?per_page=${perPage}`;
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'AREA-Platform'
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`GitHub API error: ${response.status} - ${error}`);
+            }
+
+            return await response.json() as GitHubBranch[];
+        } catch (error) {
+            console.error('[GitHub API] Error fetching branches:'.red, error);
             throw error;
         }
     }

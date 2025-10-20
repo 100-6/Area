@@ -1,7 +1,7 @@
 import { BaseModule } from '../_base/BaseModule';
 import { GitHubApiService } from './GitHubApiService';
 import githubConfig from './config';
-import { OnPushTrigger } from './triggers/_index';
+import { OnPushTrigger, OnBranchCreatedTrigger, OnBranchDeletedTrigger } from './triggers/_index';
 import 'colors';
 
 /**
@@ -77,6 +77,8 @@ export class GitHubModule extends BaseModule {
         try {
             // Register triggers
             this.registerTrigger(new OnPushTrigger());
+            this.registerTrigger(new OnBranchCreatedTrigger());
+            this.registerTrigger(new OnBranchDeletedTrigger());
 
             // TODO: Register actions here when implemented
             // this.registerAction(new CreateIssueAction());
