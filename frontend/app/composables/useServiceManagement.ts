@@ -66,87 +66,125 @@ export const useServiceManagement = () => {
         return getFallbackServices()
       }
 
-      const connectionStatusResponse = await $fetch(`${backendUrl}/api/services/connected`, { headers }).catch(() => null)
+      const connectionStatusResponse = await $fetch<{ services: any[] }>(`${backendUrl}/api/services/connected`, { headers }).catch(() => null)
       const connectionStatusMap = new Map<string, boolean>()
 
       if (connectionStatusResponse?.services?.length) {
         connectionStatusResponse.services.forEach((service: any) => {
-          if (service?.name) {
-            connectionStatusMap.set(String(service.name).toLowerCase(), !!service.connected)
-          }
+          if (!service) return
+          const keys = [service.name, service.id, service.displayName]
+            .filter(Boolean)
+            .map((identifier: any) => identifier.toString().toLowerCase())
+
+          keys.forEach(key => {
+            if (key && !connectionStatusMap.has(key)) {
+              connectionStatusMap.set(key, !!service.connected)
+            }
+          })
         })
       }
 
       const modulesWithDetails = await Promise.all(
         modulesListResponse.modules.map(async (moduleInfo: any) => {
           try {
-            const moduleDetails = await $fetch(`${backendUrl}/api/modules/${moduleInfo.name}`, { headers })
-            return moduleDetails
-          } catch (error) {
-            return null
+            const detail = await $fetch(`${backendUrl}/api/modules/${moduleInfo.name}`, { headers })
+            return { summary: moduleInfo, detail }
+          } catch (_error) {
+            return { summary: moduleInfo, detail: null }
           }
         })
       )
 
-      const validModules = modulesWithDetails.filter(module => module?.success && module)
-
-      return transformBackendModulesToServices(validModules.map(m => m), connectionStatusMap)
+      return transformBackendModulesToServices(modulesWithDetails, connectionStatusMap)
     } catch (error) {
       return getFallbackServices()
     }
   }
 
-  const transformBackendModulesToServices = (modules: any[], connectionStatusMap?: Map<string, boolean>): Service[] => {
+  const transformBackendModulesToServices = (modules: Array<{ summary: any; detail: any }>, connectionStatusMap?: Map<string, boolean>): Service[] => {
 
     const categoryMapping: Record<string, Service['category']> = {
       'timer': 'automation',
       'console': 'development',
       'discord': 'communication',
       'openai': 'productivity',
-      'email': 'communication'
+      'email': 'communication',
+      'gmail': 'communication',
+      'google': 'communication',
+      'github': 'development',
+      'gitlab': 'development',
+      'dropbox': 'storage',
+      'telegram': 'communication'
     }
 
-    const iconMapping: Record<string, string> = {
+    const iconFallback: Record<string, string> = {
       'timer': 'i-heroicons-clock',
       'console': 'i-heroicons-computer-desktop',
       'discord': 'i-logos-discord-icon',
       'openai': 'i-logos-openai-icon',
-      'email': 'i-heroicons-envelope'
+      'email': 'i-heroicons-envelope',
+      'gmail': 'i-logos-google-gmail',
+      'google': 'i-logos-google-icon',
+      'github': 'i-logos-github-icon',
+      'gitlab': 'i-logos-gitlab',
+      'dropbox': 'i-logos-dropbox-icon',
+      'telegram': 'i-logos-telegram'
     }
 
-    return modules.map(moduleResponse => {
-      const module = moduleResponse.success ? moduleResponse : moduleResponse
+    const colorFallback: Record<string, string> = {
+      'discord': '#5865F2',
+      'gmail': '#DB4437',
+      'google': '#4285F4',
+      'github': '#24292F',
+      'gitlab': '#FC6D26',
+      'dropbox': '#0061FF',
+      'telegram': '#26A5E4'
+    }
 
+    const forcedOauthProviders = new Set(['gmail', 'google', 'discord', 'github', 'gitlab', 'dropbox', 'telegram'])
 
-      const moduleName = module.moduleName || module.name
-      const normalizedModuleName = String(moduleName || '').toLowerCase()
-      const authType = mapAuthType(module.authType)
-      const requiresConnection = authType === 'oauth'
+    return modules.map(({ summary, detail }) => {
+      const baseName = summary?.name || detail?.moduleName || detail?.name || ''
+      const normalizedName = baseName.toString().toLowerCase()
+
+      const authType = mapAuthType(summary?.authType || detail?.authType)
+      const requiresConnection = authType === 'oauth' || forcedOauthProviders.has(normalizedName)
+
+      const connectedKeys = [
+        normalizedName,
+        summary?.name?.toString().toLowerCase(),
+        detail?.moduleName?.toString().toLowerCase(),
+        summary?.id?.toString().toLowerCase()
+      ]
       const isConnected = requiresConnection
-        ? !!connectionStatusMap?.get(normalizedModuleName)
+        ? connectedKeys.some(key => key && connectionStatusMap?.get(key) === true)
         : true
-      const disabledReason = module.isActive === false
-        ? 'Service désactivé'
-        : (requiresConnection && !isConnected ? 'Connexion requise' : undefined)
+
+      const displayName = detail?.displayName || summary?.displayName || summary?.name || baseName
+      const description = detail?.description || summary?.description || ''
+      const color = detail?.color || summary?.color || colorFallback[normalizedName] || '#6B7280'
+      const iconUrl = detail?.iconUrl || summary?.iconUrl
+      const icon = iconFallback[normalizedName] || 'i-heroicons-cog'
+
       const service: Service = {
-        id: moduleName,
-        name: module.displayName || moduleName,
-        slug: moduleName,
-        description: module.description || '',
-        icon: iconMapping[moduleName] || 'i-heroicons-cog',
-        iconUrl: (moduleName === 'timer' || moduleName === 'console') ? undefined : module.iconUrl,
-        color: module.color || '#6B7280',
-        isActive: module.isActive !== false,
-        category: categoryMapping[moduleName] || 'other',
+        id: summary?.id || normalizedName,
+        name: displayName,
+        slug: normalizedName,
+        description,
+        icon,
+        iconUrl,
+        color,
+        isActive: summary?.isActive !== false,
+        category: categoryMapping[normalizedName] || 'other',
         authType,
         requiresConnection,
         isConnected,
-        disabledReason,
-        actions: transformBackendTriggers(module.triggers || []),
-        reactions: transformBackendActions(module.actions || [])
+        disabledReason: summary?.isActive === false
+          ? 'Service désactivé'
+          : (requiresConnection && !isConnected ? 'Connexion requise' : undefined),
+        actions: transformBackendTriggers(detail?.triggers || []),
+        reactions: transformBackendActions(detail?.actions || [])
       }
-
-
 
       return service
     })

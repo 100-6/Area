@@ -86,11 +86,15 @@ export class ModuleController {
             return;
         }
 
+        const moduleConfig = (module as any)?.config || {};
+
         const result: any = {
             success: true,
             moduleName: moduleName,
             displayName: module.getDisplayName(),
             description: module.getDescription(),
+            iconUrl: moduleConfig.iconUrl,
+            color: moduleConfig.color,
             triggers: [],
             actions: []
         };
@@ -240,6 +244,8 @@ export class ModuleController {
                 name: module.getName(),
                 displayName: module.getDisplayName(),
                 description: module.getDescription(),
+                iconUrl: (module as any)?.config?.iconUrl,
+                color: (module as any)?.config?.color,
                 authType: module.getAuthType(),
                 isActive: module.isActive(),
                 triggerCount: module.getAllTriggers().length,

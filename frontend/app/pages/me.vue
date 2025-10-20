@@ -136,7 +136,7 @@
 
               <UiInfoCard
                 title="Services connectés"
-                :value="0"
+                :value="connectedProvidersCount"
                 icon="i-heroicons-puzzle-piece"
                 layout="stat"
                 :hoverable="false"
@@ -199,7 +199,109 @@
             </div>
           </div>
 
-          <div v-if="activeTab === 'info'" class="space-y-6">
+          <div v-else-if="activeTab === 'connections'" class="space-y-6">
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 2rem; box-shadow: var(--shadow-sm);">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div>
+                  <h3 class="text-xl font-bold flex items-center gap-2" style="color: var(--text-primary);">
+                    <UIcon name="i-heroicons-link" class="w-5 h-5" style="color: var(--color-secondary);" />
+                    Services connectés
+                  </h3>
+                  <p class="text-sm" style="color: var(--text-secondary);">Connectez plusieurs comptes OAuth pour débloquer davantage d'automatisations.</p>
+                </div>
+                <UButton
+                  variant="ghost"
+                  size="sm"
+                  @click="fetchProviders"
+                  :loading="isLoadingProviders"
+                  style="border: 1px solid var(--border-color); background: var(--bg-primary);"
+                >
+                  <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 mr-2" />
+                  Actualiser
+                </UButton>
+              </div>
+
+              <div v-if="providersError" class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {{ providersError }}
+              </div>
+
+              <div v-if="isLoadingProviders" class="flex items-center justify-center py-12" style="color: var(--text-secondary);">
+                <div class="flex items-center gap-3">
+                  <div class="animate-spin rounded-full h-6 w-6 border-b-2" style="border-color: var(--color-primary);"></div>
+                  Chargement des services...
+                </div>
+              </div>
+
+              <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                  v-for="provider in providers"
+                  :key="provider.provider"
+                  class="relative rounded-xl p-5 transition-all duration-200 hover:transform hover:scale-105"
+                  style="background: var(--bg-primary); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);"
+                >
+                  <div class="absolute inset-0 rounded-xl border border-transparent pointer-events-none transition-colors duration-200" />
+                  <div class="relative flex items-start justify-between gap-4">
+                    <div class="flex items-start gap-3">
+                      <div
+                        class="flex items-center justify-center h-12 w-12 rounded-full border"
+                        :style="{
+                          borderColor: provider.color || 'rgba(148, 163, 184, 0.4)',
+                          background: provider.color ? provider.color + '15' : 'rgba(148, 163, 184, 0.08)'
+                        }"
+                      >
+                        <UIcon :name="provider.icon" class="w-6 h-6" :style="provider.color ? { color: provider.color } : { color: '#1f2937' }" />
+                      </div>
+                      <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                          <h4 class="text-lg font-semibold" style="color: var(--text-primary);">{{ provider.displayName }}</h4>
+                          <span
+                            class="text-xs px-2 py-1 rounded-full font-medium"
+                            :style="provider.isConnected ?
+                              'background: rgba(72, 199, 116, 0.1); color: var(--color-secondary); border: 1px solid rgba(72, 199, 116, 0.2);' :
+                              provider.isConfigured ?
+                                'background: rgba(249, 115, 22, 0.12); color: #f97316; border: 1px solid rgba(249, 115, 22, 0.35);' :
+                                'background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border-color);'"
+                          >
+                            {{ provider.isConnected ? 'Connecté' : provider.isConfigured ? 'Non connecté' : 'Indisponible' }}
+                          </span>
+                        </div>
+                        <p v-if="provider.description" class="text-sm" style="color: var(--text-secondary);">{{ provider.description }}</p>
+                        <p v-if="provider.isConnected && provider.connectedAt" class="text-xs" style="color: var(--text-secondary); opacity: 0.7;">
+                          Connecté le {{ formatDate(provider.connectedAt) }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="relative mt-6 flex flex-wrap items-center gap-3">
+                    <span
+                      v-if="provider.isConnected"
+                      class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full"
+                      style="background: rgba(72, 199, 116, 0.12); color: var(--color-secondary); border: 1px solid rgba(72, 199, 116, 0.25);"
+                    >
+                      <UIcon name="i-heroicons-check" class="w-4 h-4 mr-1" />
+                      Connecté
+                    </span>
+                    <UButton
+                      v-else
+                      size="sm"
+                      :disabled="!provider.isConfigured"
+                      @click="handleProviderLink(provider.provider)"
+                      :style="provider.isConfigured ?
+                        'background: var(--color-secondary); color: var(--text-white); border: none;' :
+                        'background: var(--bg-card); color: var(--text-secondary); border: 1px solid var(--border-color); opacity: 0.6; cursor: not-allowed;'"
+                    >
+                      <UIcon name="i-heroicons-plus" class="w-4 h-4 mr-2" />
+                      {{ provider.isConfigured ? 'Connecter' : 'Non disponible' }}
+                    </UButton>
+                    <span v-if="provider.isPrimary" class="text-xs" style="color: var(--text-secondary); opacity: 0.7;">Principal</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-else-if="activeTab === 'info'" class="space-y-6">
             <div class="bg-white rounded-xl border border-gray-100 p-8 shadow-sm">
               <h3 class="text-xl font-bold mb-6 text-gray-900 flex items-center">
                 <UIcon name="i-heroicons-user-circle" class="w-5 h-5 mr-2" style="color: var(--color-secondary);" />
@@ -356,11 +458,19 @@ definePageMeta({
 // Import the InfoCard component explicitly to ensure it's available
 import InfoCard from '~/components/ui/InfoCard.vue'
 
-const { user, logout, updateProfile } = useAuth()
+const { user, logout, updateProfile, linkProvider } = useAuth()
+const { providers, isLoading: isLoadingProviders, error: providersError, fetchProviders } = useAuthProviders()
 
 const isEditing = ref(false)
 const isSaving = ref(false)
 const activeTab = ref('overview')
+
+const SUPPORTED_OAUTH_PROVIDERS = ['google', 'gmail', 'discord', 'github', 'gitlab', 'dropbox'] as const
+type SupportedOAuthProvider = typeof SUPPORTED_OAUTH_PROVIDERS[number]
+
+const isSupportedProvider = (provider: string): provider is SupportedOAuthProvider => {
+  return SUPPORTED_OAUTH_PROVIDERS.includes(provider as SupportedOAuthProvider)
+}
 
 const tabs = [
   {
@@ -372,6 +482,11 @@ const tabs = [
     id: 'info',
     name: 'Informations',
     icon: 'i-heroicons-user'
+  },
+  {
+    id: 'connections',
+    name: 'Services connectés',
+    icon: 'i-heroicons-link'
   },
   {
     id: 'security',
@@ -425,11 +540,51 @@ const handleLogout = async () => {
   await logout()
 }
 
+const handleProviderLink = (provider: string) => {
+  if (!isSupportedProvider(provider)) {
+    console.warn(`Provider ${provider} non supporté pour la liaison`)
+    return
+  }
+
+  try {
+    providersError.value = null
+    linkProvider(provider.toLowerCase() as SupportedOAuthProvider)
+  } catch (error) {
+    console.error('Provider link error:', error)
+  }
+}
+
+const connectedProvidersCount = computed(() => providers.value.filter(provider => provider.isConnected).length)
+
+const formatDate = (value?: string | null) => {
+  if (!value) return ''
+  try {
+    return new Intl.DateTimeFormat('fr-FR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }).format(new Date(value))
+  } catch (error) {
+    try {
+      return new Date(value).toLocaleDateString('fr-FR')
+    } catch (_err) {
+      return ''
+    }
+  }
+}
+
 watch(() => user.value, () => {
   if (user.value) {
     initEditForm()
+    fetchProviders()
   }
 }, { immediate: true })
+
+watch(activeTab, (value) => {
+  if (value === 'connections') {
+    fetchProviders()
+  }
+})
 
 useHead({
   title: 'Mon Profil - Auto',

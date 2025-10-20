@@ -133,6 +133,25 @@ export const useAuth = () => {
     window.location.href = `${backendUrl}/api/auth/${provider}`
   }
 
+  const providerAuthEndpoints: Record<'google' | 'gmail' | 'discord' | 'github' | 'gitlab' | 'dropbox', string> = {
+    google: '/api/auth/google',
+    gmail: '/api/gmail/connect',
+    discord: '/api/auth/discord',
+    github: '/api/auth/github',
+    gitlab: '/api/auth/gitlab',
+    dropbox: '/api/auth/dropbox'
+  }
+
+  const linkProvider = (provider: 'google' | 'gmail' | 'discord' | 'github' | 'gitlab' | 'dropbox'): void => {
+    if (!authToken.value) {
+      throw new Error('Non authentifié')
+    }
+
+    const endpoint = providerAuthEndpoints[provider]
+    const token = encodeURIComponent(authToken.value)
+    window.location.href = `${backendUrl}${endpoint}?token=${token}`
+  }
+
   const fetchUserData = async (): Promise<void> => {
     if (!authToken.value) return
 
@@ -218,6 +237,7 @@ export const useAuth = () => {
     verifyToken,
     refreshTokens,
     loginWithProvider,
+    linkProvider,
     initAuth,
     clearAuth,
     updateProfile
