@@ -15,7 +15,8 @@
       <div style="padding: 1.5rem;">
         <div class="flex items-center gap-3 mb-2">
           <div class="service-icon" :style="`background-color: ${service.color}15`">
-            <UIcon :name="service.icon" class="w-6 h-6" :style="`color: ${service.color}`" />
+            <img v-if="service.iconUrl" :src="service.iconUrl" :alt="service.name" class="w-6 h-6 object-contain" />
+            <UIcon v-else :name="service.icon" class="w-6 h-6" :style="`color: ${service.color}`" />
           </div>
           <h3 style="color: var(--text-primary); font-size: 1.25rem; font-weight: 600; margin: 0;">
             Configurer {{ service.name }}

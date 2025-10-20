@@ -247,6 +247,17 @@ export const useWorkflowApi = () => {
         throw new Error('Failed to delete connection')
       }
     } catch (err: any) {
+      // Vérifier si c'est une erreur 404 (connexion déjà supprimée)
+      const is404 = err.statusCode === 404 ||
+                   err.status === 404 ||
+                   err.data?.error === 'CONNECTION_NOT_FOUND'
+
+      if (is404) {
+        // Ignorer les erreurs 404 - connexion déjà supprimée
+        console.debug(`[WorkflowApi] Connection ${connectionId} already deleted, ignoring 404`)
+        return
+      }
+
       error.value = err.message || 'Erreur lors de la suppression de la connexion'
       throw err
     }
@@ -382,19 +393,28 @@ export const useWorkflowApi = () => {
         if (shouldRestart) {
           try {
             await $fetch(`/api/areas/${existingAreaId}/toggle`, {
-              method: 'PUT',
+              method: 'PATCH',
               baseURL: backendUrl,
               headers: {
                 'Authorization': `Bearer ${authToken.value}`,
                 'Content-Type': 'application/json'
               },
-              body: { isActive: false }
+              body: { is_active: false }
             })
           } catch (err) {
             // ignore
           }
         }
-        for (const conn of existingWorkflow.connections) {
+        // Filtrer les connexions pour éviter de supprimer celles liées aux nodes déjà supprimées
+        const deletedNodeIds = new Set(nodesToDelete.map(n => n.id))
+        const connectionsToDelete = existingWorkflow.connections.filter(conn => {
+          // Ne pas supprimer les connexions liées aux nodes supprimées (elles sont déjà supprimées automatiquement)
+          return !deletedNodeIds.has(conn.sourceNodeId) && !deletedNodeIds.has(conn.targetNodeId)
+        })
+
+        console.log(`[WorkflowApi] Skipping ${existingWorkflow.connections.length - connectionsToDelete.length} connections already deleted by node deletion`)
+
+        for (const conn of connectionsToDelete) {
           if (conn.id) {
             await deleteConnection(conn.id)
           }
@@ -424,13 +444,13 @@ export const useWorkflowApi = () => {
           try {
             const authToken = useCookie('auth-token')
             await $fetch(`/api/areas/${existingAreaId}/toggle`, {
-              method: 'PUT',
+              method: 'PATCH',
               baseURL: backendUrl,
               headers: {
                 'Authorization': `Bearer ${authToken.value}`,
                 'Content-Type': 'application/json'
               },
-              body: { isActive: true }
+              body: { is_active: true }
             })
           } catch (err) {
           }

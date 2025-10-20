@@ -66,6 +66,17 @@ export const useServiceManagement = () => {
         return getFallbackServices()
       }
 
+      const connectionStatusResponse = await $fetch(`${backendUrl}/api/services/connected`, { headers }).catch(() => null)
+      const connectionStatusMap = new Map<string, boolean>()
+
+      if (connectionStatusResponse?.services?.length) {
+        connectionStatusResponse.services.forEach((service: any) => {
+          if (service?.name) {
+            connectionStatusMap.set(String(service.name).toLowerCase(), !!service.connected)
+          }
+        })
+      }
+
       const modulesWithDetails = await Promise.all(
         modulesListResponse.modules.map(async (moduleInfo: any) => {
           try {
@@ -79,13 +90,13 @@ export const useServiceManagement = () => {
 
       const validModules = modulesWithDetails.filter(module => module?.success && module)
 
-      return transformBackendModulesToServices(validModules.map(m => m))
+      return transformBackendModulesToServices(validModules.map(m => m), connectionStatusMap)
     } catch (error) {
       return getFallbackServices()
     }
   }
 
-  const transformBackendModulesToServices = (modules: any[]): Service[] => {
+  const transformBackendModulesToServices = (modules: any[], connectionStatusMap?: Map<string, boolean>): Service[] => {
 
     const categoryMapping: Record<string, Service['category']> = {
       'timer': 'automation',
@@ -108,19 +119,33 @@ export const useServiceManagement = () => {
 
 
       const moduleName = module.moduleName || module.name
+      const normalizedModuleName = String(moduleName || '').toLowerCase()
+      const authType = mapAuthType(module.authType)
+      const requiresConnection = authType === 'oauth'
+      const isConnected = requiresConnection
+        ? !!connectionStatusMap?.get(normalizedModuleName)
+        : true
+      const disabledReason = module.isActive === false
+        ? 'Service désactivé'
+        : (requiresConnection && !isConnected ? 'Connexion requise' : undefined)
       const service: Service = {
         id: moduleName,
         name: module.displayName || moduleName,
         slug: moduleName,
         description: module.description || '',
         icon: iconMapping[moduleName] || 'i-heroicons-cog',
+        iconUrl: (moduleName === 'timer' || moduleName === 'console') ? undefined : module.iconUrl,
         color: module.color || '#6B7280',
         isActive: module.isActive !== false,
         category: categoryMapping[moduleName] || 'other',
-        authType: mapAuthType(module.authType),
+        authType,
+        requiresConnection,
+        isConnected,
+        disabledReason,
         actions: transformBackendTriggers(module.triggers || []),
         reactions: transformBackendActions(module.actions || [])
       }
+
 
 
       return service
@@ -251,6 +276,8 @@ export const useServiceManagement = () => {
         isActive: true,
         category: 'automation',
         authType: 'none',
+        requiresConnection: false,
+        isConnected: true,
         actions: [
           {
             id: 'daily_at_time',

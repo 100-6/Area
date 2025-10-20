@@ -136,6 +136,8 @@
           @update-position="updateBlockPosition"
           @delete="deleteBlock"
           @configure="handleBlockConfigure"
+          @connection-drag-start="handleConnectionDragStart"
+          @connection-drag-end="handleConnectionDragEnd"
         />
 
         <!-- Connections between blocks -->
@@ -371,6 +373,14 @@ const workflowName = ref('')
 const workflowDescription = ref('')
 const nameError = ref('')
 
+// Connection drag state
+const isDraggingConnection = ref(false)
+const draggedConnection = ref<{
+  sourceBlockId: string
+  sourceType: 'input' | 'output'
+  startEvent: MouseEvent
+} | null>(null)
+
 const handleServiceSelected = (service: Service) => {
   const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
 
@@ -440,6 +450,73 @@ const handleSaveWorkflow = async () => {
   } catch (error) {
     console.error('Failed to save workflow:', error)
   }
+}
+
+// Connection drag handlers
+const handleConnectionDragStart = (blockId: string, connectionType: 'input' | 'output', event: MouseEvent) => {
+  isDraggingConnection.value = true
+  draggedConnection.value = {
+    sourceBlockId: blockId,
+    sourceType: connectionType,
+    startEvent: event
+  }
+
+  // Visual feedback
+  document.body.style.cursor = 'crosshair'
+  console.log(`Started dragging ${connectionType} from block ${blockId}`)
+}
+
+const handleConnectionDragEnd = (blockId: string, connectionType: 'input' | 'output', event: MouseEvent) => {
+  if (!isDraggingConnection.value || !draggedConnection.value) {
+    return
+  }
+
+  const sourceBlockId = draggedConnection.value.sourceBlockId
+  const sourceType = draggedConnection.value.sourceType
+
+  // Ne pas créer de connexion si c'est la même node
+  if (sourceBlockId === blockId) {
+    resetConnectionDrag()
+    return
+  }
+
+  // Logique de création de connexion
+  if (sourceType === 'output' && connectionType === 'input') {
+    // Connexion valide : output source → input target
+    createConnection(sourceBlockId, blockId)
+  } else if (sourceType === 'input' && connectionType === 'output') {
+    // Connexion valide : output target ← input source (inverser)
+    createConnection(blockId, sourceBlockId)
+  } else {
+    console.log('Invalid connection: cannot connect same types')
+  }
+
+  resetConnectionDrag()
+}
+
+const createConnection = (fromBlockId: string, toBlockId: string) => {
+  // Vérifier si la connexion existe déjà
+  const existingConnection = connections.value.find(c => c.from === fromBlockId && c.to === toBlockId)
+  if (existingConnection) {
+    console.log('Connection already exists')
+    return
+  }
+
+  // Créer la nouvelle connexion
+  const newConnection = {
+    from: fromBlockId,
+    to: toBlockId,
+    id: crypto.randomUUID()
+  }
+
+  connections.value.push(newConnection)
+  console.log(`Created connection from ${fromBlockId} to ${toBlockId}`)
+}
+
+const resetConnectionDrag = () => {
+  isDraggingConnection.value = false
+  draggedConnection.value = null
+  document.body.style.cursor = ''
 }
 
 const goBack = () => {

@@ -94,18 +94,61 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
 
     workflowBlocks.value.push(newBlock)
 
-    if (workflowBlocks.value.length > 1) {
-      const previousBlock = workflowBlocks.value[workflowBlocks.value.length - 2]
-      const newConnection = {
-        from: previousBlock.id,
-        to: newBlock.id
-      }
-      connections.value.push(newConnection)
-    }
+    // Connexions manuelles désormais - pas de création automatique
+    // if (workflowBlocks.value.length > 1) {
+    //   const previousBlock = workflowBlocks.value[workflowBlocks.value.length - 2]
+    //   const newConnection = {
+    //     from: previousBlock.id,
+    //     to: newBlock.id
+    //   }
+    //   connections.value.push(newConnection)
+    // }
 
     nextTick(() => {
       connections.value = [...connections.value]
     })
+  }
+
+  const generateConnectionId = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID()
+    }
+
+    return `conn-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  }
+
+  const addConnection = (fromBlockId: string, toBlockId: string) => {
+    if (!fromBlockId || !toBlockId || fromBlockId === toBlockId) {
+      return null
+    }
+
+    const existingConnection = connections.value.find(connection =>
+      connection.from === fromBlockId && connection.to === toBlockId
+    )
+
+    if (existingConnection) {
+      return existingConnection
+    }
+
+    const newConnection: Connection = {
+      from: fromBlockId,
+      to: toBlockId,
+      id: generateConnectionId()
+    }
+
+    connections.value.push(newConnection)
+    connections.value = [...connections.value]
+
+    return newConnection
+  }
+
+  const removeConnection = (fromBlockId: string, toBlockId: string) => {
+    const initialLength = connections.value.length
+    connections.value = connections.value.filter(connection =>
+      !(connection.from === fromBlockId && connection.to === toBlockId)
+    )
+
+    return connections.value.length !== initialLength
   }
 
   const updateBlockPosition = (blockId: string, newPosition: { x: number; y: number }) => {
@@ -115,9 +158,62 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
   }
 
+  // Fonction pour compter les nodes qui seront supprimées en cascade
+  const countNodesForDeletion = (nodeId: string, visited = new Set<string>()): number => {
+    if (visited.has(nodeId)) {
+      return 0
+    }
+    visited.add(nodeId)
+
+    let count = 1 // La node actuelle
+
+    // Trouver toutes les connexions sortantes de cette node (enfants)
+    const childConnections = connections.value.filter(c => c.from === nodeId)
+    const childNodeIds = childConnections.map(c => c.to)
+
+    // Compter récursivement toutes les nodes enfants
+    for (const childId of childNodeIds) {
+      count += countNodesForDeletion(childId, visited)
+    }
+
+    return count
+  }
+
   const deleteBlock = (blockId: string) => {
-    workflowBlocks.value = workflowBlocks.value.filter(b => b.id !== blockId)
-    connections.value = connections.value.filter(c => c.from !== blockId && c.to !== blockId)
+    // Compter le nombre de nodes qui seront supprimées
+    const nodeCount = countNodesForDeletion(blockId)
+
+    if (nodeCount > 1) {
+      const blockName = workflowBlocks.value.find(b => b.id === blockId)?.service.name || 'cette node'
+      console.log(`[WorkflowManagement] Suppression en cascade de ${nodeCount} nodes à partir de ${blockName}`)
+    }
+
+    // Fonction récursive pour supprimer une node et toutes ses nodes enfants (vers la droite)
+    const deleteNodeAndChildren = (nodeId: string, visited = new Set<string>()): void => {
+      // Éviter les cycles infinis
+      if (visited.has(nodeId)) {
+        return
+      }
+      visited.add(nodeId)
+
+      // Trouver toutes les connexions sortantes de cette node (enfants)
+      const childConnections = connections.value.filter(c => c.from === nodeId)
+      const childNodeIds = childConnections.map(c => c.to)
+
+      // Supprimer récursivement toutes les nodes enfants
+      for (const childId of childNodeIds) {
+        deleteNodeAndChildren(childId, visited)
+      }
+
+      // Supprimer la node actuelle
+      workflowBlocks.value = workflowBlocks.value.filter(b => b.id !== nodeId)
+
+      // Supprimer toutes les connexions liées à cette node (entrantes et sortantes)
+      connections.value = connections.value.filter(c => c.from !== nodeId && c.to !== nodeId)
+    }
+
+    // Démarrer la suppression en cascade
+    deleteNodeAndChildren(blockId)
   }
 
   const configureBlock = async (blockId: string, onConfigurationChanged?: (config: ServiceConfiguration) => void) => {
@@ -503,10 +599,14 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     addServiceBlock,
     updateBlockPosition,
     deleteBlock,
+    addConnection,
+    removeConnection,
     configureBlock,
     updateBlockConfig,
     getBlockConnectionState,
     getConnectionPath,
+    getConnectionPointPosition,
+    countNodesForDeletion,
 
     saveWorkflow,
     loadWorkflow,
