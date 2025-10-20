@@ -22,8 +22,15 @@ export class AnalyzeSentiment extends BaseAction {
     getConfigSchema(): any {
         return {
             type: 'object',
-            required: ['text'],
+            required: ['apiKey', 'text'],
             properties: {
+                apiKey: {
+                    type: 'string',
+                    title: 'OpenAI API Key',
+                    description: 'Your OpenAI API key (starts with sk-)',
+                    pattern: '^sk-',
+                    minLength: 20
+                },
                 text: {
                     type: 'string',
                     title: 'Text',
