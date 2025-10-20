@@ -154,6 +154,126 @@ export default {
                     }
                 }
             }
+        },
+        {
+            name: 'on_issue_opened',
+            displayName: 'Issue Opened',
+            description: 'Triggers when a new issue is opened in a repository',
+            configSchema: {
+                type: 'object',
+                required: ['owner', 'repo'],
+                properties: {
+                    owner: {
+                        type: 'string',
+                        title: 'Repository Owner',
+                        description: 'GitHub username or organization',
+                        example: 'octocat'
+                    },
+                    repo: {
+                        type: 'string',
+                        title: 'Repository Name',
+                        description: 'Name of the repository',
+                        example: 'Hello-World'
+                    }
+                }
+            },
+            outputSchema: {
+                type: 'object',
+                properties: {
+                    issueNumber: {
+                        type: 'number',
+                        description: 'Issue number in the repository'
+                    },
+                    issueTitle: {
+                        type: 'string',
+                        description: 'Title of the issue'
+                    },
+                    issueAuthor: {
+                        type: 'string',
+                        description: 'Username of the person who opened the issue'
+                    },
+                    issueBody: {
+                        type: 'string',
+                        description: 'Body/description of the issue'
+                    },
+                    issueUrl: {
+                        type: 'string',
+                        description: 'URL to the issue on GitHub'
+                    },
+                    repository: {
+                        type: 'string',
+                        description: 'Repository full name (owner/repo)'
+                    },
+                    labels: {
+                        type: 'array',
+                        description: 'Array of label names'
+                    },
+                    createdAt: {
+                        type: 'string',
+                        description: 'Issue creation timestamp'
+                    }
+                }
+            }
+        },
+        {
+            name: 'on_issue_closed',
+            displayName: 'Issue Closed',
+            description: 'Triggers when an issue is closed in a repository',
+            configSchema: {
+                type: 'object',
+                required: ['owner', 'repo'],
+                properties: {
+                    owner: {
+                        type: 'string',
+                        title: 'Repository Owner',
+                        description: 'GitHub username or organization',
+                        example: 'octocat'
+                    },
+                    repo: {
+                        type: 'string',
+                        title: 'Repository Name',
+                        description: 'Name of the repository',
+                        example: 'Hello-World'
+                    }
+                }
+            },
+            outputSchema: {
+                type: 'object',
+                properties: {
+                    issueNumber: {
+                        type: 'number',
+                        description: 'Issue number in the repository'
+                    },
+                    issueTitle: {
+                        type: 'string',
+                        description: 'Title of the issue'
+                    },
+                    issueAuthor: {
+                        type: 'string',
+                        description: 'Username of the person who created the issue'
+                    },
+                    issueBody: {
+                        type: 'string',
+                        description: 'Body/description of the issue'
+                    },
+                    issueUrl: {
+                        type: 'string',
+                        description: 'URL to the issue on GitHub'
+                    },
+                    repository: {
+                        type: 'string',
+                        description: 'Repository full name (owner/repo)'
+                    },
+                    labels: {
+                        type: 'array',
+                        description: 'Array of label names'
+                    },
+                    closedAt: {
+                        type: 'string',
+                        description: 'Issue closing timestamp'
+                    }
+                }
+            }
         }
     ],
 

@@ -38,6 +38,13 @@ export interface GitHubCommit {
  * @property {string} title - Issue title
  * @property {string} html_url - Full URL of the issue on GitHub
  * @property {string} state - Issue state (open, closed)
+ * @property {Object} user - User who created the issue
+ * @property {string} user.login - Username of the creator
+ * @property {string} body - Issue body/description
+ * @property {string} created_at - Creation timestamp (ISO 8601)
+ * @property {string} updated_at - Last update timestamp (ISO 8601)
+ * @property {string|null} closed_at - Closing timestamp (ISO 8601) or null
+ * @property {Array} labels - Array of labels
  */
 export interface GitHubIssue {
     id: number;
@@ -45,6 +52,17 @@ export interface GitHubIssue {
     title: string;
     html_url: string;
     state: string;
+    user: {
+        login: string;
+    };
+    body: string | null;
+    created_at: string;
+    updated_at: string;
+    closed_at: string | null;
+    labels: Array<{
+        name: string;
+        color: string;
+    }>;
 }
 
 /**
@@ -236,6 +254,50 @@ export class GitHubApiService {
             return await response.json() as GitHubBranch[];
         } catch (error) {
             console.error('[GitHub API] Error fetching branches:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Fetches issues from a GitHub repository
+     * 
+     * @async
+     * @param {string} owner - Repository owner name (username or organization)
+     * @param {string} repo - Repository name
+     * @param {string} accessToken - User's GitHub OAuth token (scope: repo)
+     * @param {string} [state='all'] - Filter by state: 'open', 'closed', or 'all'
+     * @param {number} [perPage=100] - Number of issues to retrieve per page (1-100)
+     * @returns {Promise<GitHubIssue[]>} List of issues
+     * @throws {Error} If the GitHub API returns an error (401, 404, etc.)
+     * @example
+     * const issues = await githubApi.getIssues('octocat', 'Hello-World', 'ghp_abc123...', 'open');
+     * console.log(issues.map(i => i.title)); // ['Bug in login', 'Feature request']
+     */
+    async getIssues(
+        owner: string,
+        repo: string,
+        accessToken: string,
+        state: 'open' | 'closed' | 'all' = 'all',
+        perPage: number = 100
+    ): Promise<GitHubIssue[]> {
+        try {
+            const url = `${this.baseUrl}/repos/${owner}/${repo}/issues?state=${state}&per_page=${perPage}&sort=created&direction=desc`;
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'AREA-Platform'
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`GitHub API error: ${response.status} - ${error}`);
+            }
+
+            return await response.json() as GitHubIssue[];
+        } catch (error) {
+            console.error('[GitHub API] Error fetching issues:'.red, error);
             throw error;
         }
     }
