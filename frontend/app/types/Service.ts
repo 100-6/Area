@@ -4,10 +4,17 @@ export interface Service {
   slug: string
   description: string
   icon: string
+  iconUrl?: string
   color: string
   isActive: boolean
   category: 'communication' | 'productivity' | 'social' | 'storage' | 'development' | 'automation' | 'other'
   authType: 'oauth' | 'api_key' | 'webhook' | 'none'
+  /** Indicates if the service needs a user-specific connection (OAuth/API key/etc.) */
+  requiresConnection?: boolean
+  /** True when the current user has provided the required credentials */
+  isConnected?: boolean
+  /** Optional reason explaining why the service is disabled */
+  disabledReason?: string
   // AREA Concepts:
   // - actions: Things this service can DO (triggers that initiate workflows)
   // - reactions: Things this service can RESPOND TO (actions performed when triggered)
