@@ -70,6 +70,90 @@ export default {
                     }
                 }
             }
+        },
+        {
+            name: 'on_branch_created',
+            displayName: 'Branch Created',
+            description: 'Triggers when a new branch is created in a repository',
+            configSchema: {
+                type: 'object',
+                required: ['owner', 'repo'],
+                properties: {
+                    owner: {
+                        type: 'string',
+                        title: 'Repository Owner',
+                        description: 'GitHub username or organization',
+                        example: 'octocat'
+                    },
+                    repo: {
+                        type: 'string',
+                        title: 'Repository Name',
+                        description: 'Name of the repository',
+                        example: 'Hello-World'
+                    }
+                }
+            },
+            outputSchema: {
+                type: 'object',
+                properties: {
+                    branchName: {
+                        type: 'string',
+                        description: 'Name of the newly created branch'
+                    },
+                    repository: {
+                        type: 'string',
+                        description: 'Repository full name (owner/repo)'
+                    },
+                    createdAt: {
+                        type: 'string',
+                        description: 'Timestamp when the branch was detected'
+                    },
+                    latestCommitSha: {
+                        type: 'string',
+                        description: 'SHA of the latest commit on the new branch'
+                    }
+                }
+            }
+        },
+        {
+            name: 'on_branch_deleted',
+            displayName: 'Branch Deleted',
+            description: 'Triggers when a branch is deleted from a repository',
+            configSchema: {
+                type: 'object',
+                required: ['owner', 'repo'],
+                properties: {
+                    owner: {
+                        type: 'string',
+                        title: 'Repository Owner',
+                        description: 'GitHub username or organization',
+                        example: 'octocat'
+                    },
+                    repo: {
+                        type: 'string',
+                        title: 'Repository Name',
+                        description: 'Name of the repository',
+                        example: 'Hello-World'
+                    }
+                }
+            },
+            outputSchema: {
+                type: 'object',
+                properties: {
+                    branchName: {
+                        type: 'string',
+                        description: 'Name of the deleted branch'
+                    },
+                    repository: {
+                        type: 'string',
+                        description: 'Repository full name (owner/repo)'
+                    },
+                    deletedAt: {
+                        type: 'string',
+                        description: 'Timestamp when the branch deletion was detected'
+                    }
+                }
+            }
         }
     ],
 
