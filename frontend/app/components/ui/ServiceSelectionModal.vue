@@ -52,6 +52,10 @@
           </UButton>
         </div>
 
+        <p class="block-type-indicator">
+          {{ blockTypeLabel }}
+        </p>
+
         <!-- Loading state -->
         <div v-if="isLoadingServices" class="flex items-center justify-center py-8">
           <div class="flex items-center gap-3">
@@ -77,7 +81,13 @@
             <!-- Affichage compact pour "Tous" -->
             <div v-if="selectedCategory === 'all'" class="service-card-content-compact">
               <div class="service-icon-compact" :style="`background-color: ${service.color}15`">
-                <img v-if="service.iconUrl" :src="service.iconUrl" :alt="service.name" class="w-5 h-5 object-contain" />
+                <img
+                  v-if="service.iconUrl && !hasIconError(service.id)"
+                  :src="service.iconUrl"
+                  :alt="service.name"
+                  class="w-5 h-5 object-contain"
+                  @error="markIconError(service.id)"
+                />
                 <UIcon v-else :name="service.icon" class="w-5 h-5" :style="`color: ${service.color}`" />
               </div>
               <h3 class="service-name-compact">{{ service.name }}</h3>
@@ -87,7 +97,13 @@
             <!-- Affichage détaillé pour les catégories spécifiques -->
             <div v-else class="service-card-content">
               <div class="service-icon" :style="`background-color: ${service.color}15`">
-                <img v-if="service.iconUrl" :src="service.iconUrl" :alt="service.name" class="w-6 h-6 object-contain" />
+                <img
+                  v-if="service.iconUrl && !hasIconError(service.id)"
+                  :src="service.iconUrl"
+                  :alt="service.name"
+                  class="w-6 h-6 object-contain"
+                  @error="markIconError(service.id)"
+                />
                 <UIcon v-else :name="service.icon" class="w-6 h-6" :style="`color: ${service.color}`" />
               </div>
 
@@ -133,6 +149,7 @@ import type { Service } from '~/types'
 
 interface Props {
   open?: boolean
+  blockType?: 'trigger' | 'action'
 }
 
 interface Emits {
@@ -141,7 +158,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  open: false
+  open: false,
+  blockType: 'trigger'
 })
 
 const emit = defineEmits<Emits>()
@@ -153,6 +171,7 @@ const isOpen = computed({
 
 const searchTerm = ref('')
 const selectedCategory = ref<string>('all')
+const blockTypeLabel = computed(() => props.blockType === 'action' ? 'RÉACTION' : 'ACTION')
 
 // Catégories disponibles
 const categories = [
@@ -168,6 +187,7 @@ const categories = [
 const { getAvailableServices } = useServiceManagement()
 const availableServices = ref<Service[]>([])
 const isLoadingServices = ref(false)
+const iconErrorMap = ref<Record<string, boolean>>({})
 
 onMounted(async () => {
   try {
@@ -184,6 +204,12 @@ onMounted(async () => {
 const filteredServices = computed(() => {
   let services = availableServices.value
 
+  if (props.blockType === 'trigger') {
+    services = services.filter(service => (service.actions?.length || 0) > 0)
+  } else if (props.blockType === 'action') {
+    services = services.filter(service => (service.reactions?.length || 0) > 0)
+  }
+
   if (selectedCategory.value !== 'all') {
     services = services.filter(service => service.category === selectedCategory.value)
   }
@@ -198,6 +224,17 @@ const filteredServices = computed(() => {
 
   return services
 })
+
+const hasIconError = (serviceId: string) => {
+  return iconErrorMap.value[serviceId] === true
+}
+
+const markIconError = (serviceId: string) => {
+  iconErrorMap.value = {
+    ...iconErrorMap.value,
+    [serviceId]: true
+  }
+}
 
 const getServiceStatus = (service: Service) => {
   if (!service.isActive) {
@@ -238,6 +275,7 @@ const closeModal = () => {
   isOpen.value = false
   searchTerm.value = ''
   selectedCategory.value = 'all'
+  iconErrorMap.value = {}
 }
 
 const getCategoryLabel = (category: string) => {
@@ -280,6 +318,15 @@ const getCategoryLabel = (category: string) => {
   transform: none;
   box-shadow: none;
   border-color: var(--border-color);
+}
+
+.block-type-indicator {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
 }
 
 .service-card-content {

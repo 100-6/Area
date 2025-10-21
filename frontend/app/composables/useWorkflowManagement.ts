@@ -27,6 +27,31 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
   const currentAreaId = ref<string | null>(null)
   const isSaving = ref(false)
   const saveError = ref<string | null>(null)
+  const isMounted = ref(false)
+  let pendingConnectionsRefresh = false
+  let refreshScheduled = false
+
+  const scheduleConnectionsRefresh = () => {
+    if (refreshScheduled) {
+      return
+    }
+
+    refreshScheduled = true
+    nextTick(() => {
+      refreshScheduled = false
+      connections.value = [...connections.value]
+    })
+  }
+
+  const refreshConnections = () => {
+    if (!isMounted.value) {
+      pendingConnectionsRefresh = true
+      return
+    }
+
+    pendingConnectionsRefresh = false
+    scheduleConnectionsRefresh()
+  }
 
   const isUuid = (value?: string | null): boolean => {
     if (!value)
@@ -36,9 +61,16 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
   
 
   watch(zoom, () => {
-    nextTick(() => {
-      connections.value = [...connections.value]
-    })
+    refreshConnections()
+  })
+
+  onMounted(() => {
+    isMounted.value = true
+
+    if (pendingConnectionsRefresh || connections.value.length > 0) {
+      pendingConnectionsRefresh = false
+      scheduleConnectionsRefresh()
+    }
   })
 
   const firstCardPosition = computed(() => ({ x: 0, y: 0 }))
@@ -104,9 +136,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     //   connections.value.push(newConnection)
     // }
 
-    nextTick(() => {
-      connections.value = [...connections.value]
-    })
+    refreshConnections()
   }
 
   const generateConnectionId = () => {
@@ -137,7 +167,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
 
     connections.value.push(newConnection)
-    connections.value = [...connections.value]
+    refreshConnections()
 
     return newConnection
   }
@@ -148,7 +178,12 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       !(connection.from === fromBlockId && connection.to === toBlockId)
     )
 
-    return connections.value.length !== initialLength
+    const removed = connections.value.length !== initialLength
+    if (removed) {
+      refreshConnections()
+    }
+
+    return removed
   }
 
   const updateBlockPosition = (blockId: string, newPosition: { x: number; y: number }) => {
@@ -214,6 +249,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
 
     // Démarrer la suppression en cascade
     deleteNodeAndChildren(blockId)
+    refreshConnections()
   }
 
   const configureBlock = async (blockId: string, onConfigurationChanged?: (config: ServiceConfiguration) => void) => {
@@ -529,9 +565,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
 
       currentAreaId.value = areaId
 
-      nextTick(() => {
-        connections.value = [...connections.value]
-      })
+      refreshConnections()
 
       return workflow
     } catch (err: any) {
@@ -614,6 +648,6 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     initializeServiceMapping,
 
     updateBlockConfiguration,
-    updateBlockConfig
+    refreshConnections
   }
 }

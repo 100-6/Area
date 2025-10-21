@@ -46,9 +46,12 @@
         <UDropdownMenu
           :items="getAreaActions(area)"
           :ui="{
-            content: 'bg-white shadow-xl border border-gray-200 rounded-lg',
-            item: 'text-gray-700 hover:bg-gray-50',
-            itemLeadingIcon: 'text-gray-500'
+            content: 'min-w-32 bg-white shadow-lg rounded-md overflow-hidden !border-0 !ring-0 !outline-0',
+            viewport: 'p-1 !divide-y-0 !border-0',
+            group: 'p-0 !border-0',
+            separator: '!hidden',
+            item: 'text-gray-900 p-2 rounded-sm !border-0',
+            itemLeadingIcon: 'text-gray-700'
           }"
         >
           <UButton
@@ -433,6 +436,17 @@ const getAreaActions = (area: AreaData) => [
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+:deep([data-radix-dropdown-menu-content]) {
+  border: none !important;
+  outline: none !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+:deep([data-radix-dropdown-menu-content] *) {
+  border: none !important;
+  outline: none !important;
 }
 
 /* Mobile responsive */

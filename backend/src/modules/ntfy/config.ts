@@ -2,7 +2,7 @@ export default {
     name: 'ntfy',
     displayName: 'Ntfy',
     description: 'Send and receive push notifications via ntfy.sh',
-    iconUrl: '/icons/ntfy.png',
+    iconUrl: 'https://assets.streamlinehq.com/image/private/w_300,h_300,ar_1/f_auto/v1/icons/logos/ntfy-atckcjo7xgwkpk7pyxqer.png/ntfy-dcq5om2vab62rm4qrck56n.png?_a=DATAg1AAZAA0',
     color: '#338574',
     authType: 'none',
     isActive: true,

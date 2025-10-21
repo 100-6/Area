@@ -6,7 +6,7 @@ export default {
     name: 'github',
     displayName: 'GitHub',
     description: 'Automate your GitHub workflows with repository events, issues, and commits',
-    iconUrl: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/25/25231.png',
     color: '#181717',
     authType: 'oauth2',
     isActive: true,

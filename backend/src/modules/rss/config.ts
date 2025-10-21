@@ -2,8 +2,8 @@ export default {
     name: 'rss',
     displayName: 'RSS Feed',
     description: 'Monitor RSS/Atom feeds for new items with optional pattern matching',
-    iconUrl: '/icons/rss.png',
-    color: '#FF6600',
+    iconUrl: 'https://cdn2.iconfinder.com/data/icons/New-Social-Media-Icon-Set-V11/512/rss-feeds.png',
+    color: '#c4c4c4',
     authType: 'none',
     isActive: true,
 

@@ -111,6 +111,17 @@
 
         <!-- Canvas content (élément transformé) -->
         <div ref="canvas" class="canvas" :style="canvasStyle">
+          <div
+            v-if="workflowBlocks.length === 0"
+            class="add-action-button"
+            @click="openTriggerServiceModal"
+          >
+            <div class="add-button-content">
+              <UIcon name="i-heroicons-plus" class="w-8 h-8" />
+              <span>Ajouter un service</span>
+            </div>
+          </div>
+
           <!-- Service blocks -->
           <UiWorkflowStepCard
             v-for="(block, index) in workflowBlocks"
@@ -120,6 +131,7 @@
             :title="block.service.name"
             :description="block.service.description"
             :icon="block.service.icon"
+            :icon-url="block.service.iconUrl"
             :icon-background="block.service.color + '15'"
             :icon-color="block.service.color"
             :position="block.position"
@@ -185,14 +197,27 @@
             :isEmpty="true"
             :canvas-mode="true"
             :position="nextCardPosition"
-            @add-service="openServiceModal"
+            @add-service="openActionServiceModal"
           />
+
+          <UButton
+            v-if="workflowBlocks.length > 0"
+            class="floating-add-button"
+            variant="solid"
+            color="primary"
+            icon="i-heroicons-plus"
+            size="lg"
+            @click="openActionServiceModal"
+          >
+            Ajouter
+          </UButton>
         </div>
       </div>
 
       <!-- Service Selection Modal -->
       <UiServiceSelectionModal
         v-model:open="showServiceModal"
+        :block-type="selectedBlockType"
         @service-selected="handleServiceSelected"
       />
 
@@ -338,7 +363,8 @@ const {
   getConnectionPath,
   getConnectionPointPosition,
   saveWorkflow,
-  loadWorkflow
+  loadWorkflow,
+  refreshConnections
 } = useWorkflowManagement(canvas, zoom)
 
 const {
@@ -349,12 +375,14 @@ const {
   isEditingConfiguration,
   currentConfiguration,
   openServiceModal,
-  closeServiceModal,
   selectServiceWithConfiguration,
   onConfigurationConfirmed,
   editServiceConfiguration,
   closeConfigModal
 } = useServiceManagement()
+
+const openTriggerServiceModal = () => openServiceModal('trigger')
+const openActionServiceModal = () => openServiceModal('action')
 
 const showConfigModal = computed({
   get: () => _showConfigModal.value,
@@ -417,6 +445,9 @@ const loadExistingWorkflow = async () => {
 
     await loadWorkflow(areaId.value)
 
+    await nextTick()
+    refreshConnections()
+
     workflowName.value = areaData.value.name || ''
     workflowDescription.value = areaData.value.description || ''
 
@@ -464,7 +495,7 @@ const getNewBlockPosition = () => {
 }
 
 const handleServiceSelected = (service: Service) => {
-  const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
+  const blockType = selectedBlockType.value || (workflowBlocks.value.length === 0 ? 'trigger' : 'action')
   const position = getNewBlockPosition()
 
   selectServiceWithConfiguration(service, blockType, (config) => {
@@ -786,6 +817,16 @@ const handleSaveWorkflow = async () => {
   }
 }
 
+const blockCount = computed(() => workflowBlocks.value.length)
+
+watch(blockCount, (count, previous) => {
+  if (count === 0 && (previous ?? 0) > 0) {
+    resetCanvas()
+    selectedBlockType.value = 'trigger'
+    refreshConnections()
+  }
+})
+
 watch(() => route.params.id, (newId) => {
   if (newId && typeof newId === 'string' && newId !== '[object PointerEvent]') {
     areaId.value = newId
@@ -874,6 +915,45 @@ useHead({
   left: 50%;
   margin-left: -2500px;
   margin-top: -2500px;
+}
+
+.add-action-button {
+  position: absolute;
+  top: 2500px;
+  left: 2500px;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 120px;
+  background: var(--bg-card);
+  border: 2px dashed var(--color-primary);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-action-button:hover {
+  background: rgba(167, 240, 186, 0.05);
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.add-button-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.floating-add-button {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 20;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 /* Connections SVG overlay */

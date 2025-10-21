@@ -23,9 +23,15 @@
       </div>
 
       <!-- Icône centrale -->
-      <div class="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center"
+      <div class="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center overflow-hidden"
            :style="{ background: iconBackground }">
-        <UIcon :name="icon" class="w-8 h-8" :style="{ color: iconColor }" />
+        <img
+          v-if="iconUrl"
+          :src="iconUrl"
+          :alt="title"
+          class="w-12 h-12 object-contain"
+        />
+        <UIcon v-else :name="icon" class="w-8 h-8" :style="{ color: iconColor }" />
       </div>
 
       <!-- Contenu -->
@@ -129,6 +135,8 @@ interface Props {
   iconBackground?: string
   // Couleur de l'icône
   iconColor?: string
+  // URL d'icône distante au besoin
+  iconUrl?: string
   // Exemple de service (optionnel)
   example?: string
   // Icône pour l'exemple
@@ -166,6 +174,7 @@ const props = withDefaults(defineProps<Props>(), {
   description: '',
   iconBackground: 'var(--color-primary)',
   iconColor: 'var(--color-tertiary)',
+  iconUrl: '',
   exampleIcon: 'i-heroicons-envelope',
   exampleBackground: 'rgba(167, 240, 186, 0.1)',
   exampleBorderColor: 'var(--color-primary)',

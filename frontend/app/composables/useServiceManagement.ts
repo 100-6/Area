@@ -12,7 +12,8 @@ export const useServiceManagement = () => {
   const isEditingConfiguration = ref(false)
   const currentConfiguration = ref<ServiceConfiguration | null>(null)
 
-  const openServiceModal = () => {
+  const openServiceModal = (blockType: 'trigger' | 'action' = 'trigger') => {
+    selectedBlockType.value = blockType
     showServiceModal.value = true
   }
 
@@ -141,14 +142,12 @@ export const useServiceManagement = () => {
       'telegram': '#26A5E4'
     }
 
-    const forcedOauthProviders = new Set(['gmail', 'google', 'discord', 'github', 'gitlab', 'dropbox', 'telegram'])
-
     return modules.map(({ summary, detail }) => {
       const baseName = summary?.name || detail?.moduleName || detail?.name || ''
       const normalizedName = baseName.toString().toLowerCase()
 
       const authType = mapAuthType(summary?.authType || detail?.authType)
-      const requiresConnection = authType === 'oauth' || forcedOauthProviders.has(normalizedName)
+      const requiresConnection = authType === 'oauth'
 
       const connectedKeys = [
         normalizedName,
@@ -164,7 +163,9 @@ export const useServiceManagement = () => {
       const description = detail?.description || summary?.description || ''
       const color = detail?.color || summary?.color || colorFallback[normalizedName] || '#6B7280'
       const iconUrl = detail?.iconUrl || summary?.iconUrl
-      const icon = iconFallback[normalizedName] || 'i-heroicons-cog'
+      const icon = iconUrl
+        ? (detail?.icon || summary?.icon || iconFallback[normalizedName] || 'i-heroicons-cog')
+        : 'i-heroicons-cog'
 
       const service: Service = {
         id: summary?.id || normalizedName,
@@ -195,6 +196,10 @@ export const useServiceManagement = () => {
       case 'oauth2': return 'oauth'
       case 'api_key': return 'api_key'
       case 'webhook': return 'webhook'
+      case 'bot_token':
+        // Telegram and similar bot integrations rely on server-side tokens
+        // so we surface them as non-user-authenticated services.
+        return 'none'
       case 'none':
       default: return 'none'
     }
