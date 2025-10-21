@@ -17,3 +17,7 @@ export { OnNewSavedEpisodeTrigger } from './OnNewSavedEpisode';
 export { OnNewSavedTrackTrigger } from './OnNewSavedTrack';
 export { OnNewShowFromSearchTrigger } from './OnNewShowFromSearch';
 export { OnNewRecentlyPlayedTrackTrigger } from './OnNewRecentlyPlayedTrack';
+export { OnNewSavedAlbumTrigger } from './OnNewSavedAlbum';
+export { OnNewEpisodeFromFollowedShowTrigger } from './OnNewEpisodeFromFollowedShow';
+export { OnNewEpisodeFromSearchTrigger } from './OnNewEpisodeFromSearch';
+export { OnNewTrackAddedToPlaylistTrigger } from './OnNewTrackAddedToPlaylist';

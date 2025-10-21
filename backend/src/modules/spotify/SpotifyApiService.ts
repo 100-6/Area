@@ -394,6 +394,53 @@ export class SpotifyApiService {
     }
 
     /**
+     * Get tracks from a playlist
+     * @param accessToken - User's access token
+     * @param playlistId - Spotify playlist ID
+     * @param limit - Maximum number of tracks to return (max 100)
+     * @returns Array of playlist tracks with metadata
+     */
+    async getPlaylistTracks(accessToken: string, playlistId: string, limit: number = 100): Promise<any[]> {
+        try {
+            const response = await fetch(`${this.BASE_URL}/playlists/${playlistId}/tracks?limit=${limit}`, {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to get playlist tracks: ${response.statusText}`);
+            }
+
+            const data: any = await response.json();
+            return (data.items || []).map((item: any) => ({
+                addedAt: item.added_at,
+                addedBy: {
+                    id: item.added_by?.id,
+                    uri: item.added_by?.uri
+                },
+                track: {
+                    id: item.track?.id,
+                    name: item.track?.name,
+                    artists: item.track?.artists?.map((artist: any) => ({
+                        id: artist.id,
+                        name: artist.name
+                    })),
+                    album: {
+                        id: item.track?.album?.id,
+                        name: item.track?.album?.name,
+                        images: item.track?.album?.images
+                    },
+                    duration_ms: item.track?.duration_ms,
+                    uri: item.track?.uri,
+                    external_urls: item.track?.external_urls
+                }
+            }));
+        } catch (error) {
+            console.error('[Spotify] Error getting playlist tracks:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
      * Add track to a playlist
      * @param accessToken - User's access token
      * @param playlistId - Spotify playlist ID
@@ -516,6 +563,151 @@ export class SpotifyApiService {
             total_episodes: show.total_episodes,
             uri: show.uri,
             external_urls: show.external_urls
+        }));
+    }
+
+    /**
+     * Get user's saved albums
+     * @param accessToken - Spotify access token
+     * @param limit - Number of albums to retrieve (max 50)
+     * @returns Array of saved albums
+     */
+    async getSavedAlbums(accessToken: string, limit: number = 50): Promise<any[]> {
+        const response = await fetch(
+            `https://api.spotify.com/v1/me/albums?limit=${limit}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Failed to get saved albums: ${response.statusText}`);
+        }
+
+        const data: any = await response.json();
+        return data.items.map((item: any) => ({
+            id: item.album.id,
+            name: item.album.name,
+            artists: item.album.artists.map((artist: any) => ({
+                id: artist.id,
+                name: artist.name
+            })),
+            release_date: item.album.release_date,
+            total_tracks: item.album.total_tracks,
+            images: item.album.images,
+            uri: item.album.uri,
+            external_urls: item.album.external_urls,
+            added_at: item.added_at
+        }));
+    }
+
+    /**
+     * Get user's followed shows (podcasts)
+     * @param accessToken - Spotify access token
+     * @param limit - Number of shows to retrieve (max 50)
+     * @returns Array of followed shows
+     */
+    async getFollowedShows(accessToken: string, limit: number = 50): Promise<any[]> {
+        const response = await fetch(
+            `https://api.spotify.com/v1/me/shows?limit=${limit}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Failed to get followed shows: ${response.statusText}`);
+        }
+
+        const data: any = await response.json();
+        return data.items.map((item: any) => ({
+            id: item.show.id,
+            name: item.show.name,
+            publisher: item.show.publisher,
+            description: item.show.description,
+            images: item.show.images,
+            total_episodes: item.show.total_episodes,
+            uri: item.show.uri,
+            external_urls: item.show.external_urls,
+            added_at: item.added_at
+        }));
+    }
+
+    /**
+     * Get episodes from a specific show
+     * @param accessToken - Spotify access token
+     * @param showId - Show ID
+     * @param limit - Number of episodes to retrieve (max 50)
+     * @returns Array of episodes from the show
+     */
+    async getShowEpisodes(accessToken: string, showId: string, limit: number = 20): Promise<any[]> {
+        const response = await fetch(
+            `https://api.spotify.com/v1/shows/${showId}/episodes?limit=${limit}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Failed to get show episodes: ${response.statusText}`);
+        }
+
+        const data: any = await response.json();
+        return data.items.map((episode: any) => ({
+            id: episode.id,
+            name: episode.name,
+            description: episode.description,
+            duration_ms: episode.duration_ms,
+            release_date: episode.release_date,
+            uri: episode.uri,
+            external_urls: episode.external_urls,
+            images: episode.images
+        }));
+    }
+
+    /**
+     * Search for episodes on Spotify
+     * @param accessToken - Spotify access token
+     * @param query - Search query
+     * @param limit - Number of results to retrieve (max 50)
+     * @returns Array of episodes matching the search query
+     */
+    async searchEpisodes(accessToken: string, query: string, limit: number = 20): Promise<any[]> {
+        const encodedQuery = encodeURIComponent(query);
+        const response = await fetch(
+            `https://api.spotify.com/v1/search?q=${encodedQuery}&type=episode&limit=${limit}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Failed to search episodes: ${response.statusText}`);
+        }
+
+        const data: any = await response.json();
+        return data.episodes.items.map((episode: any) => ({
+            id: episode.id,
+            name: episode.name,
+            description: episode.description,
+            duration_ms: episode.duration_ms,
+            release_date: episode.release_date,
+            uri: episode.uri,
+            external_urls: episode.external_urls,
+            images: episode.images,
+            show: {
+                id: episode.show.id,
+                name: episode.show.name,
+                publisher: episode.show.publisher
+            }
         }));
     }
 

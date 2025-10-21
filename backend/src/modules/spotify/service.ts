@@ -2,11 +2,15 @@ import { BaseModule } from '../_base/BaseModule';
 import { SpotifyApiService } from './SpotifyApiService';
 import spotifyConfig from './config';
 import { 
-    OnNewFollowedShowTrigger, 
+    OnNewFollowedShowTrigger,
     OnNewSavedEpisodeTrigger,
     OnNewSavedTrackTrigger,
     OnNewShowFromSearchTrigger,
-    OnNewRecentlyPlayedTrackTrigger
+    OnNewRecentlyPlayedTrackTrigger,
+    OnNewSavedAlbumTrigger,
+    OnNewEpisodeFromFollowedShowTrigger,
+    OnNewEpisodeFromSearchTrigger,
+    OnNewTrackAddedToPlaylistTrigger
 } from './triggers/_index';
 import 'colors';
 
@@ -86,7 +90,11 @@ export class SpotifyModule extends BaseModule {
         this.registerTrigger(new OnNewSavedEpisodeTrigger(this));
         this.registerTrigger(new OnNewSavedTrackTrigger(this));
         this.registerTrigger(new OnNewShowFromSearchTrigger(this));
-        this.registerTrigger(new OnNewRecentlyPlayedTrackTrigger(this));            // Register actions here when implemented
+        this.registerTrigger(new OnNewRecentlyPlayedTrackTrigger(this));
+        this.registerTrigger(new OnNewSavedAlbumTrigger(this));
+        this.registerTrigger(new OnNewEpisodeFromFollowedShowTrigger(this));
+        this.registerTrigger(new OnNewEpisodeFromSearchTrigger(this));
+        this.registerTrigger(new OnNewTrackAddedToPlaylistTrigger(this));            // Register actions here when implemented
             // this.registerAction(new PausePlaybackAction());
 
             console.log('[Spotify] ✓ Module initialized successfully'.green.bold);
