@@ -25,8 +25,15 @@ export class GenerateText extends BaseAction {
     getConfigSchema(): any {
         return {
             type: 'object',
-            required: ['prompt'],
+            required: ['apiKey', 'prompt'],
             properties: {
+                apiKey: {
+                    type: 'string',
+                    title: 'OpenAI API Key',
+                    description: 'Your OpenAI API key (starts with sk-)',
+                    pattern: '^sk-',
+                    minLength: 20
+                },
                 prompt: {
                     type: 'string',
                     title: 'Prompt',

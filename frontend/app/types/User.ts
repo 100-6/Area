@@ -30,3 +30,15 @@ export interface ChangePasswordData {
   currentPassword: string
   newPassword: string
 }
+
+export interface AuthProviderInfo {
+  provider: string
+  displayName: string
+  icon: string
+  color?: string
+  description?: string
+  isConfigured: boolean
+  isConnected: boolean
+  isPrimary: boolean
+  connectedAt?: string | null
+}

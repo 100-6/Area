@@ -66,62 +66,125 @@ export const useServiceManagement = () => {
         return getFallbackServices()
       }
 
+      const connectionStatusResponse = await $fetch<{ services: any[] }>(`${backendUrl}/api/services/connected`, { headers }).catch(() => null)
+      const connectionStatusMap = new Map<string, boolean>()
+
+      if (connectionStatusResponse?.services?.length) {
+        connectionStatusResponse.services.forEach((service: any) => {
+          if (!service) return
+          const keys = [service.name, service.id, service.displayName]
+            .filter(Boolean)
+            .map((identifier: any) => identifier.toString().toLowerCase())
+
+          keys.forEach(key => {
+            if (key && !connectionStatusMap.has(key)) {
+              connectionStatusMap.set(key, !!service.connected)
+            }
+          })
+        })
+      }
+
       const modulesWithDetails = await Promise.all(
         modulesListResponse.modules.map(async (moduleInfo: any) => {
           try {
-            const moduleDetails = await $fetch(`${backendUrl}/api/modules/${moduleInfo.name}`, { headers })
-            return moduleDetails
-          } catch (error) {
-            return null
+            const detail = await $fetch(`${backendUrl}/api/modules/${moduleInfo.name}`, { headers })
+            return { summary: moduleInfo, detail }
+          } catch (_error) {
+            return { summary: moduleInfo, detail: null }
           }
         })
       )
 
-      const validModules = modulesWithDetails.filter(module => module?.success && module)
-
-      return transformBackendModulesToServices(validModules.map(m => m))
+      return transformBackendModulesToServices(modulesWithDetails, connectionStatusMap)
     } catch (error) {
       return getFallbackServices()
     }
   }
 
-  const transformBackendModulesToServices = (modules: any[]): Service[] => {
+  const transformBackendModulesToServices = (modules: Array<{ summary: any; detail: any }>, connectionStatusMap?: Map<string, boolean>): Service[] => {
 
     const categoryMapping: Record<string, Service['category']> = {
       'timer': 'automation',
       'console': 'development',
       'discord': 'communication',
       'openai': 'productivity',
-      'email': 'communication'
+      'email': 'communication',
+      'gmail': 'communication',
+      'google': 'communication',
+      'github': 'development',
+      'gitlab': 'development',
+      'dropbox': 'storage',
+      'telegram': 'communication'
     }
 
-    const iconMapping: Record<string, string> = {
+    const iconFallback: Record<string, string> = {
       'timer': 'i-heroicons-clock',
       'console': 'i-heroicons-computer-desktop',
       'discord': 'i-logos-discord-icon',
       'openai': 'i-logos-openai-icon',
-      'email': 'i-heroicons-envelope'
+      'email': 'i-heroicons-envelope',
+      'gmail': 'i-logos-google-gmail',
+      'google': 'i-logos-google-icon',
+      'github': 'i-logos-github-icon',
+      'gitlab': 'i-logos-gitlab',
+      'dropbox': 'i-logos-dropbox-icon',
+      'telegram': 'i-logos-telegram'
     }
 
-    return modules.map(moduleResponse => {
-      const module = moduleResponse.success ? moduleResponse : moduleResponse
+    const colorFallback: Record<string, string> = {
+      'discord': '#5865F2',
+      'gmail': '#DB4437',
+      'google': '#4285F4',
+      'github': '#24292F',
+      'gitlab': '#FC6D26',
+      'dropbox': '#0061FF',
+      'telegram': '#26A5E4'
+    }
 
+    const forcedOauthProviders = new Set(['gmail', 'google', 'discord', 'github', 'gitlab', 'dropbox', 'telegram'])
 
-      const moduleName = module.moduleName || module.name
+    return modules.map(({ summary, detail }) => {
+      const baseName = summary?.name || detail?.moduleName || detail?.name || ''
+      const normalizedName = baseName.toString().toLowerCase()
+
+      const authType = mapAuthType(summary?.authType || detail?.authType)
+      const requiresConnection = authType === 'oauth' || forcedOauthProviders.has(normalizedName)
+
+      const connectedKeys = [
+        normalizedName,
+        summary?.name?.toString().toLowerCase(),
+        detail?.moduleName?.toString().toLowerCase(),
+        summary?.id?.toString().toLowerCase()
+      ]
+      const isConnected = requiresConnection
+        ? connectedKeys.some(key => key && connectionStatusMap?.get(key) === true)
+        : true
+
+      const displayName = detail?.displayName || summary?.displayName || summary?.name || baseName
+      const description = detail?.description || summary?.description || ''
+      const color = detail?.color || summary?.color || colorFallback[normalizedName] || '#6B7280'
+      const iconUrl = detail?.iconUrl || summary?.iconUrl
+      const icon = iconFallback[normalizedName] || 'i-heroicons-cog'
+
       const service: Service = {
-        id: moduleName,
-        name: module.displayName || moduleName,
-        slug: moduleName,
-        description: module.description || '',
-        icon: iconMapping[moduleName] || 'i-heroicons-cog',
-        color: module.color || '#6B7280',
-        isActive: module.isActive !== false,
-        category: categoryMapping[moduleName] || 'other',
-        authType: mapAuthType(module.authType),
-        actions: transformBackendTriggers(module.triggers || []),
-        reactions: transformBackendActions(module.actions || [])
+        id: summary?.id || normalizedName,
+        name: displayName,
+        slug: normalizedName,
+        description,
+        icon,
+        iconUrl,
+        color,
+        isActive: summary?.isActive !== false,
+        category: categoryMapping[normalizedName] || 'other',
+        authType,
+        requiresConnection,
+        isConnected,
+        disabledReason: summary?.isActive === false
+          ? 'Service désactivé'
+          : (requiresConnection && !isConnected ? 'Connexion requise' : undefined),
+        actions: transformBackendTriggers(detail?.triggers || []),
+        reactions: transformBackendActions(detail?.actions || [])
       }
-
 
       return service
     })
@@ -139,8 +202,9 @@ export const useServiceManagement = () => {
 
   const transformBackendTriggers = (triggers: any[]): ServiceAction[] => {
     return triggers.map(trigger => {
+      const identifier = trigger.id || trigger.uuid || trigger.name
       const transformed = {
-        id: trigger.name,
+        id: identifier,
         name: trigger.description || trigger.displayName || trigger.name,
         description: trigger.description || '',
         parameters: transformConfigSchemaToParameters(trigger.configSchema),
@@ -152,8 +216,9 @@ export const useServiceManagement = () => {
 
   const transformBackendActions = (actions: any[]): ServiceReaction[] => {
     return actions.map(action => {
+      const identifier = action.id || action.uuid || action.name
       const transformed = {
-        id: action.name,
+        id: identifier,
         name: action.description || action.displayName || action.name,
         description: action.description || '',
         parameters: transformConfigSchemaToParameters(action.configSchema),
@@ -249,6 +314,8 @@ export const useServiceManagement = () => {
         isActive: true,
         category: 'automation',
         authType: 'none',
+        requiresConnection: false,
+        isConnected: true,
         actions: [
           {
             id: 'daily_at_time',
@@ -267,220 +334,6 @@ export const useServiceManagement = () => {
           }
         ],
         reactions: []
-<<<<<<< HEAD
-      },
-      {
-        id: 'console',
-        name: 'Console Logger',
-        slug: 'console',
-        description: 'Service pour logger des messages (ACTION)',
-        icon: 'i-heroicons-computer-desktop',
-        color: '#6C757D',
-        isActive: true,
-        category: 'development',
-        authType: 'none',
-        actions: [],
-        reactions: [
-          {
-            id: 'log',
-            name: 'Log dans la console',
-            description: 'Affiche un message dans la console du serveur',
-            parameters: [
-              {
-                name: 'message',
-                type: 'string',
-                required: true,
-                description: 'Le message à afficher',
-                placeholder: 'Hello from AREA!'
-              },
-              {
-                name: 'level',
-                type: 'select',
-                required: false,
-                description: 'Niveau de log',
-                options: ['info', 'warn', 'error', 'success']
-              }
-            ],
-            requiredData: []
-          }
-        ]
-      },
-      {
-        id: 'discord',
-        name: 'Discord',
-        slug: 'discord',
-        description: 'Bot Discord pour gérer serveurs et messages',
-        icon: 'i-logos-discord-icon',
-        color: '#5865F2',
-        isActive: true,
-        category: 'communication',
-        authType: 'oauth',
-        actions: [
-          {
-            id: 'on_message_created',
-            name: 'Nouveau message',
-            description: 'Se déclenche quand un nouveau message est créé dans un channel',
-            parameters: [
-              {
-                name: 'channelId',
-                type: 'string',
-                required: true,
-                description: 'ID du channel Discord à surveiller',
-                placeholder: '123456789012345678'
-              }
-            ],
-            triggers: ['message_created']
-          },
-          {
-            id: 'on_member_join',
-            name: 'Nouveau membre',
-            description: 'Se déclenche quand un nouveau membre rejoint le serveur',
-            parameters: [],
-            triggers: ['member_join']
-          },
-          {
-            id: 'on_reaction_added',
-            name: 'Réaction ajoutée',
-            description: 'Se déclenche quand une réaction est ajoutée à un message',
-            parameters: [
-              {
-                name: 'channelId',
-                type: 'string',
-                required: true,
-                description: 'ID du channel Discord à surveiller',
-                placeholder: '123456789012345678'
-              },
-              {
-                name: 'emoji',
-                type: 'string',
-                required: false,
-                description: 'Emoji spécifique à surveiller (optionnel)',
-                placeholder: '👍'
-              }
-            ],
-            triggers: ['reaction_added']
-          }
-        ],
-        reactions: [
-          {
-            id: 'send_message',
-            name: 'Envoyer un message',
-            description: 'Envoie un message dans un channel Discord',
-            parameters: [
-              {
-                name: 'channelId',
-                type: 'string',
-                required: true,
-                description: 'ID du channel Discord où envoyer le message',
-                placeholder: '123456789012345678'
-              },
-              {
-                name: 'content',
-                type: 'string',
-                required: true,
-                description: 'Le message à envoyer',
-                placeholder: 'Hello from AREA!'
-              }
-            ],
-            requiredData: []
-          },
-          {
-            id: 'add_role',
-            name: 'Ajouter un rôle',
-            description: 'Ajoute un rôle à un utilisateur',
-            parameters: [
-              {
-                name: 'guildId',
-                type: 'string',
-                required: true,
-                description: 'ID du serveur Discord',
-                placeholder: '123456789012345678'
-              },
-              {
-                name: 'userId',
-                type: 'string',
-                required: true,
-                description: 'ID de l\'utilisateur Discord',
-                placeholder: '123456789012345678'
-              },
-              {
-                name: 'roleId',
-                type: 'string',
-                required: true,
-                description: 'ID du rôle à ajouter',
-                placeholder: '123456789012345678'
-              }
-            ],
-            requiredData: []
-          },
-          {
-            id: 'kick_member',
-            name: 'Expulser un membre',
-            description: 'Expulse un membre du serveur Discord',
-            parameters: [
-              {
-                name: 'guildId',
-                type: 'string',
-                required: true,
-                description: 'ID du serveur Discord',
-                placeholder: '123456789012345678'
-              },
-              {
-                name: 'userId',
-                type: 'string',
-                required: true,
-                description: 'ID de l\'utilisateur à expulser',
-                placeholder: '123456789012345678'
-              },
-              {
-                name: 'reason',
-                type: 'string',
-                required: false,
-                description: 'Raison de l\'expulsion (optionnel)',
-                placeholder: 'Violation des règles'
-              }
-            ],
-            requiredData: []
-          },
-          {
-            id: 'send_webhook_message',
-            name: 'Envoyer un message via webhook',
-            description: 'Envoie un message dans un channel Discord via webhook (sans bot)',
-            parameters: [
-              {
-                name: 'webhookUrl',
-                type: 'string',
-                required: true,
-                description: 'URL du webhook Discord',
-                placeholder: 'https://discord.com/api/webhooks/...'
-              },
-              {
-                name: 'content',
-                type: 'string',
-                required: true,
-                description: 'Le message à envoyer',
-                placeholder: 'Hello from AREA!'
-              },
-              {
-                name: 'username',
-                type: 'string',
-                required: false,
-                description: 'Nom d\'utilisateur personnalisé (optionnel)',
-                placeholder: 'AREA Bot'
-              },
-              {
-                name: 'avatarUrl',
-                type: 'string',
-                required: false,
-                description: 'URL de l\'avatar personnalisé (optionnel)',
-                placeholder: 'https://...'
-              }
-            ],
-            requiredData: []
-          }
-        ]
-=======
->>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
       }
     ]
   }

@@ -132,6 +132,7 @@ export class WorkflowExecutor {
                 executionId: `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 previousOutputs: outputsMap
             };
+            console.log(`[WorkflowExecutor] Context triggerData:`.yellow, JSON.stringify(context.triggerData, null, 2));
             return await action.execute(actionNode.config, context);
         } catch (error) {
             console.error('[WorkflowExecutor] Action failed:'.red, error);

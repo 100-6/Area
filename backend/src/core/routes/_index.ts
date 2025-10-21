@@ -11,8 +11,12 @@ import discordRoutes from '../../modules/discord/routes';
 import gmailRoutes from '../../modules/gmail/routes';
 import outlookRoutes from '../../modules/outlook/routes';
 import telegramRoutes from '../../modules/telegram/routes';
+import webhookRoutes from '../../modules/webhook/routes';
 
 const router = Router();
+
+// Public routes (no authentication required)
+router.use('/webhook', webhookRoutes);
 
 router.use('/', systemRoutes);
 

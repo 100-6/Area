@@ -71,11 +71,11 @@
 
             <UButton
               variant="outline"
-              icon="i-heroicons-view-columns"
               @click="resetCanvas"
               style="background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); padding: 0.5rem 1rem; border-radius: 0.5rem; transition: all 0.2s ease;"
               class="hover:shadow-sm hover:bg-gray-50"
             >
+              <UIcon name="i-heroicons-arrows-pointing-in" class="w-4 h-4 mr-2" />
               Centrer
             </UButton>
 
@@ -131,6 +131,8 @@
             @update-position="updateBlockPosition"
             @delete="() => deleteBlock(block.id)"
             @configure="() => handleBlockConfigure(block.id)"
+            @connection-drag-start="handleConnectionDragStart"
+            @connection-drop="handleConnectionDragEnd"
           />
 
           <!-- Connection lines -->
@@ -150,6 +152,8 @@
                 />
               </marker>
             </defs>
+
+            <!-- Existing connections -->
             <path
               v-for="connection in connections"
               :key="`${connection.from}-${connection.to}`"
@@ -159,6 +163,18 @@
               fill="none"
               class="connection-line"
               marker-end="url(#arrowhead)"
+              @mousedown.prevent.stop="startExistingConnectionDrag(connection, $event)"
+            />
+
+            <!-- Preview connection line during drag -->
+            <path
+              v-if="isDraggingConnection && draggedConnection"
+              :d="getPreviewConnectionPath()"
+              stroke="#10b981"
+              stroke-width="3"
+              fill="none"
+              class="connection-preview"
+              stroke-dasharray="8,4"
             />
           </svg>
 
@@ -313,10 +329,14 @@ const {
   addServiceBlock,
   updateBlockPosition,
   deleteBlock,
+  addConnection,
+  removeConnection,
   configureBlock,
   updateBlockConfiguration,
+  updateBlockConfig,
   getBlockConnectionState,
   getConnectionPath,
+  getConnectionPointPosition,
   saveWorkflow,
   loadWorkflow
 } = useWorkflowManagement(canvas, zoom)
@@ -349,6 +369,18 @@ const showSaveModal = ref(false)
 const workflowName = ref('')
 const workflowDescription = ref('')
 const nameError = ref('')
+
+// Connection drag state
+const isDraggingConnection = ref(false)
+const draggedConnection = ref<{
+  sourceBlockId: string
+  sourceType: 'input' | 'output'
+  startPosition: { x: number; y: number }
+  existingConnection?: { from: string; to: string }
+} | null>(null)
+const currentMousePosition = ref({ x: 0, y: 0 })
+const hoveredConnectionTarget = ref<{ blockId: string; type: 'input' | 'output' } | null>(null)
+const connectionDragHasMoved = ref(false)
 
 const { getAreaById } = useDashboard()
 
@@ -436,12 +468,7 @@ const handleServiceSelected = (service: Service) => {
   const position = getNewBlockPosition()
 
   selectServiceWithConfiguration(service, blockType, (config) => {
-<<<<<<< HEAD
-    console.log('Adding service block with configuration at position:', position)
-    addServiceBlock(config, position)
-=======
     addServiceBlock(config, position, blockType)
->>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
   })
 }
 
@@ -459,13 +486,273 @@ const handleBlockConfigure = async (blockId: string) => {
         configInfo.blockType,
         configInfo.currentConfig,
         (newConfig: ServiceConfiguration) => {
-          updateBlockConfiguration(blockId, newConfig)
+          // Utiliser la nouvelle fonction updateBlockConfig qui sauvegarde aussi sur le backend
+          updateBlockConfig(blockId, newConfig)
         }
       )
     }
   } catch (error) {
     console.error('Failed to configure block:', error)
   }
+}
+
+const getConnectionPointOrFallback = (blockId: string, isOutput: boolean) => {
+  const resolvedPoint = getConnectionPointPosition(blockId, isOutput)
+  if (resolvedPoint) {
+    return resolvedPoint
+  }
+
+  const block = workflowBlocks.value.find(b => b.id === blockId)
+  if (!block) {
+    return { x: 0, y: 0 }
+  }
+
+  const CARD_WIDTH = 280
+  const CARD_HEIGHT = 180
+  const HORIZONTAL_OFFSET = 20
+  const VERTICAL_OFFSET = 20
+
+  const x = isOutput
+    ? block.position.x + CARD_WIDTH + 6 + HORIZONTAL_OFFSET
+    : block.position.x - 6
+
+  const y = block.position.y + CARD_HEIGHT / 2 + VERTICAL_OFFSET
+
+  return { x, y }
+}
+
+// Connection drag handlers
+const handleConnectionDragStart = (blockId: string, connectionType: 'input' | 'output', position: { x: number; y: number }) => {
+  isDraggingConnection.value = true
+  draggedConnection.value = {
+    sourceBlockId: blockId,
+    sourceType: connectionType,
+    startPosition: position
+  }
+
+  // Initialize mouse position
+  currentMousePosition.value = { ...position }
+  hoveredConnectionTarget.value = null
+  connectionDragHasMoved.value = false
+
+  // Add mouse move listener for visual feedback
+  document.addEventListener('mousemove', updateConnectionPreview)
+  document.addEventListener('mouseup', cancelConnectionDrag)
+
+  // Visual feedback
+  document.body.style.cursor = 'crosshair'
+  console.log(`Started dragging ${connectionType} from block ${blockId} at position:`, position)
+}
+
+const startExistingConnectionDrag = (connection: { from: string; to: string }, event: MouseEvent) => {
+  if (event.button !== 0) {
+    return
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  const startPosition = getConnectionPointOrFallback(connection.from, true)
+  const endPosition = getConnectionPointOrFallback(connection.to, false)
+
+  removeConnection(connection.from, connection.to)
+
+  isDraggingConnection.value = true
+  draggedConnection.value = {
+    sourceBlockId: connection.from,
+    sourceType: 'output',
+    startPosition,
+    existingConnection: { from: connection.from, to: connection.to }
+  }
+
+  currentMousePosition.value = { ...endPosition }
+  hoveredConnectionTarget.value = null
+  connectionDragHasMoved.value = false
+
+  document.addEventListener('mousemove', updateConnectionPreview)
+  document.addEventListener('mouseup', cancelConnectionDrag)
+
+  document.body.style.cursor = 'crosshair'
+}
+
+const handleConnectionDragEnd = (blockId: string, connectionType: 'input' | 'output', event: MouseEvent) => {
+  if (!isDraggingConnection.value || !draggedConnection.value) {
+    return
+  }
+
+  const sourceBlockId = draggedConnection.value.sourceBlockId
+  const sourceType = draggedConnection.value.sourceType
+
+  // Ne pas créer de connexion si c'est la même node
+  if (sourceBlockId === blockId) {
+    resetConnectionDrag()
+    return
+  }
+
+  // Logique de création de connexion
+  if (sourceType === 'output' && connectionType === 'input') {
+    // Connexion valide : output source → input target
+    createConnection(sourceBlockId, blockId, sourceType)
+  } else if (sourceType === 'input' && connectionType === 'output') {
+    // Connexion valide : output target ← input source (inverser)
+    createConnection(sourceBlockId, blockId, sourceType)
+  } else {
+    console.log('Invalid connection: cannot connect same types')
+  }
+
+  resetConnectionDrag()
+}
+
+// Update connection preview during drag
+const updateConnectionPreview = (event: MouseEvent) => {
+  if (!isDraggingConnection.value || !draggedConnection.value) return
+
+  // Convert screen coordinates to canvas coordinates
+  const canvasRect = canvas.value?.getBoundingClientRect()
+  if (!canvasRect) return
+
+  // Get mouse position relative to the transformed canvas element
+  const mouseX = event.clientX - canvasRect.left
+  const mouseY = event.clientY - canvasRect.top
+
+  const targetElement = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null
+  const targetCard = targetElement?.closest('[data-block-id]') as HTMLElement | null
+
+  if (targetCard) {
+    const targetBlockId = targetCard.dataset.blockId
+    const isSameBlock = targetBlockId === draggedConnection.value.sourceBlockId
+
+    if (!isSameBlock) {
+      const connectorSelector = draggedConnection.value.sourceType === 'output'
+        ? '.connection-input'
+        : '.connection-output'
+
+      const targetConnector = targetCard.querySelector(connectorSelector) as HTMLElement | null
+
+      if (targetConnector) {
+        const connectorRect = targetConnector.getBoundingClientRect()
+        currentMousePosition.value = {
+          x: (connectorRect.left + connectorRect.width / 2 - canvasRect.left) / zoom.value,
+          y: (connectorRect.top + connectorRect.height / 2 - canvasRect.top) / zoom.value
+        }
+        if (targetBlockId) {
+          hoveredConnectionTarget.value = {
+            blockId: targetBlockId,
+            type: connectorSelector.includes('input') ? 'input' : 'output'
+          }
+        }
+        if (draggedConnection.value) {
+          const deltaX = currentMousePosition.value.x - draggedConnection.value.startPosition.x
+          const deltaY = currentMousePosition.value.y - draggedConnection.value.startPosition.y
+          if (!connectionDragHasMoved.value && Math.hypot(deltaX, deltaY) > 4) {
+            connectionDragHasMoved.value = true
+          }
+        }
+        return
+      }
+    }
+  }
+
+  currentMousePosition.value = {
+    x: mouseX / zoom.value,
+    y: mouseY / zoom.value
+  }
+  hoveredConnectionTarget.value = null
+
+  if (draggedConnection.value) {
+    const deltaX = currentMousePosition.value.x - draggedConnection.value.startPosition.x
+    const deltaY = currentMousePosition.value.y - draggedConnection.value.startPosition.y
+    if (!connectionDragHasMoved.value && Math.hypot(deltaX, deltaY) > 4) {
+      connectionDragHasMoved.value = true
+    }
+  }
+
+}
+
+// Cancel connection drag if mouse up outside of any connection point
+const cancelConnectionDrag = (event: MouseEvent) => {
+  if (!isDraggingConnection.value || !draggedConnection.value) {
+    return
+  }
+
+  const sourceBlockId = draggedConnection.value.sourceBlockId
+  const sourceType = draggedConnection.value.sourceType
+  const targetElement = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null
+
+  if (targetElement && targetElement.closest('.connection-point')) {
+    return
+  }
+
+  let dropHandled = false
+
+  if (targetElement) {
+    const cardElement = targetElement.closest('[data-block-id]') as HTMLElement | null
+    const targetBlockId = cardElement?.dataset.blockId
+
+    if (targetBlockId && targetBlockId !== sourceBlockId) {
+      createConnection(sourceBlockId, targetBlockId, sourceType)
+      dropHandled = true
+    }
+  }
+
+  if (!dropHandled && hoveredConnectionTarget.value) {
+    const targetBlockId = hoveredConnectionTarget.value.blockId
+    if (targetBlockId && targetBlockId !== sourceBlockId) {
+      createConnection(sourceBlockId, targetBlockId, sourceType)
+      dropHandled = true
+    }
+  }
+
+  if (!dropHandled && draggedConnection.value.existingConnection && !connectionDragHasMoved.value) {
+    const original = draggedConnection.value.existingConnection
+    addConnection(original.from, original.to)
+    dropHandled = true
+  }
+
+  resetConnectionDrag()
+}
+
+const createConnection = (sourceBlockId: string, targetBlockId: string, sourceType: 'input' | 'output') => {
+  const fromBlockId = sourceType === 'output' ? sourceBlockId : targetBlockId
+  const toBlockId = sourceType === 'output' ? targetBlockId : sourceBlockId
+
+  const newConnection = addConnection(fromBlockId, toBlockId)
+
+  if (!newConnection) {
+    console.log('Connection already exists')
+    return
+  }
+
+  console.log(`Created connection from ${fromBlockId} to ${toBlockId}`)
+}
+
+// Generate preview connection path for visual feedback
+const getPreviewConnectionPath = () => {
+  if (!draggedConnection.value) return ''
+
+  const start = draggedConnection.value.startPosition
+  const end = currentMousePosition.value
+
+  // Use similar curve logic as existing connections
+  const dx = end.x - start.x
+  const controlOffset = Math.max(50, Math.abs(dx) * 0.3)
+
+  const controlPoint1X = start.x + controlOffset
+  const controlPoint2X = end.x - controlOffset
+
+  return `M ${start.x} ${start.y} C ${controlPoint1X} ${start.y}, ${controlPoint2X} ${end.y}, ${end.x} ${end.y}`
+}
+
+const resetConnectionDrag = () => {
+  isDraggingConnection.value = false
+  draggedConnection.value = null
+  document.body.style.cursor = ''
+  hoveredConnectionTarget.value = null
+  connectionDragHasMoved.value = false
+
+  // Remove event listeners
+  document.removeEventListener('mousemove', updateConnectionPreview)
+  document.removeEventListener('mouseup', cancelConnectionDrag)
 }
 
 const closeSaveModal = () => {
@@ -511,6 +798,12 @@ onMounted(() => {
     error.value = 'ID de workflow manquant'
     isLoading.value = false
   }
+})
+
+onUnmounted(() => {
+  // Clean up connection drag event listeners
+  document.removeEventListener('mousemove', updateConnectionPreview)
+  document.removeEventListener('mouseup', cancelConnectionDrag)
 })
 
 useHead({
@@ -604,6 +897,20 @@ useHead({
 .connection-line:hover {
   stroke-width: 3;
   filter: drop-shadow(0 0 8px var(--color-primary));
+}
+
+.connection-preview {
+  animation: pulse-connection 1.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px #10b981);
+}
+
+@keyframes pulse-connection {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .zoom-controls {

@@ -12,8 +12,9 @@
   >
     <!-- Carte normale -->
     <div v-if="!isEmpty" class="p-8 rounded-2xl border backdrop-blur-sm transition-all duration-500 hover:shadow-2xl hover:scale-105"
-         :class="{ 'cursor-grab': canvasMode }"
-         style="background: var(--bg-card); border-color: var(--border-color); box-shadow: var(--shadow-lg);">
+         :class="{ 'cursor-grab': canvasMode, 'cursor-pointer': canvasMode }"
+         style="background: var(--bg-card); border-color: var(--border-color); box-shadow: var(--shadow-lg);"
+         @click="canvasMode ? handleCardClick($event) : undefined">
 
       <!-- Badge numéroté -->
       <div class="absolute -top-3 -left-3 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white"
@@ -46,12 +47,21 @@
       </div>
 
       <!-- Actions pour le mode canvas -->
-      <div v-if="canvasMode" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div v-if="canvasMode" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
         <UButton
           variant="ghost"
           size="sm"
-          icon="i-heroicons-ellipsis-horizontal"
-          @click.stop="() => emit('configure', blockId)"
+          icon="i-heroicons-x-mark"
+          @click.stop="() => emit('delete', blockId)"
+          class="delete-button"
+          :ui="{
+            color: {
+              red: {
+                ghost: 'text-red-500 hover:text-red-600 hover:bg-red-50'
+              }
+            }
+          }"
+          color="red"
         />
       </div>
     </div>
@@ -84,10 +94,19 @@
 
     <!-- Connection points pour le mode canvas -->
     <div v-if="canvasMode && !isEmpty" class="connection-points">
-      <div v-if="step > 1" class="connection-point connection-input">
+      <div
+        v-if="step > 1"
+        class="connection-point connection-input"
+        @mousedown="startConnectionDrag($event, 'input')"
+        @mouseup="handleConnectionDrop($event, 'input')"
+      >
         <div class="connection-dot" :class="{ 'connection-dot-connected': hasInputConnection }"></div>
       </div>
-      <div class="connection-point connection-output">
+      <div
+        class="connection-point connection-output"
+        @mousedown="startConnectionDrag($event, 'output')"
+        @mouseup="handleConnectionDrop($event, 'output')"
+      >
         <div class="connection-dot" :class="{ 'connection-dot-connected': hasOutputConnection }"></div>
       </div>
     </div>
@@ -136,6 +155,8 @@ interface Emits {
   (e: 'delete', blockId: string): void
   (e: 'configure', blockId: string): void
   (e: 'add-service'): void
+  (e: 'connection-drag-start', blockId: string, connectionType: 'input' | 'output', position: { x: number; y: number }): void
+  (e: 'connection-drop', blockId: string, connectionType: 'input' | 'output', event: MouseEvent): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -161,6 +182,7 @@ const emit = defineEmits<Emits>()
 // Drag state pour le mode canvas
 const cardElement = ref<HTMLElement>()
 const isDragging = ref(false)
+const hasDragged = ref(false)
 const dragStart = ref({ x: 0, y: 0 })
 const dragOffset = ref({ x: 0, y: 0 })
 
@@ -177,6 +199,24 @@ const cardStyle = computed(() => {
 })
 
 // Drag methods pour le mode canvas
+const handleCardClick = (event: MouseEvent) => {
+  if (!props.canvasMode || props.isEmpty) return
+
+  // Don't emit configure if clicking on interactive elements (buttons)
+  const target = event.target as HTMLElement
+  if (target.closest('button, [role="button"]')) {
+    return
+  }
+
+  // Don't emit configure if this was a drag operation
+  if (hasDragged.value) {
+    hasDragged.value = false
+    return
+  }
+
+  emit('configure', props.blockId)
+}
+
 const startDrag = (event: MouseEvent) => {
   if (!props.canvasMode || props.isEmpty) return
 
@@ -187,6 +227,7 @@ const startDrag = (event: MouseEvent) => {
   }
 
   isDragging.value = true
+  hasDragged.value = false
 
   const rect = cardElement.value!.getBoundingClientRect()
   const canvasRect = cardElement.value!.closest('.canvas')!.getBoundingClientRect()
@@ -215,6 +256,11 @@ const handleDrag = (event: MouseEvent) => {
   const deltaX = (event.clientX - dragStart.value.x) / props.zoom
   const deltaY = (event.clientY - dragStart.value.y) / props.zoom
 
+  // Mark that we have actually dragged (movement threshold)
+  if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+    hasDragged.value = true
+  }
+
   const newPosition = {
     x: dragOffset.value.x + deltaX,
     y: dragOffset.value.y + deltaY
@@ -234,6 +280,31 @@ const endDrag = () => {
 }
 
 const duplicateStep = () => {
+}
+
+// Connection drag handlers
+const startConnectionDrag = (event: MouseEvent, connectionType: 'input' | 'output') => {
+  event.stopPropagation() // Empêcher le drag de la carte
+
+  // Calculer la position du point de connexion dans les coordonnées du canvas
+  const cardRect = cardElement.value!.getBoundingClientRect()
+  const canvasRect = cardElement.value!.closest('.canvas')!.getBoundingClientRect()
+
+  const connectionPointX = connectionType === 'input'
+    ? (cardRect.left - canvasRect.left) / props.zoom
+    : (cardRect.right - canvasRect.left) / props.zoom
+
+  const connectionPointY = (cardRect.top + cardRect.height / 2 - canvasRect.top) / props.zoom
+
+  emit('connection-drag-start', props.blockId, connectionType, {
+    x: connectionPointX,
+    y: connectionPointY
+  })
+}
+
+const handleConnectionDrop = (event: MouseEvent, connectionType: 'input' | 'output') => {
+  event.stopPropagation()
+  emit('connection-drop', props.blockId, connectionType, event)
 }
 
 // Cleanup
@@ -273,7 +344,15 @@ onUnmounted(() => {
   border: 2px solid var(--color-primary);
   border-radius: 50%;
   z-index: 10;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: crosshair;
+  transition: all 0.2s ease;
+}
+
+.connection-point:hover {
+  transform: scale(1.2);
+  border-width: 3px;
+  box-shadow: 0 0 8px rgba(167, 240, 186, 0.6);
 }
 
 .connection-input {
@@ -299,5 +378,22 @@ onUnmounted(() => {
 
 .connection-dot-connected {
   transform: scale(1) !important;
+}
+
+/* Style pour le bouton de suppression */
+.delete-button {
+  transition: all 0.2s ease;
+  border-radius: 50%;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.delete-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
 }
 </style>

@@ -5,7 +5,6 @@ export interface WorkflowBlockData {
   service: Service
   position: { x: number; y: number }
   type: 'trigger' | 'action'
-  // Backend integration fields
   serviceId?: string
   actionId?: string
   reactionId?: string
@@ -16,25 +15,25 @@ export interface WorkflowBlockData {
 export interface Connection {
   from: string
   to: string
-  // Backend integration fields
   id?: string
   condition?: Record<string, any>
 }
 
-/**
- * Workflow blocks and connections management with automatic SVG path generation
- */
 export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom: Ref<number>) => {
   const workflowBlocks = ref<WorkflowBlockData[]>([])
   const connections = ref<Connection[]>([])
 
-  // Backend integration
   const workflowApi = useWorkflowApi()
   const currentAreaId = ref<string | null>(null)
   const isSaving = ref(false)
   const saveError = ref<string | null>(null)
+
+  const isUuid = (value?: string | null): boolean => {
+    if (!value)
+      return false
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  }
   
-  // Plus besoin de mapping UUID - on utilise directement les noms de services
 
   watch(zoom, () => {
     nextTick(() => {
@@ -56,13 +55,11 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
   })
 
-  const addServiceBlock = (config: ServiceConfiguration, position?: { x: number; y: number }) => {
+  const addServiceBlock = (config: ServiceConfiguration, position?: { x: number; y: number }, blockType?: 'trigger' | 'action') => {
     let newPosition
     if (position) {
-      // Use provided position (from add button location)
       newPosition = position
     } else if (workflowBlocks.value.length === 0) {
-      // First block: use fixed, predictable position at canvas center
       newPosition = { x: 2500, y: 2500 }
     } else {
       const lastBlock = workflowBlocks.value[workflowBlocks.value.length - 1]
@@ -72,15 +69,14 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       }
     }
 
-    const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
+    const finalBlockType = blockType || (workflowBlocks.value.length === 0 ? 'trigger' : 'action')
 
-    // Use configuration from the modal
     let actionId: string | undefined
     let reactionId: string | undefined
 
-    if (blockType === 'trigger' && config.selectedAction) {
+    if (finalBlockType === 'trigger' && config.selectedAction) {
       actionId = config.selectedAction.id
-    } else if (blockType === 'action' && config.selectedReaction) {
+    } else if (finalBlockType === 'action' && config.selectedReaction) {
       reactionId = config.selectedReaction.id
     }
 
@@ -88,7 +84,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       service: config.service,
       position: newPosition,
-      type: blockType,
+      type: finalBlockType,
       serviceId: config.service.id,
       actionId,
       reactionId,
@@ -98,17 +94,61 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
 
     workflowBlocks.value.push(newBlock)
 
-    if (workflowBlocks.value.length > 1) {
-      const previousBlock = workflowBlocks.value[workflowBlocks.value.length - 2]
-      connections.value.push({
-        from: previousBlock.id,
-        to: newBlock.id
-      })
-    }
+    // Connexions manuelles désormais - pas de création automatique
+    // if (workflowBlocks.value.length > 1) {
+    //   const previousBlock = workflowBlocks.value[workflowBlocks.value.length - 2]
+    //   const newConnection = {
+    //     from: previousBlock.id,
+    //     to: newBlock.id
+    //   }
+    //   connections.value.push(newConnection)
+    // }
 
     nextTick(() => {
       connections.value = [...connections.value]
     })
+  }
+
+  const generateConnectionId = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID()
+    }
+
+    return `conn-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  }
+
+  const addConnection = (fromBlockId: string, toBlockId: string) => {
+    if (!fromBlockId || !toBlockId || fromBlockId === toBlockId) {
+      return null
+    }
+
+    const existingConnection = connections.value.find(connection =>
+      connection.from === fromBlockId && connection.to === toBlockId
+    )
+
+    if (existingConnection) {
+      return existingConnection
+    }
+
+    const newConnection: Connection = {
+      from: fromBlockId,
+      to: toBlockId,
+      id: generateConnectionId()
+    }
+
+    connections.value.push(newConnection)
+    connections.value = [...connections.value]
+
+    return newConnection
+  }
+
+  const removeConnection = (fromBlockId: string, toBlockId: string) => {
+    const initialLength = connections.value.length
+    connections.value = connections.value.filter(connection =>
+      !(connection.from === fromBlockId && connection.to === toBlockId)
+    )
+
+    return connections.value.length !== initialLength
   }
 
   const updateBlockPosition = (blockId: string, newPosition: { x: number; y: number }) => {
@@ -118,84 +158,125 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
   }
 
+  // Fonction pour compter les nodes qui seront supprimées en cascade
+  const countNodesForDeletion = (nodeId: string, visited = new Set<string>()): number => {
+    if (visited.has(nodeId)) {
+      return 0
+    }
+    visited.add(nodeId)
+
+    let count = 1 // La node actuelle
+
+    // Trouver toutes les connexions sortantes de cette node (enfants)
+    const childConnections = connections.value.filter(c => c.from === nodeId)
+    const childNodeIds = childConnections.map(c => c.to)
+
+    // Compter récursivement toutes les nodes enfants
+    for (const childId of childNodeIds) {
+      count += countNodesForDeletion(childId, visited)
+    }
+
+    return count
+  }
+
   const deleteBlock = (blockId: string) => {
-    workflowBlocks.value = workflowBlocks.value.filter(b => b.id !== blockId)
-    connections.value = connections.value.filter(c => c.from !== blockId && c.to !== blockId)
+    // Compter le nombre de nodes qui seront supprimées
+    const nodeCount = countNodesForDeletion(blockId)
+
+    if (nodeCount > 1) {
+      const blockName = workflowBlocks.value.find(b => b.id === blockId)?.service.name || 'cette node'
+      console.log(`[WorkflowManagement] Suppression en cascade de ${nodeCount} nodes à partir de ${blockName}`)
+    }
+
+    // Fonction récursive pour supprimer une node et toutes ses nodes enfants (vers la droite)
+    const deleteNodeAndChildren = (nodeId: string, visited = new Set<string>()): void => {
+      // Éviter les cycles infinis
+      if (visited.has(nodeId)) {
+        return
+      }
+      visited.add(nodeId)
+
+      // Trouver toutes les connexions sortantes de cette node (enfants)
+      const childConnections = connections.value.filter(c => c.from === nodeId)
+      const childNodeIds = childConnections.map(c => c.to)
+
+      // Supprimer récursivement toutes les nodes enfants
+      for (const childId of childNodeIds) {
+        deleteNodeAndChildren(childId, visited)
+      }
+
+      // Supprimer la node actuelle
+      workflowBlocks.value = workflowBlocks.value.filter(b => b.id !== nodeId)
+
+      // Supprimer toutes les connexions liées à cette node (entrantes et sortantes)
+      connections.value = connections.value.filter(c => c.from !== nodeId && c.to !== nodeId)
+    }
+
+    // Démarrer la suppression en cascade
+    deleteNodeAndChildren(blockId)
   }
 
   const configureBlock = async (blockId: string, onConfigurationChanged?: (config: ServiceConfiguration) => void) => {
     const block = workflowBlocks.value.find(b => b.id === blockId)
     if (!block) {
-      console.warn('Block not found for configuration:', blockId)
       return null
     }
 
-    // Rafraîchir les données depuis le backend
-    console.log('configureBlock - currentAreaId:', currentAreaId.value)
     if (currentAreaId.value) {
-      console.log('Refreshing block data from backend for block:', blockId)
       try {
         await refreshBlockFromBackend(blockId)
-      } catch (error) {
-        console.warn('Failed to refresh block from backend:', error)
-        // Continue avec les données actuelles si le rafraîchissement échoue
+      } catch (_error) {
       }
-    } else {
-      console.warn('No currentAreaId available, skipping backend refresh. This might be expected for new workflows.')
     }
 
-    // Récupérer le bloc mis à jour - assurer la réactivité
     const refreshedBlock = workflowBlocks.value.find(b => b.id === blockId) || block
 
-<<<<<<< HEAD
-    console.log('Configuring block after refresh:', blockId, 'Config:', refreshedBlock.config)
-    console.log('Block details:', {
-      serviceId: refreshedBlock.serviceId,
-      actionId: refreshedBlock.actionId,
-      reactionId: refreshedBlock.reactionId,
-      type: refreshedBlock.type,
-      configKeys: Object.keys(refreshedBlock.config || {}),
-      configValues: refreshedBlock.config
-    })
-=======
     const serviceName = refreshedBlock.serviceName || block.service.name || block.service
     const resolvedService = await resolveService(serviceName)
     if (!resolvedService) {
-      console.error('Cannot resolve service:', serviceName)
       return
     }
->>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
 
-    // Trouver l'action ou réaction correspondante
+    let nodeDetails: any = null
+    if (isUuid(refreshedBlock.id)) {
+      try {
+        nodeDetails = await workflowApi.getModuleDetails(refreshedBlock.id)
+      } catch (_error) {
+        nodeDetails = null
+      }
+    }
+
     let selectedAction: any = undefined
     let selectedReaction: any = undefined
 
     if (refreshedBlock.type === 'trigger' && refreshedBlock.actionId) {
-      selectedAction = refreshedBlock.service.actions.find(a => a.id === refreshedBlock.actionId)
-      console.log('Found selected action:', selectedAction)
+      selectedAction = resolvedService.actions.find(a => a.id === refreshedBlock.actionId)
+      if (!selectedAction && nodeDetails?.triggerName) {
+        selectedAction = resolvedService.actions.find(a => a.id === nodeDetails.triggerName)
+      }
+      if (!selectedAction && nodeDetails?.actionName) {
+        selectedAction = resolvedService.actions.find(a => a.id === nodeDetails.actionName)
+      }
     } else if (refreshedBlock.type === 'action' && refreshedBlock.reactionId) {
-      selectedReaction = refreshedBlock.service.reactions.find(r => r.id === refreshedBlock.reactionId)
-      console.log('Found selected reaction:', selectedReaction)
+      selectedReaction = resolvedService.reactions.find(r => r.id === refreshedBlock.reactionId)
+      if (!selectedReaction && nodeDetails?.actionName) {
+        selectedReaction = resolvedService.reactions.find(r => r.id === nodeDetails.actionName)
+      }
+      if (!selectedReaction && nodeDetails?.triggerName) {
+        selectedReaction = resolvedService.reactions.find(r => r.id === nodeDetails.triggerName)
+      }
     }
 
-    // Créer la configuration finale
     const finalConfig = {
-      service: refreshedBlock.service,
+      service: resolvedService,
       selectedAction,
       selectedReaction,
-      parameters: { ...(refreshedBlock.config || {}) }
+      parameters: { ...(nodeDetails?.currentConfig || refreshedBlock.config || {}) }
     } as ServiceConfiguration
 
-    console.log('Final configuration being returned from configureBlock:', {
-      parameters: finalConfig.parameters,
-      selectedAction: finalConfig.selectedAction,
-      selectedReaction: finalConfig.selectedReaction
-    })
-
-    // Retourner les informations nécessaires pour ouvrir le modal de configuration
     return {
       blockId: refreshedBlock.id,
-      service: refreshedBlock.service,
+      service: resolvedService,
       blockType: refreshedBlock.type,
       currentConfig: finalConfig,
       onConfigurationChanged
@@ -203,25 +284,22 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
   }
 
   const refreshBlockFromBackend = async (blockId: string) => {
-    if (!currentAreaId.value) return
+    if (!currentAreaId.value) {
+      return
+    }
 
     try {
-      console.log('Fetching latest workflow data for block refresh...')
       const workflow = await workflowApi.getWorkflow(currentAreaId.value)
 
-      // Trouver le nœud correspondant dans le workflow backend
       const backendNode = workflow.nodes.find(node => node.id === blockId)
       if (!backendNode) {
-        console.warn('Block not found in backend workflow:', blockId)
         return
       }
 
-      // Mettre à jour le bloc local avec les données du backend
       const blockIndex = workflowBlocks.value.findIndex(b => b.id === blockId)
       if (blockIndex !== -1) {
         const currentBlock = workflowBlocks.value[blockIndex]
 
-        // Mettre à jour les paramètres de configuration avec les données du backend
         workflowBlocks.value[blockIndex] = {
           ...currentBlock,
           actionId: backendNode.actionId,
@@ -229,18 +307,8 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
           config: backendNode.config || {}
         }
 
-        console.log('Block refreshed from backend:', {
-          blockId,
-          actionId: backendNode.actionId,
-          reactionId: backendNode.reactionId,
-          config: backendNode.config,
-          fullBackendNode: backendNode
-        })
-
-        console.log('Updated frontend block:', workflowBlocks.value[blockIndex])
       }
     } catch (error) {
-      console.error('Failed to refresh block from backend:', error)
       throw error
     }
   }
@@ -251,7 +319,6 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       return
     }
 
-    // Mettre à jour la configuration du bloc
     if (config.selectedAction && block.type === 'trigger') {
       block.actionId = config.selectedAction.id
     } else if (config.selectedReaction && block.type === 'action') {
@@ -308,9 +375,6 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     return { x, y }
   }
 
-  /**
-   * Generate smooth bezier curve paths between workflow blocks
-   */
   const getConnectionPath = (connection: Connection) => {
     const fromBlock = workflowBlocks.value.find(b => b.id === connection.from)
     const toBlock = workflowBlocks.value.find(b => b.id === connection.to)
@@ -357,9 +421,6 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
   }
 
-  /**
-   * Save workflow to backend
-   */
   const saveWorkflow = async (areaData?: CreateAreaData) => {
     try {
       isSaving.value = true
@@ -370,7 +431,6 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       }
 
 
-      // Save to backend with current positions
       const result = await workflowApi.saveWorkflowToBackend(
         workflowBlocks.value,
         connections.value,
@@ -388,30 +448,20 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
   }
 
-<<<<<<< HEAD
-  /**
-   * Service mapping cache
-   */
-  const serviceMapping = ref<Map<string, Service>>(new Map())
-
   /**
    * Initialize service mapping - plus besoin avec les noms
    */
   const initializeServiceMapping = async () => {
-    console.log('[WorkflowManagement] Using service names directly - no UUID mapping needed')
+    // Using service names directly - no UUID mapping needed
   }
 
   /**
    * Resolve service identifier (name) to a frontend service object
    */
-  const resolveService = (serviceName: string): Service | null => {
-=======
   const resolveService = async (serviceName: string): Promise<Service | null> => {
->>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
     const { getAvailableServices } = useServiceManagement()
     const services = await getAvailableServices()
 
-    // Recherche directe par nom ou ID
     const service = services.find(s =>
       s.id === serviceName ||
       s.name?.toLowerCase() === serviceName.toLowerCase()
@@ -420,28 +470,15 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     return service || null
   }
 
-<<<<<<< HEAD
   /**
    * Map backend node to frontend block
    */
-  const mapBackendNodeToBlock = (node: BackendWorkflowNode): WorkflowBlockData | null => {
-    // Utiliser serviceName si disponible, sinon essayer de deviner le nom depuis l'UUID
-    let service: Service | null = null
-
-    if (node.serviceName) {
-      // Le backend a fourni le nom du service, on résout directement
-      service = resolveService(node.serviceName)
-    } else if (node.serviceId) {
-      // Plus besoin de mapping - le backend devrait toujours fournir serviceName maintenant
-      console.warn(`[WorkflowManagement] Node has serviceId but no serviceName - this should not happen with the updated backend:`, node.serviceId)
-=======
   const mapBackendNodeToBlock = async (node: BackendWorkflowNode): Promise<WorkflowBlockData | null> => {
     let service: Service | null = null
 
     if (node.serviceName) {
       service = await resolveService(node.serviceName)
     } else if (node.serviceId) {
->>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
       return null
     }
 
@@ -454,7 +491,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       service,
       position: { x: node.positionX, y: node.positionY },
       type: node.nodeType === 'trigger' ? 'trigger' : 'action',
-      serviceId: node.serviceId, // Garder l'UUID pour les sauvegardes
+      serviceId: node.serviceId,
       actionId: node.actionId,
       reactionId: node.reactionId,
       config: node.config,
@@ -462,9 +499,6 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
   }
 
-  /**
-   * Map backend connection to frontend connection
-   */
   const mapBackendConnectionToFrontend = (connection: BackendWorkflowConnection): Connection => {
     return {
       from: connection.sourceNodeId,
@@ -474,9 +508,6 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
   }
 
-  /**
-   * Load workflow from backend
-   */
   const loadWorkflow = async (areaId: string) => {
     try {
       isSaving.value = true
@@ -484,23 +515,13 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
 
       const workflow = await workflowApi.getWorkflow(areaId)
 
-      // Initialize service mapping first
-      await initializeServiceMapping()
-
-      // Clear existing workflow
       workflowBlocks.value = []
       connections.value = []
 
-<<<<<<< HEAD
       // Map backend nodes to frontend blocks
-      const mappedBlocks = workflow.nodes
-        .map(mapBackendNodeToBlock)
-        .filter((block): block is WorkflowBlockData => block !== null)
-=======
       const mappedBlocks = await Promise.all(
         workflow.nodes.map(node => mapBackendNodeToBlock(node))
       )
->>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
 
       workflowBlocks.value = mappedBlocks.filter((block): block is WorkflowBlockData => block !== null)
 
@@ -521,8 +542,6 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
   }
 
-<<<<<<< HEAD
-=======
   const updateBlockConfig = async (blockId: string, newConfig: ServiceConfiguration) => {
     const blockIndex = workflowBlocks.value.findIndex(b => b.id === blockId)
     if (blockIndex === -1) {
@@ -569,32 +588,32 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       }
     }
   }
-
->>>>>>> 45305262 (feat: (Openai) Integrate opnai service moduraly)
   return {
-    // State
     workflowBlocks: readonly(workflowBlocks),
     connections: readonly(connections),
     currentAreaId: readonly(currentAreaId),
     isSaving: readonly(isSaving),
     saveError: readonly(saveError),
 
-    // Canvas management
     nextCardPosition,
     addServiceBlock,
     updateBlockPosition,
     deleteBlock,
+    addConnection,
+    removeConnection,
     configureBlock,
+    updateBlockConfig,
     getBlockConnectionState,
     getConnectionPath,
+    getConnectionPointPosition,
+    countNodesForDeletion,
 
-    // Backend integration
     saveWorkflow,
     loadWorkflow,
     serializeWorkflow,
     initializeServiceMapping,
 
-    // Configuration editing
-    updateBlockConfiguration
+    updateBlockConfiguration,
+    updateBlockConfig
   }
 }

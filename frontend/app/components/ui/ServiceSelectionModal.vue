@@ -67,25 +67,28 @@
             :key="service.id"
             class="service-card"
             :class="{
-              'service-card-disabled': !service.isActive,
+              'service-card-disabled': isServiceDisabled(service),
               'service-card-compact': selectedCategory === 'all'
             }"
+            :aria-disabled="isServiceDisabled(service)"
+            :title="isServiceDisabled(service) ? getServiceStatus(service).label : undefined"
             @click="selectService(service)"
           >
             <!-- Affichage compact pour "Tous" -->
             <div v-if="selectedCategory === 'all'" class="service-card-content-compact">
               <div class="service-icon-compact" :style="`background-color: ${service.color}15`">
-                <UIcon :name="service.icon" class="w-5 h-5" :style="`color: ${service.color}`" />
+                <img v-if="service.iconUrl" :src="service.iconUrl" :alt="service.name" class="w-5 h-5 object-contain" />
+                <UIcon v-else :name="service.icon" class="w-5 h-5" :style="`color: ${service.color}`" />
               </div>
               <h3 class="service-name-compact">{{ service.name }}</h3>
-              <span v-if="!service.isActive" class="status-dot status-inactive"></span>
-              <span v-else class="status-dot status-active"></span>
+              <span :class="['status-dot', getServiceStatus(service).dotClass]"></span>
             </div>
 
             <!-- Affichage détaillé pour les catégories spécifiques -->
             <div v-else class="service-card-content">
               <div class="service-icon" :style="`background-color: ${service.color}15`">
-                <UIcon :name="service.icon" class="w-6 h-6" :style="`color: ${service.color}`" />
+                <img v-if="service.iconUrl" :src="service.iconUrl" :alt="service.name" class="w-6 h-6 object-contain" />
+                <UIcon v-else :name="service.icon" class="w-6 h-6" :style="`color: ${service.color}`" />
               </div>
 
               <div class="service-info">
@@ -93,8 +96,9 @@
                 <p class="service-description">{{ service.description }}</p>
                 <div class="service-badge">
                   <span class="category-badge">{{ getCategoryLabel(service.category) }}</span>
-                  <span v-if="!service.isActive" class="status-badge status-inactive">Indisponible</span>
-                  <span v-else class="status-badge status-active">Disponible</span>
+                  <span :class="['status-badge', getServiceStatus(service).badgeClass]">
+                    {{ getServiceStatus(service).label }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -195,8 +199,37 @@ const filteredServices = computed(() => {
   return services
 })
 
+const getServiceStatus = (service: Service) => {
+  if (!service.isActive) {
+    return {
+      label: 'Indisponible',
+      badgeClass: 'status-inactive',
+      dotClass: 'status-inactive',
+      disabled: true
+    }
+  }
+
+  if (service.requiresConnection && service.isConnected !== true) {
+    return {
+      label: 'Connexion requise',
+      badgeClass: 'status-warning',
+      dotClass: 'status-warning',
+      disabled: true
+    }
+  }
+
+  return {
+    label: 'Disponible',
+    badgeClass: 'status-active',
+    dotClass: 'status-active',
+    disabled: false
+  }
+}
+
+const isServiceDisabled = (service: Service) => getServiceStatus(service).disabled
+
 const selectService = (service: Service) => {
-  if (!service.isActive) return
+  if (isServiceDisabled(service)) return
 
   emit('service-selected', service)
 }
@@ -320,6 +353,10 @@ const getCategoryLabel = (category: string) => {
   background: var(--color-error);
 }
 
+.status-dot.status-warning {
+  background: rgba(234, 179, 8, 0.85);
+}
+
 .service-name {
   font-size: 1rem;
   font-weight: 600;
@@ -368,6 +405,12 @@ const getCategoryLabel = (category: string) => {
   background: rgba(239, 68, 68, 0.1);
   color: var(--color-error);
   border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.status-warning {
+  background: rgba(234, 179, 8, 0.15);
+  color: #b45309;
+  border: 1px solid rgba(234, 179, 8, 0.35);
 }
 
 .empty-state {

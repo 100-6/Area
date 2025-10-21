@@ -1,0 +1,335 @@
+import 'colors';
+
+/**
+ * Interface representing a GitHub commit returned by the API
+ * @interface GitHubCommit
+ * @property {string} sha - Unique SHA hash of the commit
+ * @property {Object} commit - Commit details
+ * @property {string} commit.message - Commit message
+ * @property {Object} commit.author - Author information
+ * @property {string} commit.author.name - Author's name
+ * @property {string} commit.author.email - Author's email
+ * @property {string} commit.author.date - Commit date (ISO 8601)
+ * @property {Object|null} author - GitHub author information
+ * @property {string} author.login - GitHub username of the author
+ * @property {string} html_url - Full URL of the commit on GitHub
+ */
+export interface GitHubCommit {
+    sha: string;
+    commit: {
+        message: string;
+        author: {
+            name: string;
+            email: string;
+            date: string;
+        };
+    };
+    author: {
+        login: string;
+    } | null;
+    html_url: string;
+}
+
+/**
+ * Interface representing a GitHub issue returned by the API
+ * @interface GitHubIssue
+ * @property {number} id - Unique issue ID
+ * @property {number} number - Issue number in the repository
+ * @property {string} title - Issue title
+ * @property {string} html_url - Full URL of the issue on GitHub
+ * @property {string} state - Issue state (open, closed)
+ * @property {Object} user - User who created the issue
+ * @property {string} user.login - Username of the creator
+ * @property {string} body - Issue body/description
+ * @property {string} created_at - Creation timestamp (ISO 8601)
+ * @property {string} updated_at - Last update timestamp (ISO 8601)
+ * @property {string|null} closed_at - Closing timestamp (ISO 8601) or null
+ * @property {Array} labels - Array of labels
+ */
+export interface GitHubIssue {
+    id: number;
+    number: number;
+    title: string;
+    html_url: string;
+    state: string;
+    user: {
+        login: string;
+    };
+    body: string | null;
+    created_at: string;
+    updated_at: string;
+    closed_at: string | null;
+    labels: Array<{
+        name: string;
+        color: string;
+    }>;
+}
+
+/**
+ * Interface representing a GitHub branch returned by the API
+ * @interface GitHubBranch
+ * @property {string} name - Branch name
+ * @property {Object} commit - Commit information
+ * @property {string} commit.sha - SHA of the latest commit on this branch
+ * @property {string} commit.url - API URL of the commit
+ * @property {boolean} protected - Whether the branch is protected
+ */
+export interface GitHubBranch {
+    name: string;
+    commit: {
+        sha: string;
+        url: string;
+    };
+    protected: boolean;
+}
+
+/**
+ * Abstraction service to interact with the GitHub REST API v3
+ * Centralizes all API calls to GitHub to facilitate maintenance
+ * and error handling.
+ * 
+ * @class GitHubApiService
+ * @example
+ * const githubApi = new GitHubApiService();
+ * const commits = await githubApi.getLatestCommits('octocat', 'Hello-World', 'main', token);
+ */
+export class GitHubApiService {
+    /**
+     * Base URL of the GitHub REST API v3
+     * @private
+     * @readonly
+     */
+    private baseUrl = 'https://api.github.com';
+
+    /**
+     * Fetches the latest commits from a GitHub repository branch
+     * 
+     * @async
+     * @param {string} owner - Repository owner name (username or organization)
+     * @param {string} repo - Repository name
+     * @param {string} branch - Branch name to query
+     * @param {string} accessToken - User's GitHub OAuth token (scope: repo)
+     * @param {number} [perPage=1] - Number of commits to retrieve (1-100)
+     * @returns {Promise<GitHubCommit[]>} List of commits
+     * @throws {Error} If the GitHub API returns an error (401, 404, etc.)
+     * @example
+     * const commits = await githubApi.getLatestCommits(
+     *   'octocat',
+     *   'Hello-World',
+     *   'main',
+     *   'ghp_abc123...',
+     *   5
+     * );
+     * console.log(commits[0].commit.message); // "Initial commit"
+     */
+    async getLatestCommits(
+        owner: string, 
+        repo: string, 
+        branch: string, 
+        accessToken: string, 
+        perPage: number = 1
+    ): Promise<GitHubCommit[]> {
+        try {
+            const url = `${this.baseUrl}/repos/${owner}/${repo}/commits?sha=${branch}&per_page=${perPage}`;
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'AREA-Platform'
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`GitHub API error: ${response.status} - ${error}`);
+            }
+
+            return await response.json() as GitHubCommit[];
+        } catch (error) {
+            console.error('[GitHub API] Error fetching commits:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Creates a new issue in a GitHub repository
+     * 
+     * @async
+     * @param {string} owner - Repository owner name (username or organization)
+     * @param {string} repo - Repository name
+     * @param {string} title - Issue title (1-256 characters)
+     * @param {string} body - Issue description/content (Markdown supported)
+     * @param {string} accessToken - User's GitHub OAuth token (scope: repo)
+     * @param {string[]} [labels] - Optional array of labels to add to the issue
+     * @returns {Promise<GitHubIssue>} The created issue with its ID and number
+     * @throws {Error} If the GitHub API returns an error (401, 404, 422, etc.)
+     * @example
+     * const issue = await githubApi.createIssue(
+     *   'octocat',
+     *   'Hello-World',
+     *   'Bug found',
+     *   'There is a bug in the login function',
+     *   'ghp_abc123...',
+     *   ['bug', 'urgent']
+     * );
+     * console.log(`Issue #${issue.number} created`); // "Issue #42 created"
+     */
+    async createIssue(
+        owner: string, 
+        repo: string, 
+        title: string, 
+        body: string, 
+        accessToken: string, 
+        labels?: string[]
+    ): Promise<GitHubIssue> {
+        try {
+            const url = `${this.baseUrl}/repos/${owner}/${repo}/issues`;
+            const payload: any = {
+                title,
+                body: body || ''
+            };
+
+            if (labels && labels.length > 0) {
+                payload.labels = labels;
+            }
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'AREA-Platform'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`GitHub API error: ${response.status} - ${error}`);
+            }
+
+            return await response.json() as GitHubIssue;
+        } catch (error) {
+            console.error('[GitHub API] Error creating issue:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Fetches all branches from a GitHub repository
+     * 
+     * @async
+     * @param {string} owner - Repository owner name (username or organization)
+     * @param {string} repo - Repository name
+     * @param {string} accessToken - User's GitHub OAuth token (scope: repo)
+     * @param {number} [perPage=100] - Number of branches to retrieve per page (1-100)
+     * @returns {Promise<GitHubBranch[]>} List of branches
+     * @throws {Error} If the GitHub API returns an error (401, 404, etc.)
+     * @example
+     * const branches = await githubApi.getBranches('octocat', 'Hello-World', 'ghp_abc123...');
+     * console.log(branches.map(b => b.name)); // ['main', 'develop', 'feature/xyz']
+     */
+    async getBranches(
+        owner: string,
+        repo: string,
+        accessToken: string,
+        perPage: number = 100
+    ): Promise<GitHubBranch[]> {
+        try {
+            const url = `${this.baseUrl}/repos/${owner}/${repo}/branches?per_page=${perPage}`;
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'AREA-Platform'
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`GitHub API error: ${response.status} - ${error}`);
+            }
+
+            return await response.json() as GitHubBranch[];
+        } catch (error) {
+            console.error('[GitHub API] Error fetching branches:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Fetches issues from a GitHub repository
+     * 
+     * @async
+     * @param {string} owner - Repository owner name (username or organization)
+     * @param {string} repo - Repository name
+     * @param {string} accessToken - User's GitHub OAuth token (scope: repo)
+     * @param {string} [state='all'] - Filter by state: 'open', 'closed', or 'all'
+     * @param {number} [perPage=100] - Number of issues to retrieve per page (1-100)
+     * @returns {Promise<GitHubIssue[]>} List of issues
+     * @throws {Error} If the GitHub API returns an error (401, 404, etc.)
+     * @example
+     * const issues = await githubApi.getIssues('octocat', 'Hello-World', 'ghp_abc123...', 'open');
+     * console.log(issues.map(i => i.title)); // ['Bug in login', 'Feature request']
+     */
+    async getIssues(
+        owner: string,
+        repo: string,
+        accessToken: string,
+        state: 'open' | 'closed' | 'all' = 'all',
+        perPage: number = 100
+    ): Promise<GitHubIssue[]> {
+        try {
+            const url = `${this.baseUrl}/repos/${owner}/${repo}/issues?state=${state}&per_page=${perPage}&sort=created&direction=desc`;
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'AREA-Platform'
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`GitHub API error: ${response.status} - ${error}`);
+            }
+
+            return await response.json() as GitHubIssue[];
+        } catch (error) {
+            console.error('[GitHub API] Error fetching issues:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Verifies the validity of a GitHub OAuth token
+     * Makes a call to the /user endpoint to check if the token is valid
+     * 
+     * @async
+     * @param {string} accessToken - GitHub OAuth token to verify
+     * @returns {Promise<boolean>} true if the token is valid, false otherwise
+     * @example
+     * const isValid = await githubApi.verifyToken('ghp_abc123...');
+     * if (isValid) {
+     *   console.log('Token is valid');
+     * } else {
+     *   console.log('Token is invalid or expired');
+     * }
+     */
+    async verifyToken(accessToken: string): Promise<boolean> {
+        try {
+            const response = await fetch(`${this.baseUrl}/user`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'AREA-Platform'
+                }
+            });
+            return response.ok;
+        } catch {
+            return false;
+        }
+    }
+}
+
