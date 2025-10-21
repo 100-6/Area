@@ -124,11 +124,20 @@ export class WorkflowExecutor {
             const action = module.getAction(reactionName);
             if (!action)
                 return { success: false, error: 'Action not found' };
+            
+            // Get userId from AREA if not provided
+            let userId = actionNode.userId || triggerData.userId;
+            if (!userId) {
+                const { Area } = await import('../../core/models/Area');
+                const area = await Area.findById(actionNode.areaId);
+                userId = area?.user_id;
+            }
+            
             const context = {
                 areaId: actionNode.areaId,
                 triggerData: triggerData.data,
                 timestamp: triggerData.timestamp,
-                userId: actionNode.userId || triggerData.userId,
+                userId: userId,
                 executionId: `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 previousOutputs: outputsMap
             };
