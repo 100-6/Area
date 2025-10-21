@@ -6,8 +6,10 @@ import areaRoutes from './areas';
 import workflowRoutes from './workflow';
 import moduleRoutes from './modules';
 import servicesRoutes from './services';
+
 import discordRoutes from '../../modules/discord/routes';
 import gmailRoutes from '../../modules/gmail/routes';
+import outlookRoutes from '../../modules/outlook/routes';
 import telegramRoutes from '../../modules/telegram/routes';
 import webhookRoutes from '../../modules/webhook/routes';
 
@@ -27,6 +29,7 @@ router.use('/api/services', servicesRoutes);
 
 router.use('/api/discord', discordRoutes);
 router.use('/api/gmail', gmailRoutes);
+router.use('/api/outlook', outlookRoutes);
 router.use('/api/telegram', telegramRoutes);
 
 export default router;

@@ -1,5 +1,6 @@
 import { GoogleProvider } from './oauth/providers/GoogleProvider';
 import { GmailProvider } from './oauth/providers/GmailProvider';
+import { OutlookProvider } from './oauth/providers/OutlookProvider';
 import { GitHubProvider } from './oauth/providers/GitHubProvider';
 import { GitLabProvider } from './oauth/providers/GitLabProvider';
 import { DropboxProvider } from './oauth/providers/DropboxProvider';
@@ -24,6 +25,7 @@ interface OAuthUser {
 export class OAuthManager {
     private googleProvider: GoogleProvider;
     private gmailProvider: GmailProvider;
+    private outlookProvider: OutlookProvider;
     private gitHubProvider: GitHubProvider;
     private gitLabProvider: GitLabProvider;
     private dropboxProvider: DropboxProvider;
@@ -32,6 +34,7 @@ export class OAuthManager {
     constructor() {
         this.googleProvider = new GoogleProvider();
         this.gmailProvider = new GmailProvider();
+        this.outlookProvider = new OutlookProvider();
         this.gitHubProvider = new GitHubProvider();
         this.gitLabProvider = new GitLabProvider();
         this.dropboxProvider = new DropboxProvider();
@@ -50,6 +53,13 @@ export class OAuthManager {
      */
     getGmailAuthUrl(state?: string): string {
         return this.gmailProvider.getAuthUrl(state);
+    }
+
+    /**
+     * Generate Outlook OAuth URL
+     */
+    getOutlookAuthUrl(state?: string): string {
+        return this.outlookProvider.getAuthUrl(state);
     }
 
     /**
@@ -80,6 +90,18 @@ export class OAuthManager {
             return await this.findOrCreateUserFromOAuth('gmail', gmailProfile, authenticatedUserId);
         } catch (error) {
             throw new Error(`Gmail OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Handle Outlook OAuth callback
+     */
+    async handleOutlookCallback(code: string, authenticatedUserId?: string): Promise<OAuthUser> {
+        try {
+            const outlookProfile = await this.outlookProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('outlook', outlookProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Outlook OAuth error: ${error}`);
         }
     }
 
@@ -163,6 +185,13 @@ export class OAuthManager {
     }
 
     /**
+     * Check if Outlook OAuth is configured
+     */
+    isOutlookConfigured(): boolean {
+        return this.outlookProvider.isConfigured();
+    }
+
+    /**
      * Check if Discord OAuth is configured
      */
     isDiscordConfigured(): boolean {
@@ -175,6 +204,7 @@ export class OAuthManager {
     getProvidersStatus(): {
         google: { isConfigured: boolean; status: any };
         gmail: { isConfigured: boolean; status: any };
+        outlook: { isConfigured: boolean; status: any };
         discord: { isConfigured: boolean; status: any };
     } {
         return {
@@ -185,6 +215,10 @@ export class OAuthManager {
             gmail: {
                 isConfigured: this.gmailProvider.isConfigured(),
                 status: this.gmailProvider.getConfigStatus()
+            },
+            outlook: {
+                isConfigured: this.outlookProvider.isConfigured(),
+                status: this.outlookProvider.getConfigStatus()
             },
             discord: {
                 isConfigured: this.discordProvider.isConfigured(),

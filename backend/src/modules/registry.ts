@@ -5,6 +5,7 @@ import { discordModule } from './discord/service';
 import { openaiModule } from './openai/service';
 import { gmailModule } from './gmail/module';
 import { telegramModule } from './telegram/service';
+import { outlookModule } from './outlook/module';
 import { githubModule } from './github/service';
 import { ntfyModule } from './ntfy/service';
 import { rssModule } from './rss/service';
@@ -50,6 +51,7 @@ class ModuleRegistry {
             await this.registerModule(openaiModule);
             await this.registerModule(gmailModule);
             await this.registerModule(telegramModule);
+            await this.registerModule(outlookModule);
             await this.registerModule(githubModule);
             await this.registerModule(ntfyModule);
             await this.registerModule(rssModule);
