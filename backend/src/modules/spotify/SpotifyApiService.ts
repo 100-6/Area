@@ -394,6 +394,34 @@ export class SpotifyApiService {
     }
 
     /**
+     * Add track to playback queue
+     * @param accessToken - User's access token
+     * @param trackUri - Spotify track URI
+     * @param deviceId - Optional device ID
+     */
+    async addToQueue(accessToken: string, trackUri: string, deviceId?: string): Promise<void> {
+        try {
+            const url = deviceId 
+                ? `${this.BASE_URL}/me/player/queue?uri=${encodeURIComponent(trackUri)}&device_id=${deviceId}`
+                : `${this.BASE_URL}/me/player/queue?uri=${encodeURIComponent(trackUri)}`;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${accessToken}` }
+            });
+
+            if (!response.ok && response.status !== 204) {
+                throw new Error(`Failed to add track to queue: ${response.statusText}`);
+            }
+
+            console.log('[Spotify] ✓ Track added to queue'.green);
+        } catch (error) {
+            console.error('[Spotify] Error adding track to queue:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
      * Get tracks from a playlist
      * @param accessToken - User's access token
      * @param playlistId - Spotify playlist ID
@@ -731,6 +759,119 @@ export class SpotifyApiService {
             return (data.items || []) as SpotifySavedTrack[];
         } catch (error) {
             console.error('[Spotify] Error getting saved tracks:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Search for tracks on Spotify
+     * @param accessToken - User's access token
+     * @param query - Search query
+     * @param limit - Maximum number of results to return (max 50)
+     * @returns Array of tracks matching the search query
+     */
+    async searchTracks(accessToken: string, query: string, limit: number = 20): Promise<any[]> {
+        try {
+            const encodedQuery = encodeURIComponent(query);
+            const response = await fetch(
+                `${this.BASE_URL}/search?q=${encodedQuery}&type=track&limit=${limit}`,
+                {
+                    headers: { Authorization: `Bearer ${accessToken}` }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Failed to search tracks: ${response.statusText}`);
+            }
+
+            const data: any = await response.json();
+            return data.tracks.items.map((track: any) => ({
+                id: track.id,
+                name: track.name,
+                artists: track.artists.map((artist: any) => ({
+                    id: artist.id,
+                    name: artist.name
+                })),
+                album: {
+                    id: track.album.id,
+                    name: track.album.name,
+                    images: track.album.images
+                },
+                duration_ms: track.duration_ms,
+                uri: track.uri,
+                external_urls: track.external_urls
+            }));
+        } catch (error) {
+            console.error('[Spotify] Error searching tracks:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Follow a playlist
+     * @param accessToken - User's access token
+     * @param playlistId - Spotify playlist ID
+     * @param isPublic - Whether to follow the playlist publicly
+     */
+    async followPlaylist(accessToken: string, playlistId: string, isPublic: boolean = true): Promise<void> {
+        try {
+            const response = await fetch(`${this.BASE_URL}/playlists/${playlistId}/followers`, {
+                method: 'PUT',
+                headers: { 
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ public: isPublic })
+            });
+
+            if (!response.ok && response.status !== 200) {
+                throw new Error(`Failed to follow playlist: ${response.statusText}`);
+            }
+
+            console.log('[Spotify] ✓ Playlist followed'.green);
+        } catch (error) {
+            console.error('[Spotify] Error following playlist:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Start or resume playback
+     * @param accessToken - User's access token
+     * @param deviceId - Optional device ID
+     * @param contextUri - Optional Spotify URI of context to play (album, artist, playlist)
+     * @param uris - Optional array of track URIs to play
+     */
+    async startPlayback(accessToken: string, deviceId?: string, contextUri?: string, uris?: string[]): Promise<void> {
+        try {
+            const url = deviceId 
+                ? `${this.BASE_URL}/me/player/play?device_id=${deviceId}`
+                : `${this.BASE_URL}/me/player/play`;
+
+            const body: any = {};
+            if (contextUri) {
+                body.context_uri = contextUri;
+            }
+            if (uris && uris.length > 0) {
+                body.uris = uris;
+            }
+
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: { 
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined
+            });
+
+            if (!response.ok && response.status !== 204) {
+                throw new Error(`Failed to start playback: ${response.statusText}`);
+            }
+
+            console.log('[Spotify] ✓ Playback started'.green);
+        } catch (error) {
+            console.error('[Spotify] Error starting playback:'.red, error);
             throw error;
         }
     }

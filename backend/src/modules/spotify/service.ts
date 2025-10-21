@@ -12,6 +12,16 @@ import {
     OnNewEpisodeFromSearchTrigger,
     OnNewTrackAddedToPlaylistTrigger
 } from './triggers/_index';
+import {
+    SkipTrackAction,
+    PausePlaybackAction,
+    AddTrackToQueueAction,
+    AddTrackToPlaylistAction,
+    SaveTrackBySearchAction,
+    FollowPlaylistAction,
+    StartPlaybackAction,
+    AddTrackToPlaylistBySearchAction
+} from './actions/_index';
 import 'colors';
 
 /**
@@ -94,8 +104,17 @@ export class SpotifyModule extends BaseModule {
         this.registerTrigger(new OnNewSavedAlbumTrigger(this));
         this.registerTrigger(new OnNewEpisodeFromFollowedShowTrigger(this));
         this.registerTrigger(new OnNewEpisodeFromSearchTrigger(this));
-        this.registerTrigger(new OnNewTrackAddedToPlaylistTrigger(this));            // Register actions here when implemented
-            // this.registerAction(new PausePlaybackAction());
+        this.registerTrigger(new OnNewTrackAddedToPlaylistTrigger(this));
+        
+        // Register actions
+        this.registerAction(new SkipTrackAction(this));
+        this.registerAction(new PausePlaybackAction(this));
+        this.registerAction(new AddTrackToQueueAction(this));
+        this.registerAction(new AddTrackToPlaylistAction(this));
+        this.registerAction(new SaveTrackBySearchAction(this));
+        this.registerAction(new FollowPlaylistAction(this));
+        this.registerAction(new StartPlaybackAction(this));
+        this.registerAction(new AddTrackToPlaylistBySearchAction(this));
 
             console.log('[Spotify] ✓ Module initialized successfully'.green.bold);
         } catch (error) {
