@@ -64,6 +64,9 @@ class OAuthButton extends StatelessWidget {
       case OAuthProvider.google:
         icon = Icons.g_mobiledata;
         break;
+      case OAuthProvider.gmail:
+        icon = Icons.email_rounded;
+        break;
       case OAuthProvider.github:
         icon = Icons.code;
         break;
@@ -206,6 +209,9 @@ class CompactOAuthButton extends StatelessWidget {
     switch (provider) {
       case OAuthProvider.google:
         icon = Icons.g_mobiledata;
+        break;
+      case OAuthProvider.gmail:
+        icon = Icons.email_rounded;
         break;
       case OAuthProvider.github:
         icon = Icons.code;

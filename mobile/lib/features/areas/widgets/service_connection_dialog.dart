@@ -167,6 +167,8 @@ class ServiceConnectionDialog extends StatelessWidget {
         return Icons.source;
       case OAuthProvider.google:
         return Icons.g_mobiledata;
+      case OAuthProvider.gmail:
+        return Icons.email_rounded;
       case OAuthProvider.dropbox:
         return Icons.cloud;
     }

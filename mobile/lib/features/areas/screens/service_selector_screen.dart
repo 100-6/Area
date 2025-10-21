@@ -428,6 +428,7 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
         return const Color(0xFF4285F4);
       case 'openai':
         return const Color(0xFF10A37F);
+      case 'gmail':
       case 'email':
         return const Color(0xFFEA4335);
       case 'slack':
@@ -455,6 +456,7 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
         return Icons.g_mobiledata_rounded;
       case 'openai':
         return Icons.auto_awesome_rounded;
+      case 'gmail':
       case 'email':
         return Icons.email_rounded;
       case 'slack':

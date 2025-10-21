@@ -6,6 +6,7 @@ class OAuthService {
   /// Providers OAuth disponibles
   static const List<OAuthProvider> availableProviders = [
     OAuthProvider.google,
+    OAuthProvider.gmail,
     OAuthProvider.github,
     OAuthProvider.gitlab,
     OAuthProvider.discord,
@@ -76,6 +77,9 @@ class OAuthService {
     switch (provider) {
       case OAuthProvider.google:
         return '$baseUrl/api/auth/google';
+      case OAuthProvider.gmail:
+        // Gmail a sa propre route OAuth
+        return '$baseUrl/api/gmail/connect';
       case OAuthProvider.github:
         return '$baseUrl/api/auth/github';
       case OAuthProvider.gitlab:
@@ -91,7 +95,13 @@ class OAuthService {
   /// Utilise les routes OAuth existantes (/api/auth/discord, etc.)
   String _getServiceAuthUrl(String serviceName) {
     final baseUrl = ApiConstants.baseUrl;
-    // Réutilise les routes OAuth existantes
+
+    // Gmail a sa propre route spéciale
+    if (serviceName.toLowerCase() == 'gmail') {
+      return '$baseUrl/api/gmail/connect';
+    }
+
+    // Réutilise les routes OAuth existantes pour les autres services
     return '$baseUrl/api/auth/${serviceName.toLowerCase()}';
   }
 
@@ -100,6 +110,7 @@ class OAuthService {
 /// Énumération des providers OAuth
 enum OAuthProvider {
   google,
+  gmail,
   github,
   gitlab,
   discord,
@@ -110,6 +121,8 @@ enum OAuthProvider {
     switch (this) {
       case OAuthProvider.google:
         return 'Google';
+      case OAuthProvider.gmail:
+        return 'Gmail';
       case OAuthProvider.github:
         return 'GitHub';
       case OAuthProvider.gitlab:
@@ -126,6 +139,8 @@ enum OAuthProvider {
     switch (this) {
       case OAuthProvider.google:
         return 'google';
+      case OAuthProvider.gmail:
+        return 'gmail';
       case OAuthProvider.github:
         return 'github';
       case OAuthProvider.gitlab:
@@ -142,6 +157,8 @@ enum OAuthProvider {
     switch (this) {
       case OAuthProvider.google:
         return 0xFF4285F4; // Bleu Google
+      case OAuthProvider.gmail:
+        return 0xFFEA4335; // Rouge Gmail
       case OAuthProvider.github:
         return 0xFF181717; // Noir GitHub
       case OAuthProvider.gitlab:
