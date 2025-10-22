@@ -6,8 +6,8 @@ export default {
     name: 'shodan',
     displayName: 'Shodan',
     description: 'Network monitoring, vulnerability scanning, and threat intelligence using Shodan API',
-    iconUrl: 'https://static-00.iconduck.com/assets.00/shodan-icon-2048x2048-hcb0y7bz.png',
-    color: '#E51E3C',
+    iconUrl: 'https://mastodon.shodan.io/system/accounts/avatars/109/581/487/842/048/355/original/ab8765da6373845d.png',
+    color: '#c4c4c4',
     authType: 'none',
     isActive: true,
 

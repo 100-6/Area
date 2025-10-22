@@ -113,6 +113,79 @@ class ModuleConfigService {
       throw Exception('Could not load node schema for nodeId $nodeId: $e');
     }
   }
+
+  /// Récupère l'outputSchema d'une node spécifique
+  Future<Map<String, dynamic>?> getNodeOutputSchema({
+    required String nodeId,
+    required String token,
+  }) async {
+    try {
+      print('🌐 API call to /api/modules/$nodeId');
+      // Appeler l'API avec le nodeId
+      final response = await _apiService.get(
+        '/api/modules/$nodeId',
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      print('📨 API response: $response');
+      print('🔑 outputSchema from response: ${response['outputSchema']}');
+
+      // Retourner l'outputSchema directement
+      return response['outputSchema'] as Map<String, dynamic>?;
+    } catch (e) {
+      print('❌ Error in getNodeOutputSchema: $e');
+      return null;
+    }
+  }
+
+  /// Récupère l'outputSchema d'un trigger/action par son nom de module et action
+  Future<Map<String, dynamic>?> getOutputSchemaByName({
+    required String moduleName,
+    required String actionOrTriggerName,
+    required String type, // 'trigger' ou 'action'
+    required String token,
+  }) async {
+    try {
+      print('🌐 Getting outputSchema for $moduleName.$actionOrTriggerName ($type)');
+      final moduleSchema = await getModuleConfig(
+        moduleName: moduleName,
+        token: token,
+      );
+
+      if (moduleSchema == null) {
+        print('❌ Module schema not found for $moduleName');
+        return null;
+      }
+
+      // Récupérer l'outputSchema selon le type
+      if (type == 'trigger') {
+        try {
+          final trigger = moduleSchema.triggers.firstWhere(
+            (t) => t.name == actionOrTriggerName,
+          );
+          print('🔑 Trigger outputSchema: ${trigger.outputSchema}');
+          return trigger.outputSchema;
+        } catch (e) {
+          print('❌ Trigger $actionOrTriggerName not found in $moduleName');
+          return null;
+        }
+      } else {
+        try {
+          final action = moduleSchema.actions.firstWhere(
+            (a) => a.name == actionOrTriggerName,
+          );
+          print('🔑 Action outputSchema: ${action.outputSchema}');
+          return action.outputSchema;
+        } catch (e) {
+          print('❌ Action $actionOrTriggerName not found in $moduleName');
+          return null;
+        }
+      }
+    } catch (e) {
+      print('❌ Error in getOutputSchemaByName: $e');
+      return null;
+    }
+  }
 }
 
 /// Convertisseur de schéma API vers format mobile

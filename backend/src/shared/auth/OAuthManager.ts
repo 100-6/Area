@@ -5,6 +5,7 @@ import { GitHubProvider } from './oauth/providers/GitHubProvider';
 import { GitLabProvider } from './oauth/providers/GitLabProvider';
 import { DropboxProvider } from './oauth/providers/DropboxProvider';
 import { DiscordProvider } from './oauth/providers/DiscordProvider';
+import { SpotifyProvider } from './oauth/providers/SpotifyProvider';
 import { User } from '../../core/models/User';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
 
@@ -30,6 +31,7 @@ export class OAuthManager {
     private gitLabProvider: GitLabProvider;
     private dropboxProvider: DropboxProvider;
     private discordProvider: DiscordProvider;
+    private spotifyProvider: SpotifyProvider;
 
     constructor() {
         this.googleProvider = new GoogleProvider();
@@ -39,6 +41,7 @@ export class OAuthManager {
         this.gitLabProvider = new GitLabProvider();
         this.dropboxProvider = new DropboxProvider();
         this.discordProvider = new DiscordProvider();
+        this.spotifyProvider = new SpotifyProvider();
     }
 
     /**
@@ -67,6 +70,13 @@ export class OAuthManager {
      */
     getDiscordAuthUrl(state?: string): string {
         return this.discordProvider.getAuthUrl(state);
+    }
+
+    /**
+     * Generate Spotify OAuth URL
+     */
+    getSpotifyAuthUrl(state?: string): string {
+        return this.spotifyProvider.getAuthUrl(state);
     }
 
     /**
@@ -114,6 +124,18 @@ export class OAuthManager {
             return await this.findOrCreateUserFromOAuth('discord', discordProfile, authenticatedUserId);
         } catch (error) {
             throw new Error(`Discord OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Handle Spotify OAuth callback
+     */
+    async handleSpotifyCallback(code: string, authenticatedUserId?: string): Promise<OAuthUser> {
+        try {
+            const spotifyProfile = await this.spotifyProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('spotify', spotifyProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Spotify OAuth error: ${error}`);
         }
     }
 
@@ -199,6 +221,13 @@ export class OAuthManager {
     }
 
     /**
+     * Check if Spotify OAuth is configured
+     */
+    isSpotifyConfigured(): boolean {
+        return this.spotifyProvider.isConfigured();
+    }
+
+    /**
      * Get all OAuth providers status
      */
     getProvidersStatus(): {
@@ -206,6 +235,7 @@ export class OAuthManager {
         gmail: { isConfigured: boolean; status: any };
         outlook: { isConfigured: boolean; status: any };
         discord: { isConfigured: boolean; status: any };
+        spotify: { isConfigured: boolean; status: any };
     } {
         return {
             google: {
@@ -223,6 +253,10 @@ export class OAuthManager {
             discord: {
                 isConfigured: this.discordProvider.isConfigured(),
                 status: this.discordProvider.getConfigStatus()
+            },
+            spotify: {
+                isConfigured: this.spotifyProvider.isConfigured(),
+                status: this.spotifyProvider.getConfigStatus()
             }
         };
     }

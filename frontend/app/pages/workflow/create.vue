@@ -98,7 +98,7 @@
         <div
           v-if="workflowBlocks.length === 0"
           class="add-action-button"
-          @click="openServiceModal"
+          @click="openTriggerServiceModal"
         >
           <div class="add-button-content">
             <UIcon name="i-heroicons-plus" class="w-8 h-8" />
@@ -113,7 +113,7 @@
           :isEmpty="true"
           :canvas-mode="true"
           :position="nextCardPosition"
-          @add-service="openServiceModal"
+          @add-service="openActionServiceModal"
         />
 
         <!-- Workflow Cards -->
@@ -125,6 +125,7 @@
           :title="block.service.name"
           :description="block.service.description"
           :icon="block.service.icon"
+          :icon-url="block.service.iconUrl"
           :icon-background="block.service.color + '15'"
           :icon-color="block.service.color"
           :position="block.position"
@@ -186,7 +187,7 @@
           color="primary"
           icon="i-heroicons-plus"
           size="lg"
-          @click="openServiceModal"
+          @click="openActionServiceModal"
         >
           Ajouter
         </UButton>
@@ -196,6 +197,7 @@
     <!-- Service Selection Modal -->
     <UiServiceSelectionModal
       v-model:open="showServiceModal"
+      :block-type="selectedBlockType"
       @service-selected="handleServiceSelected"
     />
 
@@ -350,7 +352,8 @@ const {
   getConnectionPath,
   getConnectionPointPosition,
   saveWorkflow: saveWorkflowData,
-  loadWorkflow
+  loadWorkflow,
+  refreshConnections
 } = useWorkflowManagement(canvas, zoom)
 
 const {
@@ -367,6 +370,9 @@ const {
   closeConfigModal,
   handlePreSelectedService
 } = useServiceManagement()
+
+const openTriggerServiceModal = () => openServiceModal('trigger')
+const openActionServiceModal = () => openServiceModal('action')
 
 const showConfigModal = computed({
   get: () => _showConfigModal.value,
@@ -396,7 +402,7 @@ const hoveredConnectionTarget = ref<{ blockId: string; type: 'input' | 'output' 
 const connectionDragHasMoved = ref(false)
 
 const handleServiceSelected = (service: Service) => {
-  const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
+  const blockType = selectedBlockType.value || (workflowBlocks.value.length === 0 ? 'trigger' : 'action')
 
   selectServiceWithConfiguration(service, blockType, (config) => {
     addServiceBlock(config, undefined, blockType)
@@ -465,6 +471,16 @@ const handleSaveWorkflow = async () => {
     console.error('Failed to save workflow:', error)
   }
 }
+
+const blockCount = computed(() => workflowBlocks.value.length)
+
+watch(blockCount, (count, previous) => {
+  if (count === 0 && (previous ?? 0) > 0) {
+    resetCanvas()
+    selectedBlockType.value = 'trigger'
+    refreshConnections()
+  }
+})
 
 const handleConnectionDragStart = (blockId: string, connectionType: 'input' | 'output', position: { x: number; y: number }) => {
   isDraggingConnection.value = true
@@ -671,7 +687,8 @@ useKeyboardShortcuts({
   },
   onSpace: () => {
     if (!showServiceModal.value && !showSaveModal.value) {
-      openServiceModal()
+      const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
+      openServiceModal(blockType)
     }
   },
   onSave: openSaveModal
@@ -683,6 +700,8 @@ onMounted(async () => {
   if (areaId) {
     try {
       await loadWorkflow(areaId)
+      await nextTick()
+      refreshConnections()
     } catch (error) {
       console.error('Failed to load workflow:', error)
       await navigateTo('/workflow/create')

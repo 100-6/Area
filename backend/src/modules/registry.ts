@@ -12,6 +12,7 @@ import { ntfyModule } from './ntfy/service';
 import { rssModule } from './rss/service';
 import { webhookModule } from './webhook/service';
 import { shodanModule } from './shodan/service';
+import { spotifyModule } from './spotify/service';
 import 'colors';
 
 /**
@@ -59,6 +60,7 @@ class ModuleRegistry {
             await this.registerModule(rssModule);
             await this.registerModule(webhookModule);
             await this.registerModule(shodanModule);
+            await this.registerModule(spotifyModule);
             this.initialized = true;
             console.log(`[Registry] Successfully initialized ${this.modules.size} module(s)`.green.bold);
         } catch (error) {

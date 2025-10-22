@@ -13,6 +13,8 @@ class DynamicNodeConfigScreen extends StatefulWidget {
   final String actionName;
   final String description;
   final Map<String, dynamic>? existingConfig;
+  final Map<String, dynamic>? previousNodeOutputSchema; // Schéma de sortie de la node précédente
+  final String? previousNodeName; // Nom de la node précédente pour l'affichage
 
   const DynamicNodeConfigScreen({
     super.key,
@@ -22,6 +24,8 @@ class DynamicNodeConfigScreen extends StatefulWidget {
     required this.actionName,
     required this.description,
     this.existingConfig,
+    this.previousNodeOutputSchema,
+    this.previousNodeName,
   });
 
   @override
@@ -392,6 +396,8 @@ class _DynamicNodeConfigScreenState extends State<DynamicNodeConfigScreen> {
               serviceName: widget.serviceName,
               initialConfig: _config,
               onConfigChanged: _onConfigChanged,
+              previousNodeOutputSchema: widget.previousNodeOutputSchema,
+              previousNodeName: widget.previousNodeName,
             ),
             const SizedBox(height: 80),
           ],

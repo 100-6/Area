@@ -12,6 +12,7 @@ import gmailRoutes from '../../modules/gmail/routes';
 import outlookRoutes from '../../modules/outlook/routes';
 import telegramRoutes from '../../modules/telegram/routes';
 import webhookRoutes from '../../modules/webhook/routes';
+import spotifyRoutes from '../../modules/spotify/routes';
 
 const router = Router();
 
@@ -31,5 +32,6 @@ router.use('/api/discord', discordRoutes);
 router.use('/api/gmail', gmailRoutes);
 router.use('/api/outlook', outlookRoutes);
 router.use('/api/telegram', telegramRoutes);
+router.use('/api/spotify', spotifyRoutes);
 
 export default router;

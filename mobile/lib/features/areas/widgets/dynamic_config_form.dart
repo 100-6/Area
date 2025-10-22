@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/config_schema.dart';
 import '../services/service_resource_provider.dart';
 import '../../auth/data/auth_repository.dart';
+import 'available_variables_panel.dart';
 
 /// Widget pour générer dynamiquement un formulaire à partir d'un schéma
 class DynamicConfigForm extends StatefulWidget {
@@ -10,6 +11,8 @@ class DynamicConfigForm extends StatefulWidget {
   final String serviceName;
   final Map<String, dynamic>? initialConfig;
   final void Function(Map<String, dynamic> config) onConfigChanged;
+  final Map<String, dynamic>? previousNodeOutputSchema;
+  final String? previousNodeName;
 
   const DynamicConfigForm({
     super.key,
@@ -17,6 +20,8 @@ class DynamicConfigForm extends StatefulWidget {
     required this.serviceName,
     this.initialConfig,
     required this.onConfigChanged,
+    this.previousNodeOutputSchema,
+    this.previousNodeName,
   });
 
   @override
@@ -143,14 +148,26 @@ class _DynamicConfigFormState extends State<DynamicConfigForm> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('🎨 DynamicConfigForm build - previousNodeOutputSchema: ${widget.previousNodeOutputSchema}');
+    debugPrint('🎨 DynamicConfigForm build - previousNodeName: ${widget.previousNodeName}');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: widget.schema.fields.map((field) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: _buildField(field),
-        );
-      }).toList(),
+      children: [
+        // Afficher les variables disponibles si on a une node précédente
+        if (widget.previousNodeOutputSchema != null && widget.previousNodeName != null)
+          AvailableVariablesPanel(
+            outputSchema: widget.previousNodeOutputSchema,
+            sourceNodeName: widget.previousNodeName!,
+          ),
+        // Formulaire des champs
+        ...widget.schema.fields.map((field) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _buildField(field),
+          );
+        }),
+      ],
     );
   }
 
@@ -743,6 +760,7 @@ class _DynamicConfigFormState extends State<DynamicConfigForm> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: currentValue,
+              isExpanded: true,
               decoration: InputDecoration(
                 border: const OutlineInputBorder(),
                 hintText: field.hint ?? 'Select ${field.label.toLowerCase()}',
@@ -750,7 +768,10 @@ class _DynamicConfigFormState extends State<DynamicConfigForm> {
               items: resources.map((resource) {
                 return DropdownMenuItem(
                   value: resource.id,
-                  child: Text(resource.name),
+                  child: Text(
+                    resource.name,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 );
               }).toList(),
               onChanged: (value) {
