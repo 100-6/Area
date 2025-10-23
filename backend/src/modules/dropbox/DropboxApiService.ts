@@ -170,6 +170,220 @@ export class DropboxApiService {
     }
 
     /**
+     * Uploads a file to Dropbox
+     * 
+     * @async
+     * @param {string} path - Destination path (including filename)
+     * @param {string} content - File content
+     * @param {string} accessToken - User's Dropbox OAuth access token
+     * @param {string} mode - 'add', 'overwrite', or 'update'
+     * @param {boolean} autorename - Auto-rename if file exists
+     * @returns {Promise<DropboxFile>} Metadata of the uploaded file
+     * @throws {Error} If the Dropbox API returns an error
+     */
+    async uploadFile(
+        path: string,
+        content: string,
+        accessToken: string,
+        mode: 'add' | 'overwrite' | 'update' = 'add',
+        autorename: boolean = false
+    ): Promise<DropboxFile> {
+        try {
+            const url = 'https://content.dropboxapi.com/2/files/upload';
+            
+            const dropboxApiArg = JSON.stringify({
+                path,
+                mode,
+                autorename,
+                mute: false
+            });
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/octet-stream',
+                    'Dropbox-API-Arg': dropboxApiArg
+                },
+                body: content
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`Dropbox API error: ${response.status} - ${error}`);
+            }
+
+            return await response.json() as DropboxFile;
+        } catch (error) {
+            console.error('[Dropbox API] Error uploading file:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Creates a shared link for a file
+     * 
+     * @async
+     * @param {string} path - Path to the file
+     * @param {string} accessToken - User's Dropbox OAuth access token
+     * @returns {Promise<{url: string}>} Shared link URL
+     * @throws {Error} If the Dropbox API returns an error
+     */
+    async createSharedLink(path: string, accessToken: string): Promise<{url: string}> {
+        try {
+            const url = `${this.baseUrl}/sharing/create_shared_link_with_settings`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    path,
+                    settings: {
+                        requested_visibility: 'public'
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`Dropbox API error: ${response.status} - ${error}`);
+            }
+
+            const data = await response.json() as { url: string };
+            return { url: data.url };
+        } catch (error) {
+            console.error('[Dropbox API] Error creating shared link:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Deletes a file or folder
+     * 
+     * @async
+     * @param {string} path - Path to the file or folder
+     * @param {string} accessToken - User's Dropbox OAuth access token
+     * @returns {Promise<{path: string}>} Deleted path
+     * @throws {Error} If the Dropbox API returns an error
+     */
+    async deleteFile(path: string, accessToken: string): Promise<{path: string}> {
+        try {
+            const url = `${this.baseUrl}/files/delete_v2`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ path })
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`Dropbox API error: ${response.status} - ${error}`);
+            }
+
+            const data = await response.json() as { metadata: { path_display: string } };
+            return { path: data.metadata.path_display };
+        } catch (error) {
+            console.error('[Dropbox API] Error deleting file:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Moves a file or folder
+     * 
+     * @async
+     * @param {string} fromPath - Source path
+     * @param {string} toPath - Destination path
+     * @param {string} accessToken - User's Dropbox OAuth access token
+     * @param {boolean} autorename - Auto-rename if destination exists
+     * @returns {Promise<DropboxFile>} Metadata of moved file
+     * @throws {Error} If the Dropbox API returns an error
+     */
+    async moveFile(
+        fromPath: string,
+        toPath: string,
+        accessToken: string,
+        autorename: boolean = false
+    ): Promise<DropboxFile> {
+        try {
+            const url = `${this.baseUrl}/files/move_v2`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    from_path: fromPath,
+                    to_path: toPath,
+                    autorename
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`Dropbox API error: ${response.status} - ${error}`);
+            }
+
+            const data = await response.json() as { metadata: DropboxFile };
+            return data.metadata as DropboxFile;
+        } catch (error) {
+            console.error('[Dropbox API] Error moving file:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Copies a file or folder
+     * 
+     * @async
+     * @param {string} fromPath - Source path
+     * @param {string} toPath - Destination path
+     * @param {string} accessToken - User's Dropbox OAuth access token
+     * @param {boolean} autorename - Auto-rename if destination exists
+     * @returns {Promise<DropboxFile>} Metadata of copied file
+     * @throws {Error} If the Dropbox API returns an error
+     */
+    async copyFile(
+        fromPath: string,
+        toPath: string,
+        accessToken: string,
+        autorename: boolean = false
+    ): Promise<DropboxFile> {
+        try {
+            const url = `${this.baseUrl}/files/copy_v2`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    from_path: fromPath,
+                    to_path: toPath,
+                    autorename
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`Dropbox API error: ${response.status} - ${error}`);
+            }
+
+            const data = await response.json() as { metadata: DropboxFile };
+            return data.metadata as DropboxFile;
+        } catch (error) {
+            console.error('[Dropbox API] Error copying file:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
      * Verifies the validity of a Dropbox OAuth token
      * Makes a call to check the current account
      * 

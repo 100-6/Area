@@ -2,6 +2,13 @@ import { BaseModule } from '../_base/BaseModule';
 import { DropboxApiService } from './DropboxApiService';
 import dropboxConfig from './config';
 import { OnFileUploadedTrigger } from './triggers/_index';
+import { 
+    UploadFileAction, 
+    CreateSharedLinkAction, 
+    DeleteFileAction, 
+    MoveFileAction, 
+    CopyFileAction 
+} from './actions/_index';
 import 'colors';
 
 /**
@@ -78,8 +85,12 @@ export class DropboxModule extends BaseModule {
             // Register triggers
             this.registerTrigger(new OnFileUploadedTrigger());
 
-            // TODO: Register actions here when implemented
-            // this.registerAction(new UploadFileAction());
+            // Register actions
+            this.registerAction(new UploadFileAction());
+            this.registerAction(new CreateSharedLinkAction());
+            this.registerAction(new DeleteFileAction());
+            this.registerAction(new MoveFileAction());
+            this.registerAction(new CopyFileAction());
 
             console.log('[Dropbox] ✓ Module initialized successfully'.green.bold);
         } catch (error) {
