@@ -1,5 +1,5 @@
 <template>
-  <div class="config-field">
+  <div class="config-field" :data-parameter-name="props.parameter.name" @focusin="handleFocusIn" @mousedown="handleFocusIn">
     <label :for="fieldId" class="config-label">
       {{ props.parameter.name }}
       <span v-if="props.parameter.required" class="required-indicator">*</span>
@@ -13,7 +13,7 @@
       :disabled="disabled || isLoading"
       :loading="isLoading"
       :class="{ 'error': !!error }"
-:ui="{
+      :ui="{
         content: 'bg-white border-0 ring-0 max-h-60 overflow-y-auto',
         item: 'text-black border-0 ring-0 data-highlighted:not-data-disabled:before:bg-green-50',
         itemLabel: 'text-black',
@@ -42,20 +42,16 @@
 </template>
 
 <script setup lang="ts">
-import type { ConfigFieldProps, ConfigFieldEmits } from '~/types'
-import { ConfigurationValidator } from '~/types/ServiceConfiguration'
+import type { ConfigFieldProps, ConfigFieldEmits } from '../../../types/ServiceConfiguration'
+import { ConfigurationValidator } from '../../../types/ServiceConfiguration'
 
-interface Props extends ConfigFieldProps {
+const props = withDefaults(defineProps<ConfigFieldProps & {
   items?: Array<{ label: string; value: string }>
   loading?: boolean
   loadError?: string
   placeholder?: string
   valueKey?: string
-}
-
-interface Emits extends ConfigFieldEmits {}
-
-const props = withDefaults(defineProps<Props>(), {
+}>(), {
   disabled: false,
   loading: false,
   valueKey: 'value',
@@ -63,7 +59,11 @@ const props = withDefaults(defineProps<Props>(), {
   items: () => []
 })
 
-const emit = defineEmits<Emits>()
+const emit = defineEmits<ConfigFieldEmits>()
+
+const handleFocusIn = (event: FocusEvent | MouseEvent) => {
+  emit('focus-field', { element: event.target as HTMLElement | null })
+}
 
 const fieldId = computed(() => `config-${props.parameter.name}-${Math.random().toString(36).substr(2, 9)}`)
 
@@ -71,13 +71,34 @@ const isLoadingOptions = ref(false)
 const loadErrorMessage = ref('')
 const apiOptions = ref<Array<{ label: string; value: string }>>([])
 
+const mapParameterOptions = (options: any[]): Array<{ label: string; value: string }> => {
+  return options.map((option) => {
+    if (typeof option === 'string') {
+      return { label: option, value: option }
+    }
+    if (typeof option === 'object' && option) {
+      return {
+        label: option.label ?? option.name ?? option.value ?? '',
+        value: option.value ?? option.id ?? option.key ?? option.label ?? ''
+      }
+    }
+    return { label: String(option), value: String(option) }
+  })
+}
+
 const selectedItem = ref<{ label: string; value: string } | string | null>(null)
 
 const shouldFetchFromApi = computed(() => {
   if (props.items && props.items.length > 0) {
     return false
   }
-  return props.parameter.type === 'select'
+
+  if (props.parameter.options && props.parameter.options.length > 0) {
+    return false
+  }
+
+  const endpoint = getApiEndpoint()
+  return Boolean(endpoint)
 })
 
 const finalItems = computed(() => {
@@ -125,6 +146,12 @@ watch(() => finalItems.value, (newItems) => {
   }
 })
 
+watch(() => props.parameter.options, (newOptions) => {
+  if (newOptions && newOptions.length > 0) {
+    apiOptions.value = mapParameterOptions(newOptions)
+  }
+}, { immediate: true })
+
 const getApiEndpoint = (): string | null => {
   const paramName = props.parameter.name.toLowerCase()
   const description = props.parameter.description?.toLowerCase() || ''
@@ -133,11 +160,19 @@ const getApiEndpoint = (): string | null => {
     return '/api/openai/models'
   }
 
+  // Cas particulier pour les channels Discord
+  if (paramName.includes('channel') || description.includes('channel')) {
+    return '/api/discord/guilds'
+  }
+
   return null
 }
 
 const fetchApiOptions = async () => {
   if (!shouldFetchFromApi.value) {
+    if (props.parameter.options && props.parameter.options.length > 0) {
+      apiOptions.value = mapParameterOptions(props.parameter.options)
+    }
     return
   }
 
@@ -181,6 +216,48 @@ const fetchApiOptions = async () => {
         label: model.name,
         value: model.id
       }))
+    } else if (endpoint === '/api/discord/guilds') {
+      const guilds = Array.isArray(response)
+        ? response
+        : Array.isArray((response as any)?.guilds)
+          ? (response as any).guilds
+          : []
+
+      if (!guilds.length) {
+        apiOptions.value = []
+        loadErrorMessage.value = 'Aucun serveur Discord accessible'
+        return
+      }
+
+      const allChannels: Array<{ label: string; value: string }> = []
+
+      for (const guild of guilds) {
+        try {
+          const guildChannels = await $fetch(`${backendUrl}/api/discord/guilds/${guild.id}/channels`, { headers })
+
+          if (guildChannels.channels) {
+            guildChannels.channels.forEach((channel: any) => {
+              allChannels.push({
+                label: `${guild.name} - #${channel.name}`,
+                value: channel.id
+              })
+            })
+          } else {
+            if (!loadErrorMessage.value) {
+              loadErrorMessage.value = 'Réponse inattendue lors du chargement des salons Discord'
+            }
+          }
+        } catch (err) {
+          if (!loadErrorMessage.value) {
+            loadErrorMessage.value = 'Erreur lors du chargement des salons Discord'
+          }
+        }
+      }
+
+      apiOptions.value = allChannels
+      if (!allChannels.length) {
+        loadErrorMessage.value = 'Aucun salon disponible sur vos serveurs Discord'
+      }
     } else if (endpoint === '/api/timer/timezones' && response.timezones) {
       apiOptions.value = response.timezones.map((timezone: any) => ({
         label: timezone.name,

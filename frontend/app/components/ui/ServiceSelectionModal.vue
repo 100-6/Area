@@ -52,6 +52,10 @@
           </UButton>
         </div>
 
+        <p class="block-type-indicator">
+          {{ blockTypeLabel }}
+        </p>
+
         <!-- Loading state -->
         <div v-if="isLoadingServices" class="flex items-center justify-center py-8">
           <div class="flex items-center gap-3">
@@ -67,25 +71,40 @@
             :key="service.id"
             class="service-card"
             :class="{
-              'service-card-disabled': !service.isActive,
+              'service-card-disabled': isServiceDisabled(service),
               'service-card-compact': selectedCategory === 'all'
             }"
+            :aria-disabled="isServiceDisabled(service)"
+            :title="isServiceDisabled(service) ? getServiceStatus(service).label : undefined"
             @click="selectService(service)"
           >
             <!-- Affichage compact pour "Tous" -->
             <div v-if="selectedCategory === 'all'" class="service-card-content-compact">
               <div class="service-icon-compact" :style="`background-color: ${service.color}15`">
-                <UIcon :name="service.icon" class="w-5 h-5" :style="`color: ${service.color}`" />
+                <img
+                  v-if="service.iconUrl && !hasIconError(service.id)"
+                  :src="service.iconUrl"
+                  :alt="service.name"
+                  class="w-5 h-5 object-contain"
+                  @error="markIconError(service.id)"
+                />
+                <UIcon v-else :name="service.icon" class="w-5 h-5" :style="`color: ${service.color}`" />
               </div>
               <h3 class="service-name-compact">{{ service.name }}</h3>
-              <span v-if="!service.isActive" class="status-dot status-inactive"></span>
-              <span v-else class="status-dot status-active"></span>
+              <span :class="['status-dot', getServiceStatus(service).dotClass]"></span>
             </div>
 
             <!-- Affichage détaillé pour les catégories spécifiques -->
             <div v-else class="service-card-content">
               <div class="service-icon" :style="`background-color: ${service.color}15`">
-                <UIcon :name="service.icon" class="w-6 h-6" :style="`color: ${service.color}`" />
+                <img
+                  v-if="service.iconUrl && !hasIconError(service.id)"
+                  :src="service.iconUrl"
+                  :alt="service.name"
+                  class="w-6 h-6 object-contain"
+                  @error="markIconError(service.id)"
+                />
+                <UIcon v-else :name="service.icon" class="w-6 h-6" :style="`color: ${service.color}`" />
               </div>
 
               <div class="service-info">
@@ -93,8 +112,9 @@
                 <p class="service-description">{{ service.description }}</p>
                 <div class="service-badge">
                   <span class="category-badge">{{ getCategoryLabel(service.category) }}</span>
-                  <span v-if="!service.isActive" class="status-badge status-inactive">Indisponible</span>
-                  <span v-else class="status-badge status-active">Disponible</span>
+                  <span :class="['status-badge', getServiceStatus(service).badgeClass]">
+                    {{ getServiceStatus(service).label }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -129,6 +149,7 @@ import type { Service } from '~/types'
 
 interface Props {
   open?: boolean
+  blockType?: 'trigger' | 'action'
 }
 
 interface Emits {
@@ -137,7 +158,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  open: false
+  open: false,
+  blockType: 'trigger'
 })
 
 const emit = defineEmits<Emits>()
@@ -149,6 +171,7 @@ const isOpen = computed({
 
 const searchTerm = ref('')
 const selectedCategory = ref<string>('all')
+const blockTypeLabel = computed(() => props.blockType === 'action' ? 'RÉACTION' : 'ACTION')
 
 // Catégories disponibles
 const categories = [
@@ -164,6 +187,7 @@ const categories = [
 const { getAvailableServices } = useServiceManagement()
 const availableServices = ref<Service[]>([])
 const isLoadingServices = ref(false)
+const iconErrorMap = ref<Record<string, boolean>>({})
 
 onMounted(async () => {
   try {
@@ -180,6 +204,12 @@ onMounted(async () => {
 const filteredServices = computed(() => {
   let services = availableServices.value
 
+  if (props.blockType === 'trigger') {
+    services = services.filter(service => (service.actions?.length || 0) > 0)
+  } else if (props.blockType === 'action') {
+    services = services.filter(service => (service.reactions?.length || 0) > 0)
+  }
+
   if (selectedCategory.value !== 'all') {
     services = services.filter(service => service.category === selectedCategory.value)
   }
@@ -195,8 +225,48 @@ const filteredServices = computed(() => {
   return services
 })
 
+const hasIconError = (serviceId: string) => {
+  return iconErrorMap.value[serviceId] === true
+}
+
+const markIconError = (serviceId: string) => {
+  iconErrorMap.value = {
+    ...iconErrorMap.value,
+    [serviceId]: true
+  }
+}
+
+const getServiceStatus = (service: Service) => {
+  if (!service.isActive) {
+    return {
+      label: 'Indisponible',
+      badgeClass: 'status-inactive',
+      dotClass: 'status-inactive',
+      disabled: true
+    }
+  }
+
+  if (service.requiresConnection && service.isConnected !== true) {
+    return {
+      label: 'Connexion requise',
+      badgeClass: 'status-warning',
+      dotClass: 'status-warning',
+      disabled: true
+    }
+  }
+
+  return {
+    label: 'Disponible',
+    badgeClass: 'status-active',
+    dotClass: 'status-active',
+    disabled: false
+  }
+}
+
+const isServiceDisabled = (service: Service) => getServiceStatus(service).disabled
+
 const selectService = (service: Service) => {
-  if (!service.isActive) return
+  if (isServiceDisabled(service)) return
 
   emit('service-selected', service)
 }
@@ -205,6 +275,7 @@ const closeModal = () => {
   isOpen.value = false
   searchTerm.value = ''
   selectedCategory.value = 'all'
+  iconErrorMap.value = {}
 }
 
 const getCategoryLabel = (category: string) => {
@@ -247,6 +318,15 @@ const getCategoryLabel = (category: string) => {
   transform: none;
   box-shadow: none;
   border-color: var(--border-color);
+}
+
+.block-type-indicator {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
 }
 
 .service-card-content {
@@ -320,6 +400,10 @@ const getCategoryLabel = (category: string) => {
   background: var(--color-error);
 }
 
+.status-dot.status-warning {
+  background: rgba(234, 179, 8, 0.85);
+}
+
 .service-name {
   font-size: 1rem;
   font-weight: 600;
@@ -368,6 +452,12 @@ const getCategoryLabel = (category: string) => {
   background: rgba(239, 68, 68, 0.1);
   color: var(--color-error);
   border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.status-warning {
+  background: rgba(234, 179, 8, 0.15);
+  color: #b45309;
+  border: 1px solid rgba(234, 179, 8, 0.35);
 }
 
 .empty-state {

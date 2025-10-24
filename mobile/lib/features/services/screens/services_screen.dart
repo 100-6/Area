@@ -357,6 +357,9 @@ class _ServicesScreenState extends State<ServicesScreen> {
       case OAuthProvider.google:
         icon = Icons.g_mobiledata;
         break;
+      case OAuthProvider.gmail:
+        icon = Icons.email_rounded;
+        break;
       case OAuthProvider.github:
         icon = Icons.code;
         break;

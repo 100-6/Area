@@ -98,7 +98,7 @@
         <div
           v-if="workflowBlocks.length === 0"
           class="add-action-button"
-          @click="openServiceModal"
+          @click="openTriggerServiceModal"
         >
           <div class="add-button-content">
             <UIcon name="i-heroicons-plus" class="w-8 h-8" />
@@ -113,7 +113,7 @@
           :isEmpty="true"
           :canvas-mode="true"
           :position="nextCardPosition"
-          @add-service="openServiceModal"
+          @add-service="openActionServiceModal"
         />
 
         <!-- Workflow Cards -->
@@ -125,6 +125,7 @@
           :title="block.service.name"
           :description="block.service.description"
           :icon="block.service.icon"
+          :icon-url="block.service.iconUrl"
           :icon-background="block.service.color + '15'"
           :icon-color="block.service.color"
           :position="block.position"
@@ -136,6 +137,8 @@
           @update-position="updateBlockPosition"
           @delete="deleteBlock"
           @configure="handleBlockConfigure"
+          @connection-drag-start="handleConnectionDragStart"
+          @connection-drop="handleConnectionDragEnd"
         />
 
         <!-- Connections between blocks -->
@@ -165,6 +168,15 @@
             marker-end="url(#arrowhead)"
             class="connection-line"
           />
+          <path
+            v-if="isDraggingConnection && draggedConnection"
+            :d="getPreviewConnectionPath()"
+            stroke="#10b981"
+            stroke-width="3"
+            fill="none"
+            class="connection-preview"
+            stroke-dasharray="8,4"
+          />
         </svg>
 
         <!-- Mini add button when blocks exist -->
@@ -175,7 +187,7 @@
           color="primary"
           icon="i-heroicons-plus"
           size="lg"
-          @click="openServiceModal"
+          @click="openActionServiceModal"
         >
           Ajouter
         </UButton>
@@ -185,6 +197,7 @@
     <!-- Service Selection Modal -->
     <UiServiceSelectionModal
       v-model:open="showServiceModal"
+      :block-type="selectedBlockType"
       @service-selected="handleServiceSelected"
     />
 
@@ -195,6 +208,9 @@
       :service="selectedService"
       :block-type="selectedBlockType"
       :initial-config="currentConfiguration"
+      :workflow-blocks="workflowBlocks"
+      :current-block-index="modalCurrentBlockIndex"
+      :available-previous-nodes="modalPreviousNodeIds"
       @configuration-confirmed="handleConfigurationConfirmed"
     />
 
@@ -333,11 +349,14 @@ const {
   updateBlockPosition,
   deleteBlock,
   configureBlock,
+  addConnection,
   updateBlockConfiguration,
   getBlockConnectionState,
   getConnectionPath,
+  getConnectionPointPosition,
   saveWorkflow: saveWorkflowData,
-  loadWorkflow
+  loadWorkflow,
+  refreshConnections
 } = useWorkflowManagement(canvas, zoom)
 
 const {
@@ -347,6 +366,7 @@ const {
   selectedBlockType,
   isEditingConfiguration,
   currentConfiguration,
+  configContext: configModalContext,
   openServiceModal,
   selectServiceWithConfiguration,
   onConfigurationConfirmed,
@@ -354,6 +374,9 @@ const {
   closeConfigModal,
   handlePreSelectedService
 } = useServiceManagement()
+
+const openTriggerServiceModal = () => openServiceModal('trigger')
+const openActionServiceModal = () => openServiceModal('action')
 
 const showConfigModal = computed({
   get: () => _showConfigModal.value,
@@ -371,12 +394,24 @@ const workflowName = ref('')
 const workflowDescription = ref('')
 const nameError = ref('')
 
+// Connection drag state
+const isDraggingConnection = ref(false)
+const draggedConnection = ref<{
+  sourceBlockId: string
+  sourceType: 'input' | 'output'
+  startPosition: { x: number; y: number }
+} | null>(null)
+const currentMousePosition = ref({ x: 0, y: 0 })
+const hoveredConnectionTarget = ref<{ blockId: string; type: 'input' | 'output' } | null>(null)
+const connectionDragHasMoved = ref(false)
+
 const handleServiceSelected = (service: Service) => {
-  const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
+  const blockType = selectedBlockType.value || (workflowBlocks.value.length === 0 ? 'trigger' : 'action')
+  const blockIndex = workflowBlocks.value.length
 
   selectServiceWithConfiguration(service, blockType, (config) => {
     addServiceBlock(config, undefined, blockType)
-  })
+  }, { blockIndex })
 }
 
 const handleConfigurationConfirmed = (config: ServiceConfiguration) => {
@@ -387,19 +422,40 @@ const handleBlockConfigure = async (blockId: string) => {
   try {
     const configInfo = await configureBlock(blockId)
     if (configInfo) {
+      const blockIndex = workflowBlocks.value.findIndex(block => block.id === blockId)
       editServiceConfiguration(
         configInfo.service,
         configInfo.blockType,
         configInfo.currentConfig,
         (newConfig: ServiceConfiguration) => {
           updateBlockConfiguration(blockId, newConfig)
-        }
+        },
+        { blockId, blockIndex }
       )
     }
   } catch (error) {
     console.error('Failed to configure block:', error)
   }
 }
+
+const modalCurrentBlockIndex = computed(() => {
+  const contextIndex = configModalContext.value?.blockIndex
+  if (typeof contextIndex === 'number' && contextIndex >= 0) {
+    return contextIndex
+  }
+  return workflowBlocks.value.length
+})
+
+const modalPreviousNodeIds = computed(() => {
+  if (selectedBlockType.value !== 'action') {
+    return []
+  }
+  const index = modalCurrentBlockIndex.value
+  if (index <= 0) {
+    return []
+  }
+  return workflowBlocks.value.slice(0, index).map(block => block.id)
+})
 
 const openSaveModal = () => {
   if (workflowBlocks.value.length === 0) {
@@ -442,6 +498,207 @@ const handleSaveWorkflow = async () => {
   }
 }
 
+const blockCount = computed(() => workflowBlocks.value.length)
+
+watch(blockCount, (count, previous) => {
+  if (count === 0 && (previous ?? 0) > 0) {
+    resetCanvas()
+    selectedBlockType.value = 'trigger'
+    refreshConnections()
+  }
+})
+
+const handleConnectionDragStart = (blockId: string, connectionType: 'input' | 'output', position: { x: number; y: number }) => {
+  isDraggingConnection.value = true
+  draggedConnection.value = {
+    sourceBlockId: blockId,
+    sourceType: connectionType,
+    startPosition: position
+  }
+
+  currentMousePosition.value = { ...position }
+  hoveredConnectionTarget.value = null
+  connectionDragHasMoved.value = false
+
+  document.addEventListener('mousemove', updateConnectionPreview)
+  document.addEventListener('mouseup', cancelConnectionDrag)
+
+  document.body.style.cursor = 'crosshair'
+  console.log(`Started dragging ${connectionType} from block ${blockId}`)
+}
+
+const handleConnectionDragEnd = (blockId: string, connectionType: 'input' | 'output', event: MouseEvent) => {
+  if (!isDraggingConnection.value || !draggedConnection.value) {
+    return
+  }
+
+  const sourceBlockId = draggedConnection.value.sourceBlockId
+  const sourceType = draggedConnection.value.sourceType
+
+  if (sourceBlockId === blockId) {
+    resetConnectionDrag()
+    return
+  }
+
+  if (sourceType === 'output' && connectionType === 'input') {
+    createConnection(sourceBlockId, blockId, sourceType)
+  } else if (sourceType === 'input' && connectionType === 'output') {
+    createConnection(sourceBlockId, blockId, sourceType)
+  } else {
+    console.log('Invalid connection: cannot connect same types')
+  }
+
+  resetConnectionDrag()
+}
+
+const createConnection = (sourceBlockId: string, targetBlockId: string, sourceType: 'input' | 'output') => {
+  const fromBlockId = sourceType === 'output' ? sourceBlockId : targetBlockId
+  const toBlockId = sourceType === 'output' ? targetBlockId : sourceBlockId
+
+  const newConnection = addConnection(fromBlockId, toBlockId)
+
+  if (!newConnection) {
+    console.log('Connection already exists or invalid connection')
+    return
+  }
+
+  console.log(`Created connection from ${fromBlockId} to ${toBlockId}`)
+}
+
+const updateConnectionPreview = (event: MouseEvent) => {
+  if (!isDraggingConnection.value || !draggedConnection.value) return
+
+  const canvasRect = canvas.value?.getBoundingClientRect()
+  if (!canvasRect) return
+
+  const mouseX = event.clientX - canvasRect.left
+  const mouseY = event.clientY - canvasRect.top
+
+  const targetElement = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null
+  const targetCard = targetElement?.closest('[data-block-id]') as HTMLElement | null
+
+  if (targetCard) {
+    const targetBlockId = targetCard.dataset.blockId
+    const isSameBlock = targetBlockId === draggedConnection.value.sourceBlockId
+
+    if (!isSameBlock) {
+      const connectorSelector = draggedConnection.value.sourceType === 'output'
+        ? '.connection-input'
+        : '.connection-output'
+
+      const targetConnector = targetCard.querySelector(connectorSelector) as HTMLElement | null
+
+      if (targetConnector) {
+        const connectorRect = targetConnector.getBoundingClientRect()
+        currentMousePosition.value = {
+          x: (connectorRect.left + connectorRect.width / 2 - canvasRect.left) / zoom.value,
+          y: (connectorRect.top + connectorRect.height / 2 - canvasRect.top) / zoom.value
+        }
+        if (targetBlockId) {
+          hoveredConnectionTarget.value = {
+            blockId: targetBlockId,
+            type: connectorSelector.includes('input') ? 'input' : 'output'
+          }
+        }
+        if (draggedConnection.value) {
+          const deltaX = currentMousePosition.value.x - draggedConnection.value.startPosition.x
+          const deltaY = currentMousePosition.value.y - draggedConnection.value.startPosition.y
+          if (!connectionDragHasMoved.value && Math.hypot(deltaX, deltaY) > 4) {
+            connectionDragHasMoved.value = true
+          }
+        }
+        return
+      }
+    }
+  }
+
+  currentMousePosition.value = {
+    x: mouseX / zoom.value,
+    y: mouseY / zoom.value
+  }
+  hoveredConnectionTarget.value = null
+
+  if (draggedConnection.value) {
+    const deltaX = currentMousePosition.value.x - draggedConnection.value.startPosition.x
+    const deltaY = currentMousePosition.value.y - draggedConnection.value.startPosition.y
+    if (!connectionDragHasMoved.value && Math.hypot(deltaX, deltaY) > 4) {
+      connectionDragHasMoved.value = true
+    }
+  }
+}
+
+const cancelConnectionDrag = (event: MouseEvent) => {
+  if (!isDraggingConnection.value || !draggedConnection.value) {
+    return
+  }
+
+  const sourceBlockId = draggedConnection.value.sourceBlockId
+  const sourceType = draggedConnection.value.sourceType
+  const targetElement = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null
+
+  if (targetElement && targetElement.closest('.connection-point')) {
+    return
+  }
+
+  let dropHandled = false
+
+  if (targetElement) {
+    const cardElement = targetElement.closest('[data-block-id]') as HTMLElement | null
+    const targetBlockId = cardElement?.dataset.blockId
+
+    if (targetBlockId && targetBlockId !== sourceBlockId) {
+      createConnection(sourceBlockId, targetBlockId, sourceType)
+      dropHandled = true
+    }
+  }
+
+  if (!dropHandled && hoveredConnectionTarget.value) {
+    const targetBlockId = hoveredConnectionTarget.value.blockId
+    const targetType = hoveredConnectionTarget.value.type
+
+    if (targetBlockId && targetBlockId !== sourceBlockId) {
+      if (sourceType === 'output' && targetType === 'input') {
+        createConnection(sourceBlockId, targetBlockId, sourceType)
+      } else if (sourceType === 'input' && targetType === 'output') {
+        createConnection(sourceBlockId, targetBlockId, sourceType)
+      }
+      dropHandled = true
+    }
+  }
+
+  resetConnectionDrag()
+}
+
+const getPreviewConnectionPath = () => {
+  if (!draggedConnection.value) return ''
+
+  const start = draggedConnection.value.startPosition
+  const end = currentMousePosition.value
+
+  const dx = end.x - start.x
+  const controlOffset = Math.max(50, Math.abs(dx) * 0.3)
+
+  const controlPoint1X = start.x + controlOffset
+  const controlPoint2X = end.x - controlOffset
+
+  return `M ${start.x} ${start.y} C ${controlPoint1X} ${start.y}, ${controlPoint2X} ${end.y}, ${end.x} ${end.y}`
+}
+
+const resetConnectionDrag = () => {
+  isDraggingConnection.value = false
+  draggedConnection.value = null
+  document.body.style.cursor = ''
+  hoveredConnectionTarget.value = null
+  connectionDragHasMoved.value = false
+
+  document.removeEventListener('mousemove', updateConnectionPreview)
+  document.removeEventListener('mouseup', cancelConnectionDrag)
+}
+
+onUnmounted(() => {
+  resetConnectionDrag()
+})
+
 const goBack = () => {
   navigateTo('/dashboard')
 }
@@ -456,7 +713,8 @@ useKeyboardShortcuts({
   },
   onSpace: () => {
     if (!showServiceModal.value && !showSaveModal.value) {
-      openServiceModal()
+      const blockType = workflowBlocks.value.length === 0 ? 'trigger' : 'action'
+      openServiceModal(blockType)
     }
   },
   onSave: openSaveModal
@@ -468,6 +726,8 @@ onMounted(async () => {
   if (areaId) {
     try {
       await loadWorkflow(areaId)
+      await nextTick()
+      refreshConnections()
     } catch (error) {
       console.error('Failed to load workflow:', error)
       await navigateTo('/workflow/create')
@@ -716,6 +976,21 @@ useHead({
 
 .connection-line:hover {
   stroke-width: 3;
+}
+
+.connection-preview {
+  animation: pulse-connection 1.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px #10b981);
+  pointer-events: none;
+}
+
+@keyframes pulse-connection {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 /* Mobile responsive */

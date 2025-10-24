@@ -25,8 +25,15 @@ export class GenerateText extends BaseAction {
     getConfigSchema(): any {
         return {
             type: 'object',
-            required: ['prompt'],
+            required: ['apiKey', 'prompt'],
             properties: {
+                apiKey: {
+                    type: 'string',
+                    title: 'OpenAI API Key',
+                    description: 'Your OpenAI API key (starts with sk-)',
+                    pattern: '^sk-',
+                    minLength: 20
+                },
                 prompt: {
                     type: 'string',
                     title: 'Prompt',
@@ -38,21 +45,36 @@ export class GenerateText extends BaseAction {
                     type: 'string',
                     title: 'Model',
                     description: 'GPT model to use',
-                    enum: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-                    default: 'gpt-3.5-turbo'
+                    enum: [
+                        'gpt-5-pro',
+                        'gpt-5',
+                        'gpt-5-mini',
+                        'gpt-5-nano',
+                        'gpt-4.1',
+                        'gpt-4.1-mini',
+                        'gpt-4.1-nano',
+                        'gpt-4o',
+                        'gpt-4o-mini',
+                        'gpt-4-turbo',
+                        'gpt-4',
+                        'o4-mini',
+                        'o1-preview',
+                        'o1-mini'
+                    ],
+                    default: 'gpt-4o-mini'
                 },
                 maxTokens: {
                     type: 'number',
                     title: 'Max Tokens',
-                    description: 'Maximum tokens in the response',
+                    description: 'Maximum tokens in the response (uses max_completion_tokens for GPT-5 and o-series)',
                     default: 500,
                     minimum: 1,
-                    maximum: 4000
+                    maximum: 16000
                 },
                 temperature: {
                     type: 'number',
                     title: 'Temperature',
-                    description: 'Creativity level (0-2)',
+                    description: 'Creativity level (0-2). Not supported by GPT-5 and o-series models - will be ignored.',
                     default: 0.7,
                     minimum: 0,
                     maximum: 2
@@ -60,7 +82,7 @@ export class GenerateText extends BaseAction {
                 systemMessage: {
                     type: 'string',
                     title: 'System Message (optional)',
-                    description: 'System message to set context',
+                    description: 'System message to set context (not applicable for o-series reasoning models)',
                     maxLength: 1000
                 }
             }
@@ -100,8 +122,8 @@ export class GenerateText extends BaseAction {
             throw new Error('apiKey is required and must start with "sk-"');
         if (!config.prompt || config.prompt.length < 1 || config.prompt.length > 4000)
             throw new Error('prompt must be between 1 and 4000 characters');
-        if (config.maxTokens && (config.maxTokens < 1 || config.maxTokens > 4000))
-            throw new Error('maxTokens must be between 1 and 4000');
+        if (config.maxTokens && (config.maxTokens < 1 || config.maxTokens > 16000))
+            throw new Error('maxTokens must be between 1 and 16000');
         if (config.temperature && (config.temperature < 0 || config.temperature > 2))
             throw new Error('temperature must be between 0 and 2');
         return true;
@@ -122,7 +144,7 @@ export class GenerateText extends BaseAction {
             const result = await this.apiService.generateText(
                 apiKey,
                 prompt,
-                {model: config.model || 'gpt-3.5-turbo', maxTokens: config.maxTokens || 500, temperature: config.temperature || 0.7, systemMessage}
+                {model: config.model || 'gpt-4o-mini', maxTokens: config.maxTokens || 500, temperature: config.temperature || 0.7, systemMessage}
             );
             const executionTime = Date.now() - startTime;
             console.log(`[GenerateText] ✓ Text generated successfully (${result.tokensUsed} tokens)`.green);

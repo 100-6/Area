@@ -27,12 +27,50 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
   const currentAreaId = ref<string | null>(null)
   const isSaving = ref(false)
   const saveError = ref<string | null>(null)
+  const isMounted = ref(false)
+  let pendingConnectionsRefresh = false
+  let refreshScheduled = false
+
+  const scheduleConnectionsRefresh = () => {
+    if (refreshScheduled) {
+      return
+    }
+
+    refreshScheduled = true
+    nextTick(() => {
+      refreshScheduled = false
+      connections.value = [...connections.value]
+    })
+  }
+
+  const refreshConnections = () => {
+    if (!isMounted.value) {
+      pendingConnectionsRefresh = true
+      return
+    }
+
+    pendingConnectionsRefresh = false
+    scheduleConnectionsRefresh()
+  }
+
+  const isUuid = (value?: string | null): boolean => {
+    if (!value)
+      return false
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+  }
   
 
   watch(zoom, () => {
-    nextTick(() => {
-      connections.value = [...connections.value]
-    })
+    refreshConnections()
+  })
+
+  onMounted(() => {
+    isMounted.value = true
+
+    if (pendingConnectionsRefresh || connections.value.length > 0) {
+      pendingConnectionsRefresh = false
+      scheduleConnectionsRefresh()
+    }
   })
 
   const firstCardPosition = computed(() => ({ x: 0, y: 0 }))
@@ -88,18 +126,64 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
 
     workflowBlocks.value.push(newBlock)
 
-    if (workflowBlocks.value.length > 1) {
-      const previousBlock = workflowBlocks.value[workflowBlocks.value.length - 2]
-      const newConnection = {
-        from: previousBlock.id,
-        to: newBlock.id
-      }
-      connections.value.push(newConnection)
+    // Connexions manuelles désormais - pas de création automatique
+    // if (workflowBlocks.value.length > 1) {
+    //   const previousBlock = workflowBlocks.value[workflowBlocks.value.length - 2]
+    //   const newConnection = {
+    //     from: previousBlock.id,
+    //     to: newBlock.id
+    //   }
+    //   connections.value.push(newConnection)
+    // }
+
+    refreshConnections()
+  }
+
+  const generateConnectionId = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID()
     }
 
-    nextTick(() => {
-      connections.value = [...connections.value]
-    })
+    return `conn-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  }
+
+  const addConnection = (fromBlockId: string, toBlockId: string) => {
+    if (!fromBlockId || !toBlockId || fromBlockId === toBlockId) {
+      return null
+    }
+
+    const existingConnection = connections.value.find(connection =>
+      connection.from === fromBlockId && connection.to === toBlockId
+    )
+
+    if (existingConnection) {
+      return existingConnection
+    }
+
+    const newConnection: Connection = {
+      from: fromBlockId,
+      to: toBlockId,
+      id: generateConnectionId()
+    }
+
+    connections.value.push(newConnection)
+    refreshConnections()
+
+    return newConnection
+  }
+
+  const removeConnection = (fromBlockId: string, toBlockId: string) => {
+    const initialLength = connections.value.length
+    connections.value = connections.value.filter(connection =>
+      !(connection.from === fromBlockId && connection.to === toBlockId)
+    )
+
+    const removed = connections.value.length !== initialLength
+    if (removed) {
+      refreshConnections()
+    }
+
+    return removed
   }
 
   const updateBlockPosition = (blockId: string, newPosition: { x: number; y: number }) => {
@@ -109,9 +193,63 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
   }
 
+  // Fonction pour compter les nodes qui seront supprimées en cascade
+  const countNodesForDeletion = (nodeId: string, visited = new Set<string>()): number => {
+    if (visited.has(nodeId)) {
+      return 0
+    }
+    visited.add(nodeId)
+
+    let count = 1 // La node actuelle
+
+    // Trouver toutes les connexions sortantes de cette node (enfants)
+    const childConnections = connections.value.filter(c => c.from === nodeId)
+    const childNodeIds = childConnections.map(c => c.to)
+
+    // Compter récursivement toutes les nodes enfants
+    for (const childId of childNodeIds) {
+      count += countNodesForDeletion(childId, visited)
+    }
+
+    return count
+  }
+
   const deleteBlock = (blockId: string) => {
-    workflowBlocks.value = workflowBlocks.value.filter(b => b.id !== blockId)
-    connections.value = connections.value.filter(c => c.from !== blockId && c.to !== blockId)
+    // Compter le nombre de nodes qui seront supprimées
+    const nodeCount = countNodesForDeletion(blockId)
+
+    if (nodeCount > 1) {
+      const blockName = workflowBlocks.value.find(b => b.id === blockId)?.service.name || 'cette node'
+      console.log(`[WorkflowManagement] Suppression en cascade de ${nodeCount} nodes à partir de ${blockName}`)
+    }
+
+    // Fonction récursive pour supprimer une node et toutes ses nodes enfants (vers la droite)
+    const deleteNodeAndChildren = (nodeId: string, visited = new Set<string>()): void => {
+      // Éviter les cycles infinis
+      if (visited.has(nodeId)) {
+        return
+      }
+      visited.add(nodeId)
+
+      // Trouver toutes les connexions sortantes de cette node (enfants)
+      const childConnections = connections.value.filter(c => c.from === nodeId)
+      const childNodeIds = childConnections.map(c => c.to)
+
+      // Supprimer récursivement toutes les nodes enfants
+      for (const childId of childNodeIds) {
+        deleteNodeAndChildren(childId, visited)
+      }
+
+      // Supprimer la node actuelle
+      workflowBlocks.value = workflowBlocks.value.filter(b => b.id !== nodeId)
+
+      // Supprimer toutes les connexions liées à cette node (entrantes et sortantes)
+      connections.value = connections.value.filter(c => c.from !== nodeId && c.to !== nodeId)
+    }
+
+    // Démarrer la suppression en cascade
+    deleteNodeAndChildren(blockId)
+    refreshConnections()
   }
 
   const configureBlock = async (blockId: string, onConfigurationChanged?: (config: ServiceConfiguration) => void) => {
@@ -123,8 +261,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     if (currentAreaId.value) {
       try {
         await refreshBlockFromBackend(blockId)
-      } catch (error) {
-        console.error('Failed to refresh block from backend:', error)
+      } catch (_error) {
       }
     }
 
@@ -133,29 +270,49 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     const serviceName = refreshedBlock.serviceName || block.service.name || block.service
     const resolvedService = await resolveService(serviceName)
     if (!resolvedService) {
-      console.error('Cannot resolve service:', serviceName)
       return
+    }
+
+    let nodeDetails: any = null
+    if (isUuid(refreshedBlock.id)) {
+      try {
+        nodeDetails = await workflowApi.getModuleDetails(refreshedBlock.id)
+      } catch (_error) {
+        nodeDetails = null
+      }
     }
 
     let selectedAction: any = undefined
     let selectedReaction: any = undefined
 
-    if (refreshedBlock.nodeType === 'trigger' && refreshedBlock.actionName) {
-      selectedAction = resolvedService.actions.find(a => a.id === refreshedBlock.actionName)
-    } else if (refreshedBlock.nodeType === 'action' && refreshedBlock.reactionName) {
-      selectedReaction = resolvedService.reactions.find(r => r.id === refreshedBlock.reactionName)
+    if (refreshedBlock.type === 'trigger' && refreshedBlock.actionId) {
+      selectedAction = resolvedService.actions.find(a => a.id === refreshedBlock.actionId)
+      if (!selectedAction && nodeDetails?.triggerName) {
+        selectedAction = resolvedService.actions.find(a => a.id === nodeDetails.triggerName)
+      }
+      if (!selectedAction && nodeDetails?.actionName) {
+        selectedAction = resolvedService.actions.find(a => a.id === nodeDetails.actionName)
+      }
+    } else if (refreshedBlock.type === 'action' && refreshedBlock.reactionId) {
+      selectedReaction = resolvedService.reactions.find(r => r.id === refreshedBlock.reactionId)
+      if (!selectedReaction && nodeDetails?.actionName) {
+        selectedReaction = resolvedService.reactions.find(r => r.id === nodeDetails.actionName)
+      }
+      if (!selectedReaction && nodeDetails?.triggerName) {
+        selectedReaction = resolvedService.reactions.find(r => r.id === nodeDetails.triggerName)
+      }
     }
 
     const finalConfig = {
       service: resolvedService,
       selectedAction,
       selectedReaction,
-      parameters: { ...(refreshedBlock.config || {}) }
+      parameters: { ...(nodeDetails?.currentConfig || refreshedBlock.config || {}) }
     } as ServiceConfiguration
 
     return {
       blockId: refreshedBlock.id,
-      service: refreshedBlock.service,
+      service: resolvedService,
       blockType: refreshedBlock.type,
       currentConfig: finalConfig,
       onConfigurationChanged
@@ -170,8 +327,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     try {
       const workflow = await workflowApi.getWorkflow(currentAreaId.value)
 
-      const backendNode = workflow.nodes.find((node: any) => node.id === blockId)
-
+      const backendNode = workflow.nodes.find(node => node.id === blockId)
       if (!backendNode) {
         return
       }
@@ -183,16 +339,12 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
         workflowBlocks.value[blockIndex] = {
           ...currentBlock,
           actionId: backendNode.actionId,
-          actionName: backendNode.actionName,
           reactionId: backendNode.reactionId,
-          reactionName: backendNode.reactionName,
-          serviceName: backendNode.serviceName,
-          nodeType: backendNode.nodeType,
           config: backendNode.config || {}
         }
+
       }
     } catch (error) {
-      console.error('Error refreshing block from backend:', error)
       throw error
     }
   }
@@ -332,6 +484,16 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     }
   }
 
+  /**
+   * Initialize service mapping - plus besoin avec les noms
+   */
+  const initializeServiceMapping = async () => {
+    // Using service names directly - no UUID mapping needed
+  }
+
+  /**
+   * Resolve service identifier (name) to a frontend service object
+   */
   const resolveService = async (serviceName: string): Promise<Service | null> => {
     const { getAvailableServices } = useServiceManagement()
     const services = await getAvailableServices()
@@ -344,6 +506,9 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     return service || null
   }
 
+  /**
+   * Map backend node to frontend block
+   */
   const mapBackendNodeToBlock = async (node: BackendWorkflowNode): Promise<WorkflowBlockData | null> => {
     let service: Service | null = null
 
@@ -389,6 +554,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       workflowBlocks.value = []
       connections.value = []
 
+      // Map backend nodes to frontend blocks
       const mappedBlocks = await Promise.all(
         workflow.nodes.map(node => mapBackendNodeToBlock(node))
       )
@@ -399,9 +565,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
 
       currentAreaId.value = areaId
 
-      nextTick(() => {
-        connections.value = [...connections.value]
-      })
+      refreshConnections()
 
       return workflow
     } catch (err: any) {
@@ -458,24 +622,32 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
       }
     }
   }
-
   return {
     workflowBlocks: readonly(workflowBlocks),
     connections: readonly(connections),
     currentAreaId: readonly(currentAreaId),
     isSaving: readonly(isSaving),
     saveError: readonly(saveError),
+
     nextCardPosition,
     addServiceBlock,
     updateBlockPosition,
     deleteBlock,
+    addConnection,
+    removeConnection,
     configureBlock,
     updateBlockConfig,
     getBlockConnectionState,
     getConnectionPath,
+    getConnectionPointPosition,
+    countNodesForDeletion,
+
     saveWorkflow,
     loadWorkflow,
     serializeWorkflow,
-    updateBlockConfiguration
+    initializeServiceMapping,
+
+    updateBlockConfiguration,
+    refreshConnections
   }
 }

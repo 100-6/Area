@@ -1,0 +1,2 @@
+export { OnFileUploadedTrigger } from './OnFileUploaded';
+

@@ -4,6 +4,15 @@ import { consoleModule } from './console/service';
 import { discordModule } from './discord/service';
 import { openaiModule } from './openai/service';
 import { gmailModule } from './gmail/module';
+import { telegramModule } from './telegram/service';
+import { outlookModule } from './outlook/module';
+import { githubModule } from './github/service';
+import { dropboxModule } from './dropbox/service';
+import { ntfyModule } from './ntfy/service';
+import { rssModule } from './rss/service';
+import { webhookModule } from './webhook/service';
+import { shodanModule } from './shodan/service';
+import { spotifyModule } from './spotify/service';
 import 'colors';
 
 /**
@@ -43,6 +52,15 @@ class ModuleRegistry {
             await this.registerModule(discordModule);
             await this.registerModule(openaiModule);
             await this.registerModule(gmailModule);
+            await this.registerModule(telegramModule);
+            await this.registerModule(outlookModule);
+            await this.registerModule(githubModule);
+            await this.registerModule(dropboxModule);
+            await this.registerModule(ntfyModule);
+            await this.registerModule(rssModule);
+            await this.registerModule(webhookModule);
+            await this.registerModule(shodanModule);
+            await this.registerModule(spotifyModule);
             this.initialized = true;
             console.log(`[Registry] Successfully initialized ${this.modules.size} module(s)`.green.bold);
         } catch (error) {

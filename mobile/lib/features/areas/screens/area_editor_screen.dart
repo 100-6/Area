@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/workflow_node.dart';
 import '../models/service_info.dart';
 import '../services/area_service.dart';
+import '../services/module_config_service.dart';
 import '../../auth/data/auth_repository.dart';
 import '../utils/node_config_helper.dart';
 import 'service_selector_screen.dart';
@@ -18,6 +19,7 @@ class AreaEditorScreen extends StatefulWidget {
 
 class _AreaEditorScreenState extends State<AreaEditorScreen> {
   final AreaService _areaService = AreaService();
+  final ModuleConfigService _moduleConfigService = ModuleConfigService();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
@@ -51,14 +53,44 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
         token: token,
       );
 
+      final triggerNode = nodes.firstWhere(
+        (n) => n.nodeType == 'trigger',
+        orElse: () => nodes.first,
+      );
+
+      // Charger l'outputSchema du trigger
+      Map<String, dynamic>? outputSchema;
+      if (triggerNode.nodeType == 'trigger') {
+        if (!triggerNode.id.startsWith('temp_')) {
+          // Trigger existant - charger via nodeId
+          debugPrint('🔍 Loading outputSchema for existing trigger node: ${triggerNode.id}');
+          outputSchema = await _moduleConfigService.getNodeOutputSchema(
+            nodeId: triggerNode.id,
+            token: token,
+          );
+          debugPrint('📦 Received outputSchema: $outputSchema');
+        } else if (triggerNode.serviceId != null && triggerNode.actionId != null) {
+          // Nouveau trigger - charger via moduleName et triggerName
+          debugPrint('🔍 Loading outputSchema for new trigger: ${triggerNode.serviceId}.${triggerNode.actionId}');
+          outputSchema = await _moduleConfigService.getOutputSchemaByName(
+            moduleName: triggerNode.serviceId!,
+            actionOrTriggerName: triggerNode.actionId!,
+            type: 'trigger',
+            token: token,
+          );
+          debugPrint('📦 Received outputSchema: $outputSchema');
+        } else {
+          debugPrint('⚠️ Cannot load outputSchema - missing serviceId or actionId');
+        }
+      } else {
+        debugPrint('⚠️ Node is not a trigger - nodeType: ${triggerNode.nodeType}');
+      }
+
       setState(() {
         _nameController.text = area.name;
         _descriptionController.text = area.description ?? '';
         _isDescriptionExpanded = area.description != null && area.description!.isNotEmpty;
-        _triggerNode = nodes.firstWhere(
-          (n) => n.nodeType == 'trigger',
-          orElse: () => nodes.first,
-        );
+        _triggerNode = triggerNode;
         _actionNodes = nodes.where((n) => n.nodeType != 'trigger').toList();
         _isLoading = false;
       });
@@ -77,6 +109,12 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a name')),
       );
+      return;
+    }
+
+    // Éviter les doubles soumissions
+    if (_isLoading) {
+      debugPrint('⚠️ Save already in progress, ignoring duplicate call');
       return;
     }
 
@@ -117,8 +155,14 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
           triggerNodeId = createdTrigger.id;
         }
 
-        // Créer les nodes d'action et les connexions
+        // Créer les nodes d'action et les connexions en chaîne
+        debugPrint('💾 Creating ${_actionNodes.length} action nodes...');
+        String? previousNodeId = triggerNodeId;
+        int actionIndex = 0;
+
         for (var actionNode in _actionNodes) {
+          debugPrint('💾 Creating action ${actionIndex + 1}/${_actionNodes.length}: ${actionNode.serviceId}/${actionNode.reactionId}');
+
           final createdAction = await _areaService.createWorkflowNode(
             areaId: areaId,
             nodeType: 'action',
@@ -131,16 +175,25 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
             token: token,
           );
 
-          // Créer la connexion trigger -> action
-          if (triggerNodeId != null) {
+          debugPrint('✅ Created action node: ${createdAction.id}');
+
+          // Créer la connexion avec la node précédente (trigger ou action précédente)
+          if (previousNodeId != null) {
+            debugPrint('🔗 Connecting $previousNodeId → ${createdAction.id}');
             await _areaService.createWorkflowConnection(
               areaId: areaId,
-              sourceNodeId: triggerNodeId,
+              sourceNodeId: previousNodeId,
               targetNodeId: createdAction.id,
               token: token,
             );
           }
+
+          // La prochaine action se connectera à celle-ci
+          previousNodeId = createdAction.id;
+          actionIndex++;
         }
+
+        debugPrint('✅ All ${_actionNodes.length} actions created successfully');
       } else {
         // Mettre à jour l'AREA existante
         await _areaService.updateArea(
@@ -246,29 +299,99 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
           serviceAction: serviceAction,
         );
 
-        if (config != null) {
-          setState(() {
-            // Créer le node avec la configuration
-            _triggerNode = WorkflowNode(
-              id: 'temp_trigger',
-              areaId: widget.areaId ?? 'new',
-              nodeType: 'trigger',
-              serviceId: result['service'],
-              actionId: result['name'],
-              config: config,
-              positionX: 100,
-              positionY: 100,
-              label: '${result['service']}: ${result['description']}',
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
+        if (config != null && mounted) {
+          // Charger l'outputSchema du nouveau trigger
+          final authRepo = context.read<AuthRepository>();
+          final token = await authRepo.getToken();
+          Map<String, dynamic>? outputSchema;
+
+          if (token != null) {
+            outputSchema = await _moduleConfigService.getOutputSchemaByName(
+              moduleName: result['service'],
+              actionOrTriggerName: result['name'],
+              type: 'trigger',
+              token: token,
             );
-          });
+            debugPrint('📦 Loaded outputSchema for new trigger: $outputSchema');
+          }
+
+          if (mounted) {
+            setState(() {
+              // Créer le node avec la configuration
+              _triggerNode = WorkflowNode(
+                id: 'temp_trigger',
+                areaId: widget.areaId ?? 'new',
+                nodeType: 'trigger',
+                serviceId: result['service'],
+                actionId: result['name'],
+                config: config,
+                positionX: 100,
+                positionY: 100,
+                label: '${result['service']}: ${result['description']}',
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              );
+            });
+          }
         }
       }
     }
   }
 
   Future<void> _editAction(WorkflowNode node) async {
+    // Trouver la node précédente dans le workflow (linéaire)
+    final nodeIndex = _actionNodes.indexOf(node);
+    WorkflowNode? previousNode;
+
+    if (nodeIndex == 0) {
+      // Première action → node précédente = trigger
+      previousNode = _triggerNode;
+    } else if (nodeIndex > 0) {
+      // Action suivante → node précédente = action précédente dans la liste
+      previousNode = _actionNodes[nodeIndex - 1];
+    }
+
+    Map<String, dynamic>? previousOutputSchema;
+    String? previousNodeName;
+
+    if (previousNode != null) {
+      // Charger l'outputSchema de la node précédente
+      final authRepo = context.read<AuthRepository>();
+      final token = await authRepo.getToken();
+
+      if (token != null) {
+        if (!previousNode.id.startsWith('temp_')) {
+          // Node existante - charger via API
+          previousOutputSchema = await _moduleConfigService.getNodeOutputSchema(
+            nodeId: previousNode.id,
+            token: token,
+          );
+        } else if (previousNode.serviceId != null &&
+                   (previousNode.actionId != null || previousNode.reactionId != null)) {
+          // Nouvelle node - charger via nom
+          final actionName = previousNode.nodeType == 'trigger'
+              ? previousNode.actionId
+              : previousNode.reactionId;
+
+          previousOutputSchema = await _moduleConfigService.getOutputSchemaByName(
+            moduleName: previousNode.serviceId!,
+            actionOrTriggerName: actionName!,
+            type: previousNode.nodeType,
+            token: token,
+          );
+        }
+
+        previousNodeName = previousNode.nodeType == 'trigger'
+            ? _getTriggerDisplayText()
+            : _getActionDisplayText(previousNode);
+      }
+    }
+
+    debugPrint('✏️ Editing action at index $nodeIndex - previous node: $previousNodeName');
+    debugPrint('✏️ Previous outputSchema: $previousOutputSchema');
+
+    if (!mounted) return;
+
     // Modifier une action existante
     final config = await NodeConfigHelper.openConfigScreen(
       context: context,
@@ -278,6 +401,8 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
       actionName: node.reactionId ?? '',
       description: _getActionDisplayText(node),
       existingConfig: node.config,
+      previousNodeOutputSchema: previousOutputSchema,
+      previousNodeName: previousNodeName,
     );
 
     if (config != null && mounted) {
@@ -340,6 +465,55 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
     );
 
     if (result != null && mounted) {
+      // Déterminer la node précédente (dernière action ou trigger si aucune action)
+      WorkflowNode? previousNode;
+      if (_actionNodes.isNotEmpty) {
+        previousNode = _actionNodes.last;
+      } else {
+        previousNode = _triggerNode;
+      }
+
+      // Charger l'outputSchema de la node précédente
+      Map<String, dynamic>? previousOutputSchema;
+      String? previousNodeName;
+
+      if (previousNode != null) {
+        final authRepo = context.read<AuthRepository>();
+        final token = await authRepo.getToken();
+
+        if (token != null) {
+          if (!previousNode.id.startsWith('temp_')) {
+            // Node existante
+            previousOutputSchema = await _moduleConfigService.getNodeOutputSchema(
+              nodeId: previousNode.id,
+              token: token,
+            );
+          } else if (previousNode.serviceId != null &&
+                     (previousNode.actionId != null || previousNode.reactionId != null)) {
+            // Nouvelle node
+            final actionName = previousNode.nodeType == 'trigger'
+                ? previousNode.actionId
+                : previousNode.reactionId;
+
+            previousOutputSchema = await _moduleConfigService.getOutputSchemaByName(
+              moduleName: previousNode.serviceId!,
+              actionOrTriggerName: actionName!,
+              type: previousNode.nodeType,
+              token: token,
+            );
+          }
+
+          previousNodeName = previousNode.nodeType == 'trigger'
+              ? _getTriggerDisplayText()
+              : _getActionDisplayText(previousNode);
+        }
+      }
+
+      debugPrint('➕ Adding new action after: $previousNodeName');
+      debugPrint('➕ Previous outputSchema: $previousOutputSchema');
+
+      if (!mounted) return;
+
       // Étape 2: Configurer les paramètres avec le helper
       final item = result['item'];
       final serviceReaction = item is ServiceReaction ? item : null;
@@ -351,6 +525,8 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
         actionName: result['name'],
         description: result['description'],
         serviceReaction: serviceReaction,
+        previousNodeOutputSchema: previousOutputSchema,
+        previousNodeName: previousNodeName,
       );
 
       if (config != null) {

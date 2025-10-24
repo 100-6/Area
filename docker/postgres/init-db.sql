@@ -65,7 +65,7 @@ CREATE TABLE services (
     description TEXT,
     icon_url VARCHAR(500),
     base_url VARCHAR(255),
-    auth_type VARCHAR(20) NOT NULL CHECK (auth_type IN ('oauth2', 'api_key', 'basic', 'none')),
+    auth_type VARCHAR(20) NOT NULL CHECK (auth_type IN ('oauth2', 'api_key', 'basic', 'none', 'bot_token')),
     oauth_client_id VARCHAR(255),
     oauth_client_secret VARCHAR(255),
     oauth_scopes TEXT,

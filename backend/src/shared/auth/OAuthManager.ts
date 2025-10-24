@@ -1,9 +1,11 @@
 import { GoogleProvider } from './oauth/providers/GoogleProvider';
 import { GmailProvider } from './oauth/providers/GmailProvider';
+import { OutlookProvider } from './oauth/providers/OutlookProvider';
 import { GitHubProvider } from './oauth/providers/GitHubProvider';
 import { GitLabProvider } from './oauth/providers/GitLabProvider';
 import { DropboxProvider } from './oauth/providers/DropboxProvider';
 import { DiscordProvider } from './oauth/providers/DiscordProvider';
+import { SpotifyProvider } from './oauth/providers/SpotifyProvider';
 import { User } from '../../core/models/User';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
 
@@ -24,18 +26,22 @@ interface OAuthUser {
 export class OAuthManager {
     private googleProvider: GoogleProvider;
     private gmailProvider: GmailProvider;
+    private outlookProvider: OutlookProvider;
     private gitHubProvider: GitHubProvider;
     private gitLabProvider: GitLabProvider;
     private dropboxProvider: DropboxProvider;
     private discordProvider: DiscordProvider;
+    private spotifyProvider: SpotifyProvider;
 
     constructor() {
         this.googleProvider = new GoogleProvider();
         this.gmailProvider = new GmailProvider();
+        this.outlookProvider = new OutlookProvider();
         this.gitHubProvider = new GitHubProvider();
         this.gitLabProvider = new GitLabProvider();
         this.dropboxProvider = new DropboxProvider();
         this.discordProvider = new DiscordProvider();
+        this.spotifyProvider = new SpotifyProvider();
     }
 
     /**
@@ -53,10 +59,24 @@ export class OAuthManager {
     }
 
     /**
+     * Generate Outlook OAuth URL
+     */
+    getOutlookAuthUrl(state?: string): string {
+        return this.outlookProvider.getAuthUrl(state);
+    }
+
+    /**
      * Generate Discord OAuth URL
      */
     getDiscordAuthUrl(state?: string): string {
         return this.discordProvider.getAuthUrl(state);
+    }
+
+    /**
+     * Generate Spotify OAuth URL
+     */
+    getSpotifyAuthUrl(state?: string): string {
+        return this.spotifyProvider.getAuthUrl(state);
     }
 
     /**
@@ -84,6 +104,18 @@ export class OAuthManager {
     }
 
     /**
+     * Handle Outlook OAuth callback
+     */
+    async handleOutlookCallback(code: string, authenticatedUserId?: string): Promise<OAuthUser> {
+        try {
+            const outlookProfile = await this.outlookProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('outlook', outlookProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Outlook OAuth error: ${error}`);
+        }
+    }
+
+    /**
      * Handle Discord OAuth callback
      */
     async handleDiscordCallback(code: string, authenticatedUserId?: string): Promise<OAuthUser> {
@@ -92,6 +124,18 @@ export class OAuthManager {
             return await this.findOrCreateUserFromOAuth('discord', discordProfile, authenticatedUserId);
         } catch (error) {
             throw new Error(`Discord OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Handle Spotify OAuth callback
+     */
+    async handleSpotifyCallback(code: string, authenticatedUserId?: string): Promise<OAuthUser> {
+        try {
+            const spotifyProfile = await this.spotifyProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('spotify', spotifyProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Spotify OAuth error: ${error}`);
         }
     }
 
@@ -163,10 +207,24 @@ export class OAuthManager {
     }
 
     /**
+     * Check if Outlook OAuth is configured
+     */
+    isOutlookConfigured(): boolean {
+        return this.outlookProvider.isConfigured();
+    }
+
+    /**
      * Check if Discord OAuth is configured
      */
     isDiscordConfigured(): boolean {
         return this.discordProvider.isConfigured();
+    }
+
+    /**
+     * Check if Spotify OAuth is configured
+     */
+    isSpotifyConfigured(): boolean {
+        return this.spotifyProvider.isConfigured();
     }
 
     /**
@@ -175,7 +233,9 @@ export class OAuthManager {
     getProvidersStatus(): {
         google: { isConfigured: boolean; status: any };
         gmail: { isConfigured: boolean; status: any };
+        outlook: { isConfigured: boolean; status: any };
         discord: { isConfigured: boolean; status: any };
+        spotify: { isConfigured: boolean; status: any };
     } {
         return {
             google: {
@@ -186,9 +246,17 @@ export class OAuthManager {
                 isConfigured: this.gmailProvider.isConfigured(),
                 status: this.gmailProvider.getConfigStatus()
             },
+            outlook: {
+                isConfigured: this.outlookProvider.isConfigured(),
+                status: this.outlookProvider.getConfigStatus()
+            },
             discord: {
                 isConfigured: this.discordProvider.isConfigured(),
                 status: this.discordProvider.getConfigStatus()
+            },
+            spotify: {
+                isConfigured: this.spotifyProvider.isConfigured(),
+                status: this.spotifyProvider.getConfigStatus()
             }
         };
     }

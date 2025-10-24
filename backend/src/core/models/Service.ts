@@ -7,7 +7,7 @@ export interface ServiceResult {
     description?: string;
     icon_url?: string;
     base_url?: string;
-    auth_type: 'oauth2' | 'api_key' | 'basic' | 'none';
+    auth_type: 'oauth2' | 'api_key' | 'basic' | 'none' | 'bot_token';
     oauth_client_id?: string;
     oauth_client_secret?: string;
     oauth_scopes?: string;

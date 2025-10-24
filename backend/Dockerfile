@@ -32,13 +32,26 @@ EXPOSE 8080
 CMD ["npm", "run", "dev"]
 
 # ==========================================
-# STAGE PRODUCTION
+# STAGE BUILDER - Build TypeScript
 # ==========================================
-FROM base AS production
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm ci && npm cache clean --force
 
 COPY . .
 
 RUN npm run build
+
+# ==========================================
+# STAGE PRODUCTION
+# ==========================================
+FROM base AS production
+
+COPY --from=builder /app/dist ./dist
 
 ENV NODE_ENV=production
 ENV PORT=8080
@@ -51,7 +64,4 @@ USER area
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
-
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/src/index.js"]

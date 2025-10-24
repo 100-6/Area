@@ -153,6 +153,20 @@ export const useWorkflowApi = () => {
     }
   }
 
+  const getModuleDetails = async (identifier: string): Promise<any> => {
+    const authToken = useCookie('auth-token')
+    if (!authToken.value) {
+      throw new Error('Token d\'authentification manquant')
+    }
+
+    return await $fetch(`/api/modules/${identifier}`, {
+      baseURL: backendUrl,
+      headers: {
+        'Authorization': `Bearer ${authToken.value}`
+      }
+    })
+  }
+
   /**
    * Update a workflow node
    */
@@ -233,6 +247,17 @@ export const useWorkflowApi = () => {
         throw new Error('Failed to delete connection')
       }
     } catch (err: any) {
+      // Vérifier si c'est une erreur 404 (connexion déjà supprimée)
+      const is404 = err.statusCode === 404 ||
+                   err.status === 404 ||
+                   err.data?.error === 'CONNECTION_NOT_FOUND'
+
+      if (is404) {
+        // Ignorer les erreurs 404 - connexion déjà supprimée
+        console.debug(`[WorkflowApi] Connection ${connectionId} already deleted, ignoring 404`)
+        return
+      }
+
       error.value = err.message || 'Erreur lors de la suppression de la connexion'
       throw err
     }
@@ -346,6 +371,12 @@ export const useWorkflowApi = () => {
           await deleteNode(node.id)
         }
         
+        // 4. Handle connections - if the area is active, stop it, then delete
+        // existing connections and recreate them, finally restart if needed.
+        console.log('[WorkflowApi] Recreating', connections.length, 'connections')
+
+        const authToken = useCookie('auth-token')
+
         let shouldRestart = false
         try {
           const areaResponse = await $fetch<{ success: boolean; area: AreaData }>(`/api/areas/${existingAreaId}`, {
@@ -356,25 +387,34 @@ export const useWorkflowApi = () => {
           })
           shouldRestart = areaResponse.success && areaResponse.area.is_active
         } catch (err) {
+          // ignore
         }
 
         if (shouldRestart) {
           try {
-            const authToken = useCookie('auth-token')
             await $fetch(`/api/areas/${existingAreaId}/toggle`, {
-              method: 'PUT',
+              method: 'PATCH',
               baseURL: backendUrl,
               headers: {
                 'Authorization': `Bearer ${authToken.value}`,
                 'Content-Type': 'application/json'
               },
-              body: { isActive: false }
+              body: { is_active: false }
             })
           } catch (err) {
+            // ignore
           }
         }
+        // Filtrer les connexions pour éviter de supprimer celles liées aux nodes déjà supprimées
+        const deletedNodeIds = new Set(nodesToDelete.map(n => n.id))
+        const connectionsToDelete = existingWorkflow.connections.filter(conn => {
+          // Ne pas supprimer les connexions liées aux nodes supprimées (elles sont déjà supprimées automatiquement)
+          return !deletedNodeIds.has(conn.sourceNodeId) && !deletedNodeIds.has(conn.targetNodeId)
+        })
 
-        for (const conn of existingWorkflow.connections) {
+        console.log(`[WorkflowApi] Skipping ${existingWorkflow.connections.length - connectionsToDelete.length} connections already deleted by node deletion`)
+
+        for (const conn of connectionsToDelete) {
           if (conn.id) {
             await deleteConnection(conn.id)
           }
@@ -404,13 +444,13 @@ export const useWorkflowApi = () => {
           try {
             const authToken = useCookie('auth-token')
             await $fetch(`/api/areas/${existingAreaId}/toggle`, {
-              method: 'PUT',
+              method: 'PATCH',
               baseURL: backendUrl,
               headers: {
                 'Authorization': `Bearer ${authToken.value}`,
                 'Content-Type': 'application/json'
               },
-              body: { isActive: true }
+              body: { is_active: true }
             })
           } catch (err) {
           }
@@ -459,6 +499,7 @@ export const useWorkflowApi = () => {
     createConnection,
     deleteNode,
     deleteConnection,
+    getModuleDetails,
 
     mapBlockToNode,
     mapConnectionToDto,

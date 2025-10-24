@@ -110,28 +110,56 @@ GET /api/openai/models
 ## ⚙️ Configuration
 
 ### Supported Models
-- `gpt-3.5-turbo` - Fast and efficient (default)
-- `gpt-4` - Most capable
-- `gpt-4-turbo` - Larger context window
+
+#### GPT-5 Series (Latest, Premium)
+- `gpt-5-pro` - Highest capability, reasoning, and context
+- `gpt-5` - Standard GPT-5 model
+- `gpt-5-mini` - Faster, cost-effective version
+- `gpt-5-nano` - Ultra-fast, lightweight version
+
+#### GPT-4.1 Series (Enhanced)
+- `gpt-4.1` - Improved GPT-4 with better reasoning
+- `gpt-4.1-mini` - Faster, cheaper variant
+- `gpt-4.1-nano` - Ultra-lightweight version
+
+#### GPT-4 Series (Proven, Recommended)
+- `gpt-4o` - Optimized multimodal GPT-4
+- `gpt-4o-mini` - **Default model** (best price/performance) ⭐
+- `gpt-4-turbo` - Faster GPT-4 with larger context
+- `gpt-4` - Original GPT-4
+
+#### O-Series Reasoning Models
+- `o4-mini` - Latest mini reasoning model
+- `o1-preview` - Preview of advanced reasoning
+- `o1-mini` - Lightweight reasoning model
+
+> **Note:** GPT-5 and O-series models have special parameter requirements that are handled automatically. See [MODEL_COMPATIBILITY_GUIDE.md](./MODEL_COMPATIBILITY_GUIDE.md) for details.
 
 ### Temperature Settings
 - `0.0-0.3` - Focused, deterministic
 - `0.4-0.7` - Balanced (default: 0.7)
 - `0.8-2.0` - Creative, diverse
 
+> **Note:** Temperature is not supported by GPT-5 and O-series models (automatically ignored)
+
 ### Token Limits
-- Input: Up to 4000 tokens
-- Output: 1-4000 tokens (configurable)
+- Input: Up to 16,000 tokens
+- Output: 1-16,000 tokens (configurable)
+- Default: 500 tokens
 
 ## 💰 Cost Management
 
-| Model | Input (per 1K) | Output (per 1K) |
-|-------|---------------|-----------------|
-| GPT-3.5 Turbo | $0.0005 | $0.0015 |
-| GPT-4 | $0.03 | $0.06 |
-| GPT-4 Turbo | $0.01 | $0.03 |
+| Model | Input (per 1M tokens) | Output (per 1M tokens) | Use Case |
+|-------|----------------------|------------------------|----------|
+| GPT-5 Pro | $30.00 | $120.00 | Critical, highest quality |
+| GPT-5 | $15.00 | $60.00 | Premium quality |
+| GPT-5 Mini | $3.00 | $12.00 | Balanced premium |
+| GPT-4o-mini | $0.15 | $0.60 | **Default (recommended)** ⭐ |
+| GPT-4o | $5.00 | $15.00 | High quality |
+| GPT-4.1 | $10.00 | $30.00 | Enhanced reasoning |
+| O1-mini | $15.00 | $60.00 | Complex reasoning |
 
-**Tip:** Use GPT-3.5 for most tasks to reduce costs by 60x!
+**Tip:** Use `gpt-4o-mini` for most tasks (best price/performance)! Upgrade to GPT-5 only for critical quality needs.
 
 ## 🔐 Security
 
@@ -145,21 +173,22 @@ GET /api/openai/models
 
 ```
 openai/
-├── config.ts                  # Module configuration
-├── service.ts                 # Module initialization
-├── controller.ts              # API endpoints
-├── routes.ts                  # Route definitions
-├── OpenAIApiService.ts        # API client
+├── config.ts                     # Module configuration
+├── service.ts                    # Module initialization
+├── controller.ts                 # API endpoints
+├── routes.ts                     # Route definitions
+├── OpenAIApiService.ts           # API client with model compatibility
 ├── actions/
-│   ├── GenerateText.ts
-│   ├── AnalyzeSentiment.ts
-│   ├── SummarizeText.ts
-│   ├── TranslateText.ts
-│   ├── ExtractKeywords.ts
+│   ├── GenerateText.ts           # Text generation
+│   ├── AnalyzeSentiment.ts       # Sentiment analysis
+│   ├── SummarizeText.ts          # Text summarization
+│   ├── TranslateText.ts          # Translation
+│   ├── ExtractKeywords.ts        # Keyword extraction
 │   └── _index.ts
-├── OPENAI_MODULE_GUIDE.md     # Complete guide
-├── OUTPUT_SCHEMA.md           # Output documentation
-└── README.md                  # This file
+├── MODEL_COMPATIBILITY_GUIDE.md  # Model comparison & compatibility
+├── UPGRADE_SUMMARY.md            # Upgrade changelog
+├── OUTPUT_SCHEMA.md              # Output documentation
+└── README.md                     # This file
 ```
 
 ## 🐛 Troubleshooting
@@ -185,5 +214,6 @@ openai/
 ---
 
 **Module Status:** ✅ Production Ready  
-**Version:** 1.0.0  
-**Last Updated:** October 2025
+**Version:** 2.0.0  
+**Last Updated:** October 2025  
+**New:** GPT-5, GPT-4.1, and O-series support with automatic compatibility handling

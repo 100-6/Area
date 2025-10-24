@@ -406,6 +406,7 @@ class ServiceActionsScreen extends StatelessWidget {
         return const Color(0xFF4285F4);
       case 'openai':
         return const Color(0xFF10A37F);
+      case 'gmail':
       case 'email':
         return const Color(0xFFEA4335);
       case 'slack':
@@ -433,6 +434,7 @@ class ServiceActionsScreen extends StatelessWidget {
         return Icons.g_mobiledata_rounded;
       case 'openai':
         return Icons.auto_awesome_rounded;
+      case 'gmail':
       case 'email':
         return Icons.email_rounded;
       case 'slack':
@@ -443,7 +445,7 @@ class ServiceActionsScreen extends StatelessWidget {
   }
 
   bool _requiresOAuthConnection(String serviceName) {
-    final oauthServices = ['discord', 'github', 'gitlab', 'dropbox', 'google'];
+    final oauthServices = ['discord', 'github', 'gitlab', 'dropbox', 'google', 'gmail'];
     return oauthServices.contains(serviceName.toLowerCase());
   }
 
@@ -457,6 +459,7 @@ class ServiceActionsScreen extends StatelessWidget {
         return OAuthProvider.gitlab;
       case 'dropbox':
         return OAuthProvider.dropbox;
+      case 'gmail':
       case 'google':
         return OAuthProvider.google;
       default:

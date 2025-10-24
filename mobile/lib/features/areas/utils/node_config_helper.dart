@@ -16,6 +16,8 @@ class NodeConfigHelper {
     ServiceAction? serviceAction,
     ServiceReaction? serviceReaction,
     Map<String, dynamic>? existingConfig,
+    Map<String, dynamic>? previousNodeOutputSchema,
+    String? previousNodeName,
   }) async {
     // Utiliser le nouveau système dynamique qui charge depuis l'API
     return await Navigator.push<Map<String, dynamic>>(
@@ -28,6 +30,8 @@ class NodeConfigHelper {
           actionName: actionName,
           description: description,
           existingConfig: existingConfig,
+          previousNodeOutputSchema: previousNodeOutputSchema,
+          previousNodeName: previousNodeName,
         ),
       ),
     );
