@@ -31,13 +31,28 @@ EXPOSE 3000
 CMD ["npm", "run", "dev"]
 
 # ==========================================
-# STAGE PRODUCTION
+# STAGE BUILDER - Build Nuxt
 # ==========================================
-FROM base AS production
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm ci && npm cache clean --force
 
 COPY . .
 
 RUN npm run build
+
+# ==========================================
+# STAGE PRODUCTION
+# ==========================================
+FROM base AS production
+
+COPY --from=builder /app/.output ./.output
+COPY --from=builder /app/.nuxt ./.nuxt
+COPY --from=builder /app/node_modules ./node_modules
 
 ENV NODE_ENV=production
 ENV PORT=3000
