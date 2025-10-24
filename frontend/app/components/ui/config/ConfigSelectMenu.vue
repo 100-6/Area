@@ -1,5 +1,5 @@
 <template>
-  <div class="config-field">
+  <div class="config-field" :data-parameter-name="props.parameter.name" @focusin="handleFocusIn" @mousedown="handleFocusIn">
     <label :for="fieldId" class="config-label">
       {{ props.parameter.name }}
       <span v-if="props.parameter.required" class="required-indicator">*</span>
@@ -13,7 +13,7 @@
       :disabled="disabled || isLoading"
       :loading="isLoading"
       :class="{ 'error': !!error }"
-:ui="{
+      :ui="{
         content: 'bg-white border-0 ring-0 max-h-60 overflow-y-auto',
         item: 'text-black border-0 ring-0 data-highlighted:not-data-disabled:before:bg-green-50',
         itemLabel: 'text-black',
@@ -42,20 +42,16 @@
 </template>
 
 <script setup lang="ts">
-import type { ConfigFieldProps, ConfigFieldEmits } from '~/types'
-import { ConfigurationValidator } from '~/types/ServiceConfiguration'
+import type { ConfigFieldProps, ConfigFieldEmits } from '../../../types/ServiceConfiguration'
+import { ConfigurationValidator } from '../../../types/ServiceConfiguration'
 
-interface Props extends ConfigFieldProps {
+const props = withDefaults(defineProps<ConfigFieldProps & {
   items?: Array<{ label: string; value: string }>
   loading?: boolean
   loadError?: string
   placeholder?: string
   valueKey?: string
-}
-
-interface Emits extends ConfigFieldEmits {}
-
-const props = withDefaults(defineProps<Props>(), {
+}>(), {
   disabled: false,
   loading: false,
   valueKey: 'value',
@@ -63,7 +59,11 @@ const props = withDefaults(defineProps<Props>(), {
   items: () => []
 })
 
-const emit = defineEmits<Emits>()
+const emit = defineEmits<ConfigFieldEmits>()
+
+const handleFocusIn = (event: FocusEvent | MouseEvent) => {
+  emit('focus-field', { element: event.target as HTMLElement | null })
+}
 
 const fieldId = computed(() => `config-${props.parameter.name}-${Math.random().toString(36).substr(2, 9)}`)
 

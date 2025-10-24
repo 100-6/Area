@@ -64,6 +64,39 @@
         </div>
 
         <div v-if="selectedActionReaction" class="parameters-configuration">
+          <!-- Variables de sortie disponibles -->
+          <div v-if="props.blockType === 'action' && availableVariables.length > 0" class="available-variables">
+            <h4 class="variables-title">Variables disponibles</h4>
+            <p class="variables-description">
+              Variables provenant des actions et triggers précédents que vous pouvez utiliser dans la configuration
+            </p>
+
+            <div v-if="isLoadingVariables" class="variables-loading">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+              <span>Chargement des variables...</span>
+            </div>
+
+            <div v-else class="variables-content">
+              <div v-for="source in availableVariables" :key="source.nodeId" class="variable-source">
+                <h5 class="source-title">{{ source.nodeName }}</h5>
+                <div class="variable-badges">
+                  <UBadge
+                    v-for="variable in source.variables"
+                    :key="variable.path"
+                    variant="solid"
+                    color="green"
+                    size="sm"
+                    class="variable-badge"
+                    :title="`${variable.description}\nType: ${variable.type}\nCliquez pour ajouter au champ actif`"
+                    @click="insertVariableInActiveField(variable)"
+                  >
+                    {{ getVariableBadgeText(variable) }}
+                  </UBadge>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <h4 class="parameters-title">Paramètres de configuration</h4>
 
 
@@ -83,6 +116,7 @@
               :disabled="isLoading"
               @update:value="(value) => updateParameter(parameter.name, value)"
               @validate="(isValid, error) => updateValidation(parameter.name, isValid, error)"
+              @focus-field="onFieldFocus(parameter.name, $event)"
             />
           </div>
         </div>
@@ -120,9 +154,9 @@
 </template>
 
 <script setup lang="ts">
-import type { Service, ServiceAction, ServiceReaction } from '~/types'
-import type { ServiceConfiguration, ConfigurationValidation } from '~/types'
-import { ConfigurationValidator, FIELD_TYPE_MAPPING } from '~/types/ServiceConfiguration'
+import type { Service, ServiceAction, ServiceReaction, ServiceConfiguration, ConfigurationValidation } from '~/types'
+import { ConfigurationValidator, FIELD_TYPE_MAPPING } from '../../types/ServiceConfiguration'
+import type { OutputVariable } from '~/composables/useOutputVariables'
 
 import ConfigInput from '~/components/ui/config/ConfigInput.vue'
 import ConfigNumber from '~/components/ui/config/ConfigNumber.vue'
@@ -136,6 +170,9 @@ interface Props {
   service: Service
   blockType: 'trigger' | 'action'
   initialConfig?: ServiceConfiguration
+  availablePreviousNodes?: string[] // IDs of previous nodes (triggers + actions) that provide output variables
+  workflowBlocks?: any[] // For create mode - pass workflow blocks instead of saved node IDs
+  currentBlockIndex?: number // Index of the current block being configured (to only show previous blocks)
 }
 
 interface Emits {
@@ -144,7 +181,10 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  open: false
+  open: false,
+  availablePreviousNodes: () => [],
+  workflowBlocks: () => [],
+  currentBlockIndex: -1
 })
 
 const emit = defineEmits<Emits>()
@@ -163,6 +203,21 @@ const validation = ref<ConfigurationValidation>({
   errors: []
 })
 const iconLoadFailed = ref(false)
+type VariableSource = { nodeId: string; nodeName: string; nodeType: string; variables: OutputVariable[] }
+
+const availableVariables = ref<VariableSource[]>([])
+const isLoadingVariables = ref(false)
+interface FocusedFieldInfo {
+  parameterName: string
+  element: HTMLInputElement | HTMLTextAreaElement | null
+  elementId?: string
+  selectionStart?: number
+  selectionEnd?: number
+}
+
+const lastFocusedField = ref<FocusedFieldInfo | null>(null)
+
+const { getAvailableOutputVariables, getAvailableOutputVariablesFromBlocks, getVariableBadgeText } = useOutputVariables()
 
 const availableActionReactions = computed((): (ServiceAction | ServiceReaction)[] => {
   if (props.blockType === 'trigger') {
@@ -175,6 +230,48 @@ const availableActionReactions = computed((): (ServiceAction | ServiceReaction)[
 const canConfirm = computed(() => {
   return selectedActionReaction.value && validation.value.isValid
 })
+
+const loadAvailableVariables = async () => {
+  if (props.blockType !== 'action') {
+    availableVariables.value = []
+    return
+  }
+
+  try {
+    isLoadingVariables.value = true
+
+    // Use blocks mode if we have workflow blocks (create mode)
+    let sources: VariableSource[] = []
+
+    if (props.workflowBlocks?.length > 0) {
+      // Only get blocks that come before the current block being configured
+      let previousBlocks = props.workflowBlocks
+      if (props.currentBlockIndex >= 0) {
+        previousBlocks = props.workflowBlocks.slice(0, props.currentBlockIndex)
+      }
+
+      const lastBlock = previousBlocks.length ? [previousBlocks[previousBlocks.length - 1]] : []
+
+      console.log(`[Variables] Loading variables from ${lastBlock.length} previous block(s) (latest only)`)
+      sources = lastBlock.length ? await getAvailableOutputVariablesFromBlocks(lastBlock) : []
+    }
+    // Use node IDs mode if we have saved nodes (edit mode)
+    else if (props.availablePreviousNodes?.length > 0) {
+      const lastNodeId = props.availablePreviousNodes[props.availablePreviousNodes.length - 1]
+      console.log(`[Variables] Loading variables from last previous node: ${lastNodeId}`)
+      sources = lastNodeId ? await getAvailableOutputVariables([lastNodeId]) : []
+    }
+
+    availableVariables.value = sources.filter((source) => source.variables && source.variables.length > 0)
+
+    console.log(`[Variables] Loaded ${availableVariables.value.length} variable sources (after filtering empty ones)`)
+  } catch (error) {
+    console.error('Error loading available variables:', error)
+    availableVariables.value = []
+  } finally {
+    isLoadingVariables.value = false
+  }
+}
 
 const getFieldComponent = (type: string, parameterName?: string) => {
   // Cas particulier : forcer ConfigSelectMenu pour les champs channelId Discord
@@ -197,13 +294,324 @@ const getFieldComponent = (type: string, parameterName?: string) => {
   }
 }
 
+const findInputElementForParameter = (parameterName: string, elementId?: string) => {
+  if (!parameterName) {
+    return null
+  }
+
+  if (elementId) {
+    const byId = document.getElementById(elementId)
+    if (byId instanceof HTMLInputElement || byId instanceof HTMLTextAreaElement) {
+      return byId
+    }
+  }
+
+  const container = Array.from(document.querySelectorAll('[data-parameter-name]'))
+    .find((el) => (el as HTMLElement).dataset.parameterName === parameterName) as HTMLElement | undefined
+
+  if (container) {
+    const directInput = container.querySelector('input, textarea') as HTMLInputElement | HTMLTextAreaElement | null
+    if (directInput) {
+      return directInput
+    }
+  }
+
+  const candidates = document.querySelectorAll('.parameters-list input, .parameters-list textarea') as NodeListOf<HTMLInputElement | HTMLTextAreaElement>
+
+  for (const input of candidates) {
+    const candidateParam = input.dataset.parameterName || input.closest('[data-parameter-name]')?.getAttribute('data-parameter-name')
+    if (candidateParam === parameterName) {
+      return input
+    }
+  }
+
+  for (const input of candidates) {
+    if (input.id && input.id.includes(parameterName)) {
+      return input
+    }
+  }
+
+  return null
+}
+
+const recordLastFocusedField = (inputElement: HTMLInputElement | HTMLTextAreaElement) => {
+  if (!selectedActionReaction.value) {
+    return
+  }
+
+  let parameterName = inputElement.dataset.parameterName
+
+  if (!parameterName) {
+    const container = inputElement.closest('[data-parameter-name]') as HTMLElement | null
+    parameterName = container?.dataset.parameterName
+  }
+
+  if (!parameterName) {
+    const matchingParam = selectedActionReaction.value.parameters.find(param => inputElement.id.includes(param.name))
+    parameterName = matchingParam?.name
+  }
+
+  if (!parameterName) {
+    return
+  }
+
+  const supportsSelection = 'selectionStart' in inputElement && 'selectionEnd' in inputElement
+  const selectionStart = supportsSelection ? (inputElement as HTMLInputElement | HTMLTextAreaElement).selectionStart ?? undefined : undefined
+  const selectionEnd = supportsSelection ? (inputElement as HTMLInputElement | HTMLTextAreaElement).selectionEnd ?? undefined : undefined
+
+  lastFocusedField.value = {
+    parameterName,
+    element: inputElement,
+    elementId: inputElement.id || undefined,
+    selectionStart,
+    selectionEnd
+  }
+}
+
+const onFieldFocus = (parameterName: string, payload?: { element?: HTMLElement | null }) => {
+  if (!parameterName) {
+    return
+  }
+
+  const targetElement = payload?.element
+
+  if (targetElement instanceof HTMLInputElement || targetElement instanceof HTMLTextAreaElement) {
+    recordLastFocusedField(targetElement)
+    return
+  }
+
+  const fallbackElement = findInputElementForParameter(parameterName)
+
+  if (fallbackElement) {
+    recordLastFocusedField(fallbackElement)
+  } else {
+    lastFocusedField.value = {
+      parameterName,
+      element: null,
+      elementId: undefined
+    }
+  }
+}
+
 const selectActionReaction = (actionReaction: ServiceAction | ServiceReaction) => {
   selectedActionReaction.value = actionReaction
 
   parameters.value = ConfigurationValidator.initializeParameters(actionReaction)
 
   validateConfiguration()
+  lastFocusedField.value = null
 }
+
+const insertVariableInActiveField = (variable: OutputVariable) => {
+  const variableText = `{{${variable.path}}}`
+
+  console.log(`[Insert] Attempting to insert ${variableText}`)
+  console.log(`[Insert] lastFocusedField:`, lastFocusedField.value)
+
+  // Try to use lastFocusedField first
+  if (lastFocusedField.value) {
+    const { parameterName, element, elementId, selectionStart, selectionEnd } = lastFocusedField.value
+    let targetElement = element
+
+    if (!targetElement || !document.body.contains(targetElement)) {
+      targetElement = findInputElementForParameter(parameterName, elementId)
+    }
+
+    console.log(`[Insert] Using lastFocusedField: ${parameterName}`)
+
+    if (targetElement) {
+      // If the field lost focus, restore it before reading selection positions
+      if (document.activeElement !== targetElement) {
+        targetElement.focus()
+      }
+
+      const start = targetElement.selectionStart ?? selectionStart ?? targetElement.value.length
+      const end = targetElement.selectionEnd ?? selectionEnd ?? targetElement.value.length
+      const currentValue = parameters.value[parameterName] || ''
+
+      console.log(`[Insert] Current value in ${parameterName}: "${currentValue}"`)
+      console.log(`[Insert] Inserting at position ${start}-${end}`)
+
+      // Insert the variable at cursor position
+      const newValue = currentValue.slice(0, start) + variableText + currentValue.slice(end)
+
+      // Update the parameter value
+      updateParameter(parameterName, newValue)
+
+      // Set focus back to the field and position cursor after inserted text
+      nextTick(() => {
+        const refreshedElement = findInputElementForParameter(parameterName, elementId)
+        const focusTarget = refreshedElement ?? targetElement
+        focusTarget.focus()
+        const newCursorPosition = start + variableText.length
+        if (typeof focusTarget.setSelectionRange === 'function' && Number.isFinite(newCursorPosition)) {
+          focusTarget.setSelectionRange(newCursorPosition, newCursorPosition)
+        }
+        recordLastFocusedField(focusTarget)
+      })
+
+      // Show feedback
+      const toast = useToast()
+      toast.add({
+        title: 'Variable ajoutée',
+        description: `${variableText} a été ajouté au champ "${parameterName}"`,
+        color: 'green',
+        timeout: 2000
+      })
+      return
+    } else {
+      console.log(`[Insert] lastFocusedField element not valid or not in DOM`)
+    }
+  }
+
+  console.log(`[Insert] Trying fallback methods`)
+
+  // Fallback: try to find currently focused element
+  let activeInput: HTMLInputElement | HTMLTextAreaElement | null = null
+  let parameterName: string | null = null
+
+  let activeElement = document.activeElement as HTMLInputElement | HTMLTextAreaElement
+
+  console.log(`[Insert] document.activeElement:`, activeElement, activeElement?.tagName)
+
+  // If activeElement is not an input, try to find input within it
+  if (activeElement && activeElement.tagName !== 'INPUT' && activeElement.tagName !== 'TEXTAREA') {
+    const inputInside = activeElement.querySelector('input, textarea') as HTMLInputElement | HTMLTextAreaElement
+    if (inputInside) {
+      activeInput = inputInside
+      console.log(`[Insert] Found input inside element:`, inputInside.id)
+    }
+  } else if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+    activeInput = activeElement
+    console.log(`[Insert] Using direct input element:`, activeInput.id)
+  }
+
+  // Try to determine which parameter this belongs to
+  if (activeInput && selectedActionReaction.value) {
+    const directDataset = activeInput.dataset.parameterName || activeInput.closest('[data-parameter-name]')?.getAttribute('data-parameter-name')
+    if (directDataset) {
+      parameterName = directDataset
+    } else {
+      const inputId = activeInput.id
+
+      console.log(`[Insert] Looking for parameter matching input ID: ${inputId}`)
+
+      for (const param of selectedActionReaction.value.parameters) {
+        console.log(`[Insert] Checking parameter: ${param.name}`)
+        if (inputId && inputId.includes(param.name)) {
+          parameterName = param.name
+          console.log(`[Insert] Found matching parameter: ${parameterName}`)
+          break
+        }
+      }
+    }
+
+    if (parameterName) {
+      const start = activeInput.selectionStart || 0
+      const end = activeInput.selectionEnd || 0
+      const currentValue = parameters.value[parameterName] || ''
+
+      console.log(`[Insert] Inserting in fallback method to ${parameterName}`)
+
+      const newValue = currentValue.slice(0, start) + variableText + currentValue.slice(end)
+      updateParameter(parameterName, newValue)
+
+      nextTick(() => {
+        if (activeInput) {
+          const refreshedElement = findInputElementForParameter(parameterName as string, activeInput.id)
+          const focusTarget = refreshedElement ?? activeInput
+          focusTarget.focus()
+          const newCursorPosition = start + variableText.length
+          if (typeof focusTarget.setSelectionRange === 'function' && Number.isFinite(newCursorPosition)) {
+            focusTarget.setSelectionRange(newCursorPosition, newCursorPosition)
+          }
+          recordLastFocusedField(focusTarget)
+        }
+      })
+
+      const toast = useToast()
+      toast.add({
+        title: 'Variable ajoutée',
+        description: `${variableText} a été ajouté au champ "${parameterName}"`,
+        color: 'green',
+        timeout: 2000
+      })
+      return
+    }
+  }
+
+  // Last fallback: use first available input
+  console.log(`[Insert] Using last fallback - first available input`)
+
+  if (selectedActionReaction.value) {
+    const allInputs = document.querySelectorAll('.parameters-list input, .parameters-list textarea') as NodeListOf<HTMLInputElement | HTMLTextAreaElement>
+
+    console.log(`[Insert] Found ${allInputs.length} total inputs`)
+
+    if (allInputs.length > 0) {
+      const firstInput = allInputs[0]
+      parameterName = firstInput.dataset.parameterName || firstInput.closest('[data-parameter-name]')?.getAttribute('data-parameter-name') || null
+
+      if (!parameterName) {
+        const inputId = firstInput.id
+
+        console.log(`[Insert] Using first input with ID: ${inputId}`)
+
+        for (const param of selectedActionReaction.value.parameters) {
+          if (inputId && inputId.includes(param.name)) {
+            parameterName = param.name
+            console.log(`[Insert] Matched first input to parameter: ${parameterName}`)
+            break
+          }
+        }
+      }
+
+      if (parameterName) {
+        const currentValue = parameters.value[parameterName] || ''
+        const newValue = currentValue + variableText
+
+        console.log(`[Insert] Adding to end of first field: ${parameterName}`)
+
+        updateParameter(parameterName, newValue)
+
+        nextTick(() => {
+          const refreshedElement = findInputElementForParameter(parameterName as string, firstInput.id)
+          const focusTarget = refreshedElement ?? firstInput
+          focusTarget.focus()
+          if (typeof focusTarget.setSelectionRange === 'function') {
+            focusTarget.setSelectionRange(newValue.length, newValue.length)
+          }
+          recordLastFocusedField(focusTarget)
+        })
+
+        const toast = useToast()
+        toast.add({
+          title: 'Variable ajoutée',
+          description: `${variableText} a été ajouté au premier champ "${parameterName}"`,
+          color: 'green',
+          timeout: 2000
+        })
+        return
+      }
+    }
+  }
+
+  console.log(`[Insert] All methods failed, falling back to clipboard`)
+
+  // Final fallback to clipboard
+  navigator.clipboard.writeText(variableText).then(() => {
+    const toast = useToast()
+    toast.add({
+      title: 'Variable copiée',
+      description: `${variableText} copié dans le presse-papiers`,
+      color: 'orange',
+      timeout: 3000
+    })
+  }).catch((error) => {
+    console.error('Failed to copy variable to clipboard:', error)
+  })
+}
+
 
 const updateParameter = (paramName: string, value: any) => {
   parameters.value[paramName] = value
@@ -315,16 +723,129 @@ watch(() => props.open, (isOpen, wasOpen) => {
     iconLoadFailed.value = false
     nextTick(() => {
       initializeFromConfig()
+      loadAvailableVariables()
     })
   }
 })
+
+watch(
+  () => [
+    props.blockType,
+    props.currentBlockIndex,
+    props.availablePreviousNodes?.join(','),
+    Array.isArray(props.workflowBlocks) ? props.workflowBlocks.map((block: any) => block?.id).join(',') : ''
+  ],
+  () => {
+    if (isOpen.value) {
+      loadAvailableVariables()
+    }
+  }
+)
+
+// Setup focus tracking when modal opens
+const setupFocusTracking = () => {
+  const resolveInputElement = (element: HTMLElement | null) => {
+    if (!element) {
+      return null
+    }
+
+    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+      return element as HTMLInputElement | HTMLTextAreaElement
+    }
+
+    const directChild = element.querySelector('input, textarea') as HTMLInputElement | HTMLTextAreaElement | null
+    if (directChild) {
+      return directChild
+    }
+
+    let parent = element.parentElement
+    while (parent) {
+      const candidate = parent.querySelector('input, textarea') as HTMLInputElement | HTMLTextAreaElement | null
+      if (candidate) {
+        return candidate
+      }
+      parent = parent.parentElement
+    }
+
+    return null
+  }
+
+  const handleFocusIn = (event: FocusEvent) => {
+    const inputElement = resolveInputElement(event.target as HTMLElement)
+    if (inputElement) {
+      recordLastFocusedField(inputElement)
+    }
+  }
+
+  const handleClick = (event: MouseEvent) => {
+    const inputElement = resolveInputElement(event.target as HTMLElement)
+    if (inputElement) {
+      // Delay the recording slightly to ensure caret position is updated
+      requestAnimationFrame(() => {
+        recordLastFocusedField(inputElement)
+      })
+    }
+  }
+
+  const handleSelectionChange = () => {
+    const activeElement = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null
+    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+      recordLastFocusedField(activeElement)
+    }
+  }
+
+  const handleInputEvent = (event: Event) => {
+    const inputElement = event.target as HTMLInputElement | HTMLTextAreaElement | null
+    if (inputElement && (inputElement.tagName === 'INPUT' || inputElement.tagName === 'TEXTAREA')) {
+      recordLastFocusedField(inputElement)
+    }
+  }
+
+  // Add listeners to keep track of the last focused field and caret position
+  document.addEventListener('focusin', handleFocusIn)
+  document.addEventListener('click', handleClick)
+  document.addEventListener('selectionchange', handleSelectionChange)
+  document.addEventListener('input', handleInputEvent, true)
+
+  // Cleanup function
+  return () => {
+    document.removeEventListener('focusin', handleFocusIn)
+    document.removeEventListener('click', handleClick)
+    document.removeEventListener('selectionchange', handleSelectionChange)
+    document.removeEventListener('input', handleInputEvent, true)
+  }
+}
 
 onMounted(() => {
   if (props.open) {
     iconLoadFailed.value = false
     nextTick(() => {
       initializeFromConfig()
+      loadAvailableVariables()
     })
+  }
+})
+
+// Setup and cleanup focus tracking
+let cleanupFocusTracking: (() => void) | null = null
+
+watch(() => props.open, (isOpen) => {
+  if (isOpen) {
+    nextTick(() => {
+      cleanupFocusTracking = setupFocusTracking()
+    })
+  } else {
+    if (cleanupFocusTracking) {
+      cleanupFocusTracking()
+      cleanupFocusTracking = null
+    }
+    lastFocusedField.value = null
+  }
+})
+
+onUnmounted(() => {
+  if (cleanupFocusTracking) {
+    cleanupFocusTracking()
   }
 })
 
@@ -471,5 +992,77 @@ watch(() => props.service?.id, () => {
 
 .error-item:not(:last-child) {
   margin-bottom: 0.25rem;
+}
+
+/* Styles pour les variables de sortie */
+.available-variables {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.variables-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.variables-description {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.variables-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.variables-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.variable-source {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.source-title {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  margin: 0;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.variable-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.variable-badge {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.75rem;
+}
+
+.variable-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(72, 199, 116, 0.3);
 }
 </style>

@@ -208,6 +208,9 @@
       :service="selectedService"
       :block-type="selectedBlockType"
       :initial-config="currentConfiguration"
+      :workflow-blocks="workflowBlocks"
+      :current-block-index="modalCurrentBlockIndex"
+      :available-previous-nodes="modalPreviousNodeIds"
       @configuration-confirmed="handleConfigurationConfirmed"
     />
 
@@ -363,6 +366,7 @@ const {
   selectedBlockType,
   isEditingConfiguration,
   currentConfiguration,
+  configContext: configModalContext,
   openServiceModal,
   selectServiceWithConfiguration,
   onConfigurationConfirmed,
@@ -403,10 +407,11 @@ const connectionDragHasMoved = ref(false)
 
 const handleServiceSelected = (service: Service) => {
   const blockType = selectedBlockType.value || (workflowBlocks.value.length === 0 ? 'trigger' : 'action')
+  const blockIndex = workflowBlocks.value.length
 
   selectServiceWithConfiguration(service, blockType, (config) => {
     addServiceBlock(config, undefined, blockType)
-  })
+  }, { blockIndex })
 }
 
 const handleConfigurationConfirmed = (config: ServiceConfiguration) => {
@@ -417,19 +422,40 @@ const handleBlockConfigure = async (blockId: string) => {
   try {
     const configInfo = await configureBlock(blockId)
     if (configInfo) {
+      const blockIndex = workflowBlocks.value.findIndex(block => block.id === blockId)
       editServiceConfiguration(
         configInfo.service,
         configInfo.blockType,
         configInfo.currentConfig,
         (newConfig: ServiceConfiguration) => {
           updateBlockConfiguration(blockId, newConfig)
-        }
+        },
+        { blockId, blockIndex }
       )
     }
   } catch (error) {
     console.error('Failed to configure block:', error)
   }
 }
+
+const modalCurrentBlockIndex = computed(() => {
+  const contextIndex = configModalContext.value?.blockIndex
+  if (typeof contextIndex === 'number' && contextIndex >= 0) {
+    return contextIndex
+  }
+  return workflowBlocks.value.length
+})
+
+const modalPreviousNodeIds = computed(() => {
+  if (selectedBlockType.value !== 'action') {
+    return []
+  }
+  const index = modalCurrentBlockIndex.value
+  if (index <= 0) {
+    return []
+  }
+  return workflowBlocks.value.slice(0, index).map(block => block.id)
+})
 
 const openSaveModal = () => {
   if (workflowBlocks.value.length === 0) {
