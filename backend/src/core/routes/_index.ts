@@ -19,7 +19,7 @@ const router = Router();
 // Public routes (no authentication required)
 router.use('/webhook', webhookRoutes);
 
-router.use('/', systemRoutes);
+router.use('/api', systemRoutes);
 
 router.use('/api/auth', authRoutes);
 router.use('/api/users', userRoutes);
