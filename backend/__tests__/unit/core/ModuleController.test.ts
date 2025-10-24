@@ -170,13 +170,17 @@ describe('Module API Endpoints', () => {
 
         describe('By node ID', () => {
             it('should return variables for a trigger node', async () => {
-                const { WorkflowModel } = require('../../../src/core/models/WorkflowModel');
-                
+                const WorkflowModel = require('../../../src/core/models/WorkflowModel').WorkflowModel;
+
+                const nodeId = '123e4567-e89b-12d3-a456-426614174000';
+                const serviceId = '223e4567-e89b-12d3-a456-426614174000';
+                const actionId = '323e4567-e89b-12d3-a456-426614174000';
+
                 const mockNode = {
-                    id: 'node-123',
+                    id: nodeId,
                     nodeType: 'trigger',
-                    serviceId: 'service-123',
-                    actionId: 'action-123',
+                    serviceId: serviceId,
+                    actionId: actionId,
                     label: 'Discord Message Trigger',
                     config: { channelId: '123456' }
                 };
@@ -199,31 +203,36 @@ describe('Module API Endpoints', () => {
                     getTrigger: () => mockTrigger
                 };
 
-                WorkflowModel.prototype.getNodeById = jest.fn().mockResolvedValue(mockNode);
-                WorkflowModel.prototype.getServiceNameById = jest.fn().mockResolvedValue('discord');
-                WorkflowModel.prototype.getActionNameById = jest.fn().mockResolvedValue('on_message_created');
-                
+                // Mock the instance methods
+                jest.spyOn(WorkflowModel.prototype, 'getNodeById').mockResolvedValue(mockNode);
+                jest.spyOn(WorkflowModel.prototype, 'getServiceNameById').mockResolvedValue('discord');
+                jest.spyOn(WorkflowModel.prototype, 'getActionNameById').mockResolvedValue('on_message_created');
+
                 (moduleRegistry.getModule as jest.Mock).mockReturnValue(mockModule);
 
                 const response = await request(app)
-                    .get('/api/modules/node-123')
+                    .get(`/api/modules/${nodeId}`)
                     .expect(200);
 
                 expect(response.body.success).toBe(true);
-                expect(response.body.nodeId).toBe('node-123');
+                expect(response.body.nodeId).toBe(nodeId);
                 expect(response.body.nodeType).toBe('trigger');
                 expect(response.body.triggerName).toBe('on_message_created');
                 expect(response.body.outputSchema).toBeDefined();
             });
 
             it('should return variables for an action node', async () => {
-                const { WorkflowModel } = require('../../../src/core/models/WorkflowModel');
-                
+                const WorkflowModel = require('../../../src/core/models/WorkflowModel').WorkflowModel;
+
+                const nodeId = '423e4567-e89b-12d3-a456-426614174000';
+                const serviceId = '523e4567-e89b-12d3-a456-426614174000';
+                const reactionId = '623e4567-e89b-12d3-a456-426614174000';
+
                 const mockNode = {
-                    id: 'node-456',
+                    id: nodeId,
                     nodeType: 'action',
-                    serviceId: 'service-123',
-                    reactionId: 'reaction-123',
+                    serviceId: serviceId,
+                    reactionId: reactionId,
                     label: 'Send Discord Message',
                     config: { channelId: '123456', content: 'Hello' }
                 };
@@ -246,27 +255,29 @@ describe('Module API Endpoints', () => {
                     getAction: () => mockAction
                 };
 
-                WorkflowModel.prototype.getNodeById = jest.fn().mockResolvedValue(mockNode);
-                WorkflowModel.prototype.getServiceNameById = jest.fn().mockResolvedValue('discord');
-                WorkflowModel.prototype.getReactionNameById = jest.fn().mockResolvedValue('send_message');
-                
+                // Mock the instance methods
+                jest.spyOn(WorkflowModel.prototype, 'getNodeById').mockResolvedValue(mockNode);
+                jest.spyOn(WorkflowModel.prototype, 'getServiceNameById').mockResolvedValue('discord');
+                jest.spyOn(WorkflowModel.prototype, 'getReactionNameById').mockResolvedValue('send_message');
+
                 (moduleRegistry.getModule as jest.Mock).mockReturnValue(mockModule);
 
                 const response = await request(app)
-                    .get('/api/modules/node-456')
+                    .get(`/api/modules/${nodeId}`)
                     .expect(200);
 
                 expect(response.body.success).toBe(true);
-                expect(response.body.nodeId).toBe('node-456');
+                expect(response.body.nodeId).toBe(nodeId);
                 expect(response.body.nodeType).toBe('action');
                 expect(response.body.actionName).toBe('send_message');
                 expect(response.body.requiredScopes).toContain('messages.write');
             });
 
             it('should return 404 for non-existent node', async () => {
-                const { WorkflowModel } = require('../../../src/core/models/WorkflowModel');
-                
-                WorkflowModel.prototype.getNodeById = jest.fn().mockResolvedValue(null);
+                const WorkflowModel = require('../../../src/core/models/WorkflowModel').WorkflowModel;
+
+                // Mock the instance method
+                jest.spyOn(WorkflowModel.prototype, 'getNodeById').mockResolvedValue(null);
 
                 const response = await request(app)
                     .get('/api/modules/550e8400-e29b-41d4-a716-446655440000')
@@ -277,18 +288,21 @@ describe('Module API Endpoints', () => {
             });
 
             it('should return 400 for node without service', async () => {
-                const { WorkflowModel } = require('../../../src/core/models/WorkflowModel');
-                
+                const WorkflowModel = require('../../../src/core/models/WorkflowModel').WorkflowModel;
+
+                const nodeId = '723e4567-e89b-12d3-a456-426614174000';
+
                 const mockNode = {
-                    id: 'node-789',
+                    id: nodeId,
                     nodeType: 'trigger',
                     serviceId: null
                 };
 
-                WorkflowModel.prototype.getNodeById = jest.fn().mockResolvedValue(mockNode);
+                // Mock the instance method
+                jest.spyOn(WorkflowModel.prototype, 'getNodeById').mockResolvedValue(mockNode);
 
                 const response = await request(app)
-                    .get('/api/modules/node-789')
+                    .get(`/api/modules/${nodeId}`)
                     .expect(400);
 
                 expect(response.body.success).toBe(false);
@@ -297,12 +311,16 @@ describe('Module API Endpoints', () => {
         });
 
         describe('Validation', () => {
-            it('should return 400 for invalid identifier format', async () => {
+            it('should return list of modules for root path', async () => {
+                (moduleRegistry.getAllModules as jest.Mock).mockReturnValue([]);
+
                 const response = await request(app)
                     .get('/api/modules/')
-                    .expect(404); // Express returns 404 for empty path param
+                    .expect(200);
 
-                // This test verifies that the route doesn't match empty identifier
+                // This verifies that the route '/' returns the modules list
+                expect(response.body.success).toBe(true);
+                expect(response.body.modules).toBeDefined();
             });
         });
     });
