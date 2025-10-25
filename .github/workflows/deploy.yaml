@@ -52,6 +52,7 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile
           target: production
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.backend_tags }}
           labels: |
@@ -70,6 +71,7 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           target: production
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.frontend_tags }}
           labels: |
