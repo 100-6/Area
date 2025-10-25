@@ -1,24 +1,65 @@
 # ==========================================
-# STAGE BASE - Common for dev & prod
+# STAGE 1: Dependencies installation
 # ==========================================
-FROM node:22-alpine AS base
-
-RUN apk update && \
-    apk add --no-cache \
-    curl \
-    && rm -rf /var/cache/apk/*
+FROM node:22-alpine AS deps
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 # ==========================================
-# STAGE DEVELOPMENT
+# STAGE 2: Build the application
 # ==========================================
-FROM base AS development
+FROM node:22-alpine AS builder
 
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+
+COPY . .
+
+RUN npm run build
+
+# ==========================================
+# STAGE 3: Production runtime
+# ==========================================
+FROM node:22-alpine AS production
+
+RUN apk add --no-cache curl && \
+    rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nuxt -u 1001 -G nodejs
+
+COPY --from=builder --chown=nuxt:nodejs /app/.output /app/.output
+
+ENV NODE_ENV=production
+ENV PORT=3000
+
+USER nuxt
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/ || exit 1
+
+CMD ["node", ".output/server/index.mjs"]
+
+# ==========================================
+# STAGE: Development
+# ==========================================
+FROM node:22-alpine AS development
+
+RUN apk add --no-cache curl && \
+    rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+COPY package*.json ./
 RUN npm ci && npm cache clean --force
 
 COPY . .
@@ -29,43 +70,3 @@ ENV PORT=3000
 EXPOSE 3000
 
 CMD ["npm", "run", "dev"]
-
-# ==========================================
-# STAGE BUILDER - Build Nuxt
-# ==========================================
-FROM node:22-alpine AS builder
-
-WORKDIR /app
-
-COPY package*.json ./
-
-RUN npm ci && npm cache clean --force
-
-COPY . .
-
-RUN npm run build
-
-# ==========================================
-# STAGE PRODUCTION
-# ==========================================
-FROM base AS production
-
-COPY --from=builder /app/.output ./.output
-COPY --from=builder /app/.nuxt ./.nuxt
-COPY --from=builder /app/node_modules ./node_modules
-
-ENV NODE_ENV=production
-ENV PORT=3000
-
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nuxt -u 1001 -G nodejs
-
-RUN chown -R nuxt:nodejs /app
-USER nuxt
-
-EXPOSE 3000
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/ || exit 1
-
-CMD ["npm", "run", "start"]
