@@ -1,8 +1,9 @@
 <template>
-  <div class="config-field">
+  <div class="config-field" :data-parameter-name="props.parameter.name" @focusin="handleFocusIn" @mousedown="handleFocusIn">
     <div class="checkbox-container">
       <UCheckbox
         :id="fieldId"
+        :name="props.parameter.name"
         :model-value="!!value"
         :disabled="disabled"
         :class="{ 'error': !!error }"
@@ -28,17 +29,17 @@
 </template>
 
 <script setup lang="ts">
-import type { ConfigFieldProps, ConfigFieldEmits } from '~/types'
-import { ConfigurationValidator } from '~/types/ServiceConfiguration'
+import type { ConfigFieldProps, ConfigFieldEmits } from '../../../types/ServiceConfiguration'
+import { ConfigurationValidator } from '../../../types/ServiceConfiguration'
 
-interface Props extends ConfigFieldProps {}
-interface Emits extends ConfigFieldEmits {}
-
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<ConfigFieldProps>(), {
   disabled: false
 })
+const emit = defineEmits<ConfigFieldEmits>()
 
-const emit = defineEmits<Emits>()
+const handleFocusIn = (event: FocusEvent | MouseEvent) => {
+  emit('focus-field', { element: event.target as HTMLElement | null })
+}
 
 // Générer un ID unique pour le champ
 const fieldId = computed(() => `config-${props.parameter.name}-${Math.random().toString(36).substr(2, 9)}`)

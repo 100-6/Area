@@ -44,6 +44,7 @@ export interface ConfigFieldProps {
 export interface ConfigFieldEmits {
   (e: 'update:value', value: any): void
   (e: 'validate', isValid: boolean, error?: string): void
+  (e: 'focus-field', payload?: { element?: HTMLElement | null }): void
 }
 
 /**
