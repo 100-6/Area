@@ -12,9 +12,16 @@ import { SendMessage } from './actions/_index';
  * Gère l'intégration avec Telegram (bot, triggers, actions)
  */
 export class TelegramModule extends BaseModule {
-    private botClient: TelegramBotClient;
+    private static instance: TelegramModule | null = null;
+    private botClient!: TelegramBotClient;
 
     constructor() {
+        // Protection singleton pour éviter les instances multiples causant l'erreur 409
+        if (TelegramModule.instance) {
+            console.warn('[Telegram] ⚠️  Module instance already exists, reusing existing instance'.yellow);
+            return TelegramModule.instance;
+        }
+
         super({
             name: telegramConfig.name,
             displayName: telegramConfig.displayName,
@@ -25,6 +32,8 @@ export class TelegramModule extends BaseModule {
             isActive: telegramConfig.isActive
         });
         this.botClient = TelegramBotClient.getInstance();
+        
+        TelegramModule.instance = this;
     }
 
     getName(): string {
