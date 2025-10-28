@@ -1,8 +1,23 @@
 import { BaseModule } from '../_base/BaseModule';
 import { RedditApiService } from './RedditApiService';
 import redditConfig from './config';
-import { OnNewPostInSubredditTrigger, OnNewSavedPostTrigger } from './triggers/_index';
-import { SubmitPostAction, SubmitCommentAction, SavePostAction, UpvoteAction } from './actions/_index';
+import { 
+    OnNewPostInSubredditTrigger, 
+    OnNewSavedPostTrigger,
+    OnNewMessageReceivedTrigger,
+    OnKeywordInSubredditTrigger,
+    OnUserMentionedTrigger
+} from './triggers/_index';
+import { 
+    SubmitPostAction, 
+    SubmitCommentAction, 
+    SavePostAction, 
+    UpvoteAction,
+    SendPrivateMessageAction,
+    EditCommentAction,
+    DeletePostOrCommentAction,
+    SetFlairAction
+} from './actions/_index';
 import 'colors';
 
 /**
@@ -79,12 +94,19 @@ export class RedditModule extends BaseModule {
             // Register triggers
             this.registerTrigger(new OnNewPostInSubredditTrigger(this));
             this.registerTrigger(new OnNewSavedPostTrigger(this));
+            this.registerTrigger(new OnNewMessageReceivedTrigger(this));
+            this.registerTrigger(new OnKeywordInSubredditTrigger(this));
+            this.registerTrigger(new OnUserMentionedTrigger(this));
 
             // Register actions
             this.registerAction(new SubmitPostAction(this));
             this.registerAction(new SubmitCommentAction(this));
             this.registerAction(new SavePostAction(this));
             this.registerAction(new UpvoteAction(this));
+            this.registerAction(new SendPrivateMessageAction(this));
+            this.registerAction(new EditCommentAction(this));
+            this.registerAction(new DeletePostOrCommentAction(this));
+            this.registerAction(new SetFlairAction(this));
 
             console.log('[Reddit] ✓ Module initialized successfully'.green.bold);
         } catch (error) {

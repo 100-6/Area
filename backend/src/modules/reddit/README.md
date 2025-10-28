@@ -34,6 +34,9 @@ Le module demande les permissions suivantes :
 - `vote` : Voter sur les posts et commentaires
 - `history` : Accès à l'historique de navigation
 - `mysubreddits` : Accès aux subreddits suivis
+- `privatemessages` : Envoyer et recevoir des messages privés
+- `edit` : Éditer et supprimer son propre contenu
+- `flair` : Gérer les flairs des posts
 
 ## Triggers disponibles
 
@@ -64,6 +67,53 @@ Déclenche un workflow lorsque vous sauvegardez un nouveau post.
 - `pollingInterval` : Intervalle de vérification en ms (minimum 60000ms = 1 min)
 
 **Variables disponibles :** (mêmes que OnNewPostInSubreddit)
+
+### 3. OnNewMessageReceived
+Déclenche un workflow lorsque vous recevez un nouveau message privé.
+
+**Configuration :**
+- `filterByUser` : (Optionnel) Filtrer par nom d'utilisateur
+- `pollingInterval` : Intervalle de vérification en ms (minimum 60000ms = 1 min)
+
+**Variables disponibles :**
+- `{{id}}` : ID du message
+- `{{sender}}` : Nom d'utilisateur de l'expéditeur
+- `{{subject}}` : Sujet du message
+- `{{body}}` : Corps du message
+- `{{timestamp}}` : Date/heure de réception
+- `{{context}}` : Contexte/lien si applicable
+- `{{fullname}}` : ID complet Reddit (t4_xxx)
+
+### 4. OnKeywordInSubreddit
+Déclenche un workflow lorsqu'un mot-clé apparaît dans les nouveaux posts d'un subreddit.
+
+**Configuration :**
+- `subreddit` : Nom du subreddit à surveiller (sans "r/")
+- `keywords` : Liste de mots-clés à surveiller (insensible à la casse)
+- `matchTitle` : Rechercher dans les titres (défaut: true)
+- `matchBody` : Rechercher dans le corps des posts (défaut: true)
+- `pollingInterval` : Intervalle de vérification en ms (minimum 60000ms = 1 min)
+
+**Variables disponibles :**
+- Toutes les variables de OnNewPostInSubreddit, plus :
+- `{{matchedKeyword}}` : Le mot-clé qui a déclenché le match
+- `{{matchedIn}}` : Où le mot-clé a été trouvé (title, body, ou both)
+
+### 5. OnUserMentioned
+Déclenche un workflow lorsque vous êtes mentionné (u/username) dans un commentaire ou post.
+
+**Configuration :**
+- `pollingInterval` : Intervalle de vérification en ms (minimum 60000ms = 1 min)
+
+**Variables disponibles :**
+- `{{id}}` : ID de la mention
+- `{{author}}` : Auteur qui vous a mentionné
+- `{{subreddit}}` : Subreddit où vous avez été mentionné
+- `{{body}}` : Texte contenant la mention
+- `{{context}}` : Contexte/lien permanent
+- `{{postTitle}}` : Titre du post (si disponible)
+- `{{timestamp}}` : Date/heure de la mention
+- `{{fullname}}` : ID complet Reddit
 
 ## Actions disponibles
 
@@ -107,26 +157,98 @@ Met un upvote sur un post ou commentaire.
 **Variables de sortie :**
 - `{{upvoted}}` : true si l'upvote a été effectué avec succès
 
+### 5. SendPrivateMessage
+Envoie un message privé à un utilisateur Reddit.
+
+**Configuration :**
+- `to` : Nom d'utilisateur du destinataire (sans "u/", supporte les variables)
+- `subject` : Sujet du message (supporte les variables)
+- `body` : Corps du message (supporte les variables)
+
+**Variables de sortie :**
+- `{{recipient}}` : Nom d'utilisateur du destinataire
+- `{{subject}}` : Sujet du message
+- `{{sentAt}}` : Timestamp d'envoi
+
+### 6. EditComment
+Édite un commentaire ou post existant.
+
+**Configuration :**
+- `thingId` : ID complet (t1_xxx pour commentaire, t3_xxx pour post, supporte les variables)
+- `newText` : Nouveau texte (supporte les variables)
+
+**Variables de sortie :**
+- `{{thingId}}` : ID de l'élément édité
+- `{{editedAt}}` : Timestamp de l'édition
+
+### 7. DeletePostOrComment
+Supprime un post ou commentaire que vous avez créé.
+
+**Configuration :**
+- `thingId` : ID complet (t1_xxx pour commentaire, t3_xxx pour post, supporte les variables)
+
+**Variables de sortie :**
+- `{{thingId}}` : ID de l'élément supprimé
+- `{{deletedAt}}` : Timestamp de la suppression
+
+### 8. SetFlair
+Définit le flair d'un post dans un subreddit.
+
+**Configuration :**
+- `subreddit` : Nom du subreddit (sans "r/", supporte les variables)
+- `postId` : ID complet du post (t3_xxx, supporte les variables)
+- `flairText` : Texte du flair (supporte les variables)
+
+**Variables de sortie :**
+- `{{postId}}` : ID du post
+- `{{subreddit}}` : Nom du subreddit
+- `{{flairText}}` : Texte du flair défini
+- `{{setAt}}` : Timestamp de l'opération
+
 ## Exemple de workflow
 
-### Exemple 1 : Sauvegarder automatiquement les posts mentionnant un mot-clé
+### Exemple 1 : Réponse automatique aux mentions
 
-**Trigger :** OnNewPostInSubreddit
+**Trigger :** OnUserMentioned
+
+**Action :** SendPrivateMessage
+- To : `{{author}}`
+- Subject : `Thanks for mentioning me!`
+- Body : `I saw your mention in r/{{subreddit}}: {{body}}`
+
+### Exemple 2 : Veille automatique sur des mots-clés
+
+**Trigger :** OnKeywordInSubreddit
 - Subreddit : `javascript`
+- Keywords : `["react", "vue", "angular"]`
 
-**Action 1 :** (Condition - à implémenter) Vérifier si le titre contient "react"
-
-**Action 2 :** SavePost
+**Action 1 :** SavePost
 - Post ID : `{{fullname}}`
 
-### Exemple 2 : Publier un post automatiquement
+**Action 2 :** SendPrivateMessage (vers vous-même ou un canal Discord)
+- Subject : `Keyword Alert: {{matchedKeyword}}`
+- Body : `Found in r/{{subreddit}}: {{title}} - {{permalink}}`
 
-**Trigger :** Timer (chaque jour à 9h)
+### Exemple 3 : Auto-modération
 
-**Action :** SubmitPost
-- Subreddit : `test`
-- Title : `Daily Update - {{date}}`
-- Text : `Voici le rapport quotidien...`
+**Trigger :** OnNewPostInSubreddit
+- Subreddit : `mysubreddit`
+
+**Action 1 :** (Condition basée sur le contenu)
+
+**Action 2 :** SetFlair
+- Subreddit : `{{subreddit}}`
+- Post ID : `{{fullname}}`
+- Flair Text : `Needs Review`
+
+### Exemple 4 : Réponse automatique aux messages privés
+
+**Trigger :** OnNewMessageReceived
+
+**Action :** SendPrivateMessage
+- To : `{{sender}}`
+- Subject : `Re: {{subject}}`
+- Body : `Thank you for your message. I'll respond as soon as possible.`
 
 ## API Endpoints
 
@@ -173,12 +295,19 @@ reddit/
 ├── RedditApiService.ts   # Service API Reddit
 ├── triggers/
 │   ├── OnNewPostInSubredditTrigger.ts
-│   └── OnNewSavedPostTrigger.ts
+│   ├── OnNewSavedPostTrigger.ts
+│   ├── OnNewMessageReceivedTrigger.ts
+│   ├── OnKeywordInSubredditTrigger.ts
+│   └── OnUserMentionedTrigger.ts
 └── actions/
     ├── SubmitPostAction.ts
     ├── SubmitCommentAction.ts
     ├── SavePostAction.ts
-    └── UpvoteAction.ts
+    ├── UpvoteAction.ts
+    ├── SendPrivateMessageAction.ts
+    ├── EditCommentAction.ts
+    ├── DeletePostOrCommentAction.ts
+    └── SetFlairAction.ts
 ```
 
 ## Développement

@@ -60,7 +60,10 @@ export class RedditProvider implements IOAuthProvider {
             'submit',
             'vote',
             'history',
-            'mysubreddits'
+            'mysubreddits',
+            'privatemessages',
+            'edit',
+            'flair'
         ];
 
         const params = new URLSearchParams({

@@ -254,4 +254,180 @@ export class RedditApiService {
             throw new Error(`Failed to upvote: ${error.message}`);
         }
     }
+
+    /**
+     * Get user's inbox messages
+     * 
+     * @param accessToken - OAuth2 access token
+     * @param limit - Number of messages to retrieve
+     * @returns Array of messages
+     * @throws Error if API request fails
+     */
+    async getInboxMessages(accessToken: string, limit: number = 25): Promise<any[]> {
+        try {
+            const response = await this.client.get('/message/inbox', {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                params: {
+                    limit: Math.min(limit, 100)
+                }
+            });
+
+            return response.data.data.children.map((child: any) => child.data);
+        } catch (error: any) {
+            console.error('[Reddit API] Error fetching inbox messages:'.red, error.response?.data || error.message);
+            throw new Error(`Failed to fetch inbox messages: ${error.message}`);
+        }
+    }
+
+    /**
+     * Get user mentions
+     * 
+     * @param accessToken - OAuth2 access token
+     * @param limit - Number of mentions to retrieve
+     * @returns Array of mentions
+     * @throws Error if API request fails
+     */
+    async getMentions(accessToken: string, limit: number = 25): Promise<any[]> {
+        try {
+            const response = await this.client.get('/message/mentions', {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                params: {
+                    limit: Math.min(limit, 100)
+                }
+            });
+
+            return response.data.data.children.map((child: any) => child.data);
+        } catch (error: any) {
+            console.error('[Reddit API] Error fetching mentions:'.red, error.response?.data || error.message);
+            throw new Error(`Failed to fetch mentions: ${error.message}`);
+        }
+    }
+
+    /**
+     * Send a private message
+     * 
+     * @param to - Username of recipient
+     * @param subject - Message subject
+     * @param text - Message body
+     * @param accessToken - OAuth2 access token
+     * @returns Response data
+     * @throws Error if API request fails
+     */
+    async sendPrivateMessage(
+        to: string,
+        subject: string,
+        text: string,
+        accessToken: string
+    ): Promise<any> {
+        try {
+            const response = await this.client.post('/api/compose', {
+                to: to,
+                subject: subject,
+                text: text,
+                api_type: 'json'
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            });
+
+            return response.data;
+        } catch (error: any) {
+            console.error('[Reddit API] Error sending private message:'.red, error.response?.data || error.message);
+            throw new Error(`Failed to send private message: ${error.message}`);
+        }
+    }
+
+    /**
+     * Edit a comment or post
+     * 
+     * @param thingId - Full ID of the thing to edit (including prefix)
+     * @param text - New text content
+     * @param accessToken - OAuth2 access token
+     * @returns Edited thing data
+     * @throws Error if API request fails
+     */
+    async editUserText(
+        thingId: string,
+        text: string,
+        accessToken: string
+    ): Promise<any> {
+        try {
+            const response = await this.client.post('/api/editusertext', {
+                thing_id: thingId,
+                text: text,
+                api_type: 'json'
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            });
+
+            return response.data;
+        } catch (error: any) {
+            console.error('[Reddit API] Error editing user text:'.red, error.response?.data || error.message);
+            throw new Error(`Failed to edit user text: ${error.message}`);
+        }
+    }
+
+    /**
+     * Delete a post or comment
+     * 
+     * @param thingId - Full ID of the thing to delete (including prefix)
+     * @param accessToken - OAuth2 access token
+     * @throws Error if API request fails
+     */
+    async deletePost(thingId: string, accessToken: string): Promise<void> {
+        try {
+            await this.client.post('/api/del', {
+                id: thingId
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            });
+        } catch (error: any) {
+            console.error('[Reddit API] Error deleting post:'.red, error.response?.data || error.message);
+            throw new Error(`Failed to delete post: ${error.message}`);
+        }
+    }
+
+    /**
+     * Set flair on a post
+     * 
+     * @param subreddit - Subreddit name (without r/)
+     * @param postId - Full post ID (including t3_ prefix)
+     * @param flairText - Flair text to set
+     * @param accessToken - OAuth2 access token
+     * @throws Error if API request fails
+     */
+    async setFlair(
+        subreddit: string,
+        postId: string,
+        flairText: string,
+        accessToken: string
+    ): Promise<void> {
+        try {
+            await this.client.post(`/r/${subreddit}/api/selectflair`, {
+                link: postId,
+                text: flairText,
+                api_type: 'json'
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            });
+        } catch (error: any) {
+            console.error('[Reddit API] Error setting flair:'.red, error.response?.data || error.message);
+            throw new Error(`Failed to set flair: ${error.message}`);
+        }
+    }
 }
