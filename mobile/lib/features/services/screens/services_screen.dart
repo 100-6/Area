@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/services/oauth_service.dart';
 import '../../../core/services/service_connection_service.dart';
+import '../../../core/models/service_provider.dart';
 import '../../auth/data/auth_repository.dart';
 
 /// Écran de gestion des connexions aux services
@@ -15,8 +16,8 @@ class ServicesScreen extends StatefulWidget {
 class _ServicesScreenState extends State<ServicesScreen> {
   final OAuthService _oauthService = OAuthService();
   final ServiceConnectionService _connectionService = ServiceConnectionService();
-  final Map<OAuthProvider, bool> _connectedServices = {};
-  final Map<OAuthProvider, bool> _loadingServices = {};
+  List<ServiceProvider> _availableServices = [];
+  final Map<String, bool> _loadingServices = {};
   bool _isLoading = true;
 
   @override
@@ -35,27 +36,24 @@ class _ServicesScreenState extends State<ServicesScreen> {
       final token = await authRepo.getToken();
 
       if (token == null) {
-        // Pas de token, tous déconnectés
-        for (var provider in OAuthService.availableProviders) {
-          _connectedServices[provider] = false;
-        }
+        _availableServices = [];
       } else {
-        // Vérifier chaque service
-        for (var provider in OAuthService.availableProviders) {
-          final serviceName = provider.name; // discord, github, etc.
-          final isConnected = await _connectionService.isServiceConnected(
-            serviceName: serviceName,
-            token: token,
-          );
-          _connectedServices[provider] = isConnected;
-        }
+        // Récupérer la liste des services depuis l'API /api/services/connected
+        final servicesData = await _connectionService.getConnectedServices(token: token);
+
+        // Construire la liste des ServiceProvider à partir de la réponse API
+        // Filtrer uniquement les services qui nécessitent une connexion OAuth2
+        _availableServices = servicesData
+            .map((data) => ServiceProvider.fromJson(data))
+            .where((service) {
+              // Ne garder que les services avec authType 'oauth2'
+              return service.authType.toLowerCase() == 'oauth2';
+            })
+            .toList();
       }
     } catch (e) {
       print('Erreur lors du chargement des services: $e');
-      // En cas d'erreur, tous déconnectés
-      for (var provider in OAuthService.availableProviders) {
-        _connectedServices[provider] = false;
-      }
+      _availableServices = [];
     } finally {
       if (mounted) {
         setState(() {
@@ -65,9 +63,9 @@ class _ServicesScreenState extends State<ServicesScreen> {
     }
   }
 
-  Future<void> _connectService(OAuthProvider provider) async {
+  Future<void> _connectService(ServiceProvider service) async {
     setState(() {
-      _loadingServices[provider] = true;
+      _loadingServices[service.name] = true;
     });
 
     try {
@@ -87,13 +85,13 @@ class _ServicesScreenState extends State<ServicesScreen> {
         return;
       }
 
-      final result = await _oauthService.connectService(provider.name, userToken: token);
+      final result = await _oauthService.connectService(service.name, userToken: token);
 
       if (result.isSuccess || result.isPending) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Connexion à ${provider.displayName} en cours...'),
+              content: Text('Connexion à ${service.displayName} en cours...'),
               backgroundColor: Colors.blue,
               behavior: SnackBarBehavior.floating,
             ),
@@ -117,20 +115,20 @@ class _ServicesScreenState extends State<ServicesScreen> {
     } finally {
       if (mounted) {
         setState(() {
-          _loadingServices[provider] = false;
+          _loadingServices[service.name] = false;
         });
       }
     }
   }
 
-  Future<void> _disconnectService(OAuthProvider provider) async {
+  Future<void> _disconnectService(ServiceProvider service) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Déconnecter le service'),
         content: Text(
-          'Êtes-vous sûr de vouloir déconnecter ${provider.displayName} ?',
+          'Êtes-vous sûr de vouloir déconnecter ${service.displayName} ?',
         ),
         actions: [
           TextButton(
@@ -148,19 +146,18 @@ class _ServicesScreenState extends State<ServicesScreen> {
 
     if (confirmed == true) {
       // TODO: Implémenter la déconnexion via API
-      setState(() {
-        _connectedServices[provider] = false;
-      });
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${provider.displayName} déconnecté'),
+            content: Text('${service.displayName} déconnecté'),
             backgroundColor: Colors.orange,
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
+
+      // Recharger la liste après déconnexion
+      await _loadConnectedServices();
     }
   }
 
@@ -206,20 +203,18 @@ class _ServicesScreenState extends State<ServicesScreen> {
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                          final provider = OAuthService.availableProviders[index];
-                          final isConnected = _connectedServices[provider] ?? false;
-                          final isLoading = _loadingServices[provider] ?? false;
+                          final service = _availableServices[index];
+                          final isLoading = _loadingServices[service.name] ?? false;
 
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 16),
                             child: _buildServiceCard(
-                              provider,
-                              isConnected,
+                              service,
                               isLoading,
                             ),
                           );
                         },
-                        childCount: OAuthService.availableProviders.length,
+                        childCount: _availableServices.length,
                       ),
                     ),
                   ),
@@ -232,8 +227,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
   }
 
   Widget _buildServiceCard(
-    OAuthProvider provider,
-    bool isConnected,
+    ServiceProvider service,
     bool isLoading,
   ) {
     return Container(
@@ -255,8 +249,8 @@ class _ServicesScreenState extends State<ServicesScreen> {
           ),
         ],
         border: Border.all(
-          color: isConnected
-              ? Color(provider.color).withValues(alpha: 0.3)
+          color: service.isConnected
+              ? Color(service.color).withValues(alpha: 0.3)
               : Colors.grey.withValues(alpha: 0.2),
           width: 1.5,
         ),
@@ -272,8 +266,8 @@ class _ServicesScreenState extends State<ServicesScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Color(provider.color),
-                    Color(provider.color).withValues(alpha: 0.8),
+                    Color(service.color),
+                    Color(service.color).withValues(alpha: 0.8),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -281,14 +275,14 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(provider.color).withValues(alpha: 0.3),
+                    color: Color(service.color).withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: Center(
-                child: _getProviderIcon(provider),
+                child: _getServiceIcon(service.name),
               ),
             ),
             const SizedBox(width: 16),
@@ -299,7 +293,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    provider.displayName,
+                    service.displayName,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -320,12 +314,12 @@ class _ServicesScreenState extends State<ServicesScreen> {
               SizedBox(
                 width: 110,
                 child: ElevatedButton(
-                  onPressed: isConnected
-                      ? () => _disconnectService(provider)
-                      : () => _connectService(provider),
+                  onPressed: service.isConnected
+                      ? () => _disconnectService(service)
+                      : () => _connectService(service),
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
-                        isConnected ? Colors.red[400] : Color(provider.color),
+                        service.isConnected ? Colors.red[400] : Color(service.color),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -336,7 +330,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                     ),
                   ),
                   child: Text(
-                    isConnected ? 'Déconnecter' : 'Connecter',
+                    service.isConnected ? 'Déconnecter' : 'Connecter',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -350,27 +344,48 @@ class _ServicesScreenState extends State<ServicesScreen> {
     );
   }
 
-  Widget _getProviderIcon(OAuthProvider provider) {
+  Widget _getServiceIcon(String serviceName) {
     IconData icon;
 
-    switch (provider) {
-      case OAuthProvider.google:
+    switch (serviceName.toLowerCase()) {
+      case 'google':
         icon = Icons.g_mobiledata;
         break;
-      case OAuthProvider.gmail:
+      case 'gmail':
         icon = Icons.email_rounded;
         break;
-      case OAuthProvider.github:
+      case 'github':
         icon = Icons.code;
         break;
-      case OAuthProvider.gitlab:
+      case 'gitlab':
         icon = Icons.source;
         break;
-      case OAuthProvider.discord:
+      case 'discord':
         icon = Icons.discord;
         break;
-      case OAuthProvider.dropbox:
+      case 'dropbox':
         icon = Icons.cloud;
+        break;
+      case 'telegram':
+        icon = Icons.telegram;
+        break;
+      case 'outlook':
+        icon = Icons.email;
+        break;
+      case 'spotify':
+        icon = Icons.music_note;
+        break;
+      case 'rss':
+        icon = Icons.rss_feed;
+        break;
+      case 'webhook':
+        icon = Icons.webhook;
+        break;
+      case 'openai':
+        icon = Icons.auto_awesome;
+        break;
+      default:
+        icon = Icons.api; // Icône par défaut
         break;
     }
 

@@ -70,6 +70,8 @@ export class TelegramBotClient {
     private pollingInterval: NodeJS.Timeout | null = null;
     private registeredTriggers: Set<string> = new Set();
     private botInfo: any = null;
+    private lastConflictWarning: number = 0; // Timestamp du dernier warning 409
+    private conflictWarningInterval: number = 60000; // Afficher max 1 fois par minute
 
     private constructor() {
         this.eventBus = EventBus.getInstance();
@@ -134,6 +136,9 @@ export class TelegramBotClient {
         this.isRunning = true;
         console.log('[Telegram Bot] Starting long polling...'.cyan);
 
+        // Réinitialiser le compteur de conflict warnings
+        this.lastConflictWarning = 0;
+
         // Fonction de polling récursive
         const poll = async () => {
             if (!this.isRunning || !this.apiService) {
@@ -152,7 +157,18 @@ export class TelegramBotClient {
                     }
                 }
             } catch (error: any) {
-                if (error.code !== 'ECONNABORTED') {
+                // Gérer l'erreur 409 avec throttle pour éviter le spam
+                if (error.message?.includes('Conflict')) {
+                    const now = Date.now();
+                    // Afficher le warning seulement si ça fait plus de 1 minute
+                    if (now - this.lastConflictWarning > this.conflictWarningInterval) {
+                        console.error('[Telegram Bot] ⚠️  CONFLICT DETECTED'.yellow.bold);
+                        console.error('[Telegram Bot] Another instance is polling or webhook is active'.yellow);
+                        console.error('[Telegram Bot] 💡 Check for duplicate containers/processes'.yellow);
+                        console.error('[Telegram Bot] (This warning will repeat every 60s)'.gray);
+                        this.lastConflictWarning = now;
+                    }
+                } else if (error.code !== 'ECONNABORTED') {
                     console.error('[Telegram Bot] Polling error:'.red, error.message);
                 }
             }
@@ -355,6 +371,8 @@ export class TelegramBotClient {
      * Déconnecter le bot
      */
     async disconnect(): Promise<void> {
+        console.log('[Telegram Bot] Disconnecting...'.yellow);
+
         if (this.isRunning) {
             this.stopPolling();
         }
@@ -362,7 +380,7 @@ export class TelegramBotClient {
         this.apiService = null;
         this.isReady = false;
         this.botInfo = null;
-        console.log('[Telegram Bot] Disconnected'.yellow);
+        console.log('[Telegram Bot] ✓ Disconnected'.yellow);
     }
 
     /**

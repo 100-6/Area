@@ -15,9 +15,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      backendUrl: process.env.BACKEND_URL || 'http://localhost:8080'
-    },
-    // Configuration côté serveur pour Docker
-    backendUrl: process.env.BACKEND_URL || 'http://area_backend_dev:8080'
+      backendUrl: process.env.NUXT_PUBLIC_API_URL || process.env.BACKEND_URL || 'http://localhost:8080'
+    }
   }
 })
