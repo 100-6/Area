@@ -16,6 +16,12 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+ARG NUXT_PUBLIC_API_URL
+ARG BACKEND_URL
+
+ENV NUXT_PUBLIC_API_URL=${NUXT_PUBLIC_API_URL}
+ENV BACKEND_URL=${BACKEND_URL}
+
 COPY --from=deps /app/node_modules ./node_modules
 
 COPY . .

@@ -74,11 +74,11 @@ export const useServiceManagement = () => {
         return getFallbackServices()
       }
 
-      const connectionStatusResponse = await $fetch<{ services: any[] }>(`${backendUrl}/api/services/connected`, { headers }).catch(() => null)
+      const connectionStatusResponse = await $fetch<{ success: boolean; data: any[] }>(`${backendUrl}/api/services/connected`, { headers }).catch(() => null)
       const connectionStatusMap = new Map<string, boolean>()
 
-      if (connectionStatusResponse?.services?.length) {
-        connectionStatusResponse.services.forEach((service: any) => {
+      if (connectionStatusResponse?.success && connectionStatusResponse?.data?.length) {
+        connectionStatusResponse.data.forEach((service: any) => {
           if (!service) return
           const keys = [service.name, service.id, service.displayName]
             .filter(Boolean)
