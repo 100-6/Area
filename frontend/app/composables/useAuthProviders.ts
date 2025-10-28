@@ -2,58 +2,38 @@ import type { AuthProviderInfo } from '~/types'
 
 const normalizeKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '')
 
-const providerMeta: Record<string, { keys: string[]; displayName: string; icon: string; color?: string; description?: string }> = {
-  google: {
-    keys: ['google', 'googleoauth', 'googleoauth2'],
-    displayName: 'Google',
-    icon: 'i-logos-google-icon',
-    color: '#4285F4',
-    description: 'Connexion via compte Google'
-  },
-  gmail: {
-    keys: ['gmail', 'googlemail'],
-    displayName: 'Gmail',
-    icon: 'i-logos-google-gmail',
-    color: '#DB4437',
-    description: 'Autoriser l\'envoi et la lecture via Gmail'
-  },
-  discord: {
-    keys: ['discord'],
-    displayName: 'Discord',
-    icon: 'i-logos-discord-icon',
-    color: '#5865F2',
-    description: 'Notifications et interactions Discord'
-  },
-  github: {
-    keys: ['github'],
-    displayName: 'GitHub',
-    icon: 'i-logos-github-icon',
-    description: 'Intégrations développeur GitHub'
-  },
-  gitlab: {
-    keys: ['gitlab'],
-    displayName: 'GitLab',
-    icon: 'i-logos-gitlab',
-    description: 'Intégrations GitLab'
-  },
-  dropbox: {
-    keys: ['dropbox'],
-    displayName: 'Dropbox',
-    icon: 'i-logos-dropbox-icon',
-    color: '#0061FF',
-    description: 'Stockage et synchronisation Dropbox'
+const getDefaultIcon = (serviceName: string): string => {
+  const name = normalizeKey(serviceName)
+  const iconMap: Record<string, string> = {
+    google: 'i-logos-google-icon',
+    gmail: 'i-logos-google-gmail',
+    discord: 'i-logos-discord-icon',
+    github: 'i-logos-github-icon',
+    gitlab: 'i-logos-gitlab',
+    dropbox: 'i-logos-dropbox-icon',
+    microsoft: 'i-logos-microsoft-icon',
+    outlook: 'i-logos-microsoft-outlook',
+    telegram: 'i-logos-telegram',
+    slack: 'i-logos-slack-icon'
   }
+  return iconMap[name] || 'i-heroicons-link'
 }
 
-const resolveMeta = (rawKey: string) => {
-  const key = normalizeKey(rawKey)
-  for (const metaKey in providerMeta) {
-    const meta = providerMeta[metaKey]
-    if (meta.keys.some(candidate => normalizeKey(candidate) === key)) {
-      return { metaKey, meta }
-    }
+const getDefaultColor = (serviceName: string): string | undefined => {
+  const name = normalizeKey(serviceName)
+  const colorMap: Record<string, string> = {
+    google: '#4285F4',
+    gmail: '#DB4437',
+    discord: '#5865F2',
+    github: '#24292F',
+    gitlab: '#FC6D26',
+    dropbox: '#0061FF',
+    microsoft: '#00BCF2',
+    outlook: '#0078D4',
+    telegram: '#26A5E4',
+    slack: '#4A154B'
   }
-  return null
+  return colorMap[name]
 }
 
 export const useAuthProviders = () => {
@@ -70,26 +50,20 @@ export const useAuthProviders = () => {
 
   const mapServiceToProvider = (service: any): AuthProviderInfo => {
     const rawKey = String(service.name || service.id || '')
-    const resolved = resolveMeta(rawKey)
-    const meta = resolved?.meta || {
-      keys: [rawKey],
-      displayName: service.displayName || service.name || rawKey,
-      icon: 'i-heroicons-link'
-    }
-
-    const metaKey = resolved?.metaKey || normalizeKey(rawKey)
+    const normalizedKey = normalizeKey(rawKey)
     const isOauth = String(service.authType || '').toLowerCase().includes('oauth')
 
     return {
-      provider: metaKey,
-      displayName: meta.displayName,
-      icon: meta.icon,
-      color: meta.color,
-      description: meta.description || service.description || '',
+      provider: normalizedKey,
+      displayName: service.displayName || service.name || rawKey,
+      icon: service.icon || getDefaultIcon(rawKey),
+      color: service.color || getDefaultColor(rawKey),
+      description: service.description || '',
       isConfigured: isOauth,
       isConnected: !!service.connected,
       isPrimary: false,
       connectedAt: service.connectedAt || null
+      // Plus besoin d'oauthEndpoint - tous les services utilisent /api/auth/{service}
     }
   }
 
@@ -103,7 +77,7 @@ export const useAuthProviders = () => {
     error.value = null
 
     try {
-      const response = await $fetch<{ services: any[] }>('/api/services/connected', {
+      const response = await $fetch<{ success: boolean; data: any[] }>('/api/services/connected', {
         method: 'GET',
         baseURL: backendUrl,
         headers: {
@@ -111,10 +85,9 @@ export const useAuthProviders = () => {
         }
       })
 
-      const filtered = (response.services || []).filter((service) => {
+      const filtered = (response.data || []).filter((service) => {
         const authType = String(service.authType || '').toLowerCase()
-        const rawKey = String(service.name || service.id || '')
-        return authType.includes('oauth') || !!resolveMeta(rawKey)
+        return authType.includes('oauth')
       })
 
       providers.value = filtered.map(mapServiceToProvider)

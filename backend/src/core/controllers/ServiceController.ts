@@ -102,6 +102,7 @@ export class ConnectedServicesController {
     /**
      * Get all connected services for the authenticated user
      * GET /api/services/connected
+     * Note: All services now use the standard /api/auth/{service} pattern
      */
     public getConnectedServices = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
         try {
@@ -122,7 +123,7 @@ export class ConnectedServicesController {
                     };
                 })
             );
-            res.json({ services });
+            res.json({ success: true, data: services });
         } catch (error) {
             next(error);
         }
