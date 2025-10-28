@@ -129,6 +129,13 @@ export class TelegramApiService {
                 throw new Error(response.data.description || 'Failed to get updates');
             }
         } catch (error: any) {
+            // Erreur 409 = Conflit (webhook actif ou autre instance de polling)
+            if (error.response?.status === 409) {
+                const errorMsg = error.response?.data?.description || error.message;
+                // Logger détaillé seulement la première fois, ensuite juste throw
+                throw new Error(`Telegram Bot Conflict: ${errorMsg}`);
+            }
+            
             // Ne pas logger les timeouts (comportement normal du long polling)
             if (error.code !== 'ECONNABORTED') {
                 console.error(`[Telegram API] ❌ Failed to get updates:`.red, error.message);
@@ -166,6 +173,53 @@ export class TelegramApiService {
             return true;
         } catch (error) {
             return false;
+        }
+    }
+
+    /**
+     * Supprimer le webhook configuré (requis pour utiliser le polling)
+     * Telegram ne permet pas d'utiliser getUpdates si un webhook est actif
+     * @param dropPendingUpdates - Supprimer les updates en attente
+     * @returns true si le webhook a été supprimé avec succès
+     */
+    async deleteWebhook(dropPendingUpdates: boolean = true): Promise<boolean> {
+        try {
+            console.log('[Telegram API] Deleting webhook to enable polling...'.cyan);
+            
+            const response = await this.api.post('/deleteWebhook', {
+                drop_pending_updates: dropPendingUpdates
+            });
+
+            if (response.data.ok) {
+                console.log('[Telegram API] ✓ Webhook deleted successfully'.green);
+                return true;
+            } else {
+                console.warn('[Telegram API] ⚠️  Failed to delete webhook:'.yellow, response.data.description);
+                return false;
+            }
+        } catch (error: any) {
+            console.error('[Telegram API] ❌ Error deleting webhook:'.red, error.message);
+            return false;
+        }
+    }
+
+    /**
+     * Obtenir les informations du webhook configuré
+     * Utile pour diagnostiquer les problèmes de polling
+     * @returns Informations sur le webhook
+     */
+    async getWebhookInfo(): Promise<any> {
+        try {
+            const response = await this.api.get('/getWebhookInfo');
+            
+            if (response.data.ok) {
+                return response.data.result;
+            } else {
+                throw new Error(response.data.description || 'Failed to get webhook info');
+            }
+        } catch (error: any) {
+            console.error('[Telegram API] ❌ Failed to get webhook info:'.red, error.message);
+            throw error;
         }
     }
 }

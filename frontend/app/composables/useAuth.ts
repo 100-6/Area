@@ -15,14 +15,14 @@ export const useAuth = () => {
     default: () => '',
     secure: false, // false en développement pour HTTP
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24
+    maxAge: 60 * 60 * 24 * 7  // 7 jours au lieu de 1
   })
 
   const refreshToken = useCookie('refresh-token', {
     default: () => '',
     secure: false, // false en développement pour HTTP
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7
+    maxAge: 60 * 60 * 24 * 30  // 30 jours
   })
 
   const login = async (credentials: LoginData): Promise<void> => {
@@ -121,6 +121,7 @@ export const useAuth = () => {
 
       authToken.value = response.token
       refreshToken.value = response.refreshToken
+      await fetchUserData()
       return true
     } catch (error) {
       console.error('Token refresh error:', error)
@@ -129,25 +130,27 @@ export const useAuth = () => {
     }
   }
 
-  const loginWithProvider = (provider: 'google' | 'discord' | 'github' | 'gitlab' | 'dropbox'): void => {
+  const loginWithProvider = (provider: string): void => {
     window.location.href = `${backendUrl}/api/auth/${provider}`
   }
 
-  const providerAuthEndpoints: Record<'google' | 'gmail' | 'discord' | 'github' | 'gitlab' | 'dropbox', string> = {
-    google: '/api/auth/google',
-    gmail: '/api/gmail/connect',
-    discord: '/api/auth/discord',
-    github: '/api/auth/github',
-    gitlab: '/api/auth/gitlab',
-    dropbox: '/api/auth/dropbox'
+  const getProviderAuthEndpoint = (provider: string): string => {
+    // Special routes for certain providers
+    const specialRoutes: Record<string, string> = {
+      spotify: '/api/spotify/connect',
+      gmail: '/api/gmail/connect',
+      outlook: '/api/outlook/connect',
+    }
+
+    return specialRoutes[provider] || `/api/auth/${provider}`
   }
 
-  const linkProvider = (provider: 'google' | 'gmail' | 'discord' | 'github' | 'gitlab' | 'dropbox'): void => {
+  const linkProvider = (provider: string): void => {
     if (!authToken.value) {
       throw new Error('Non authentifié')
     }
 
-    const endpoint = providerAuthEndpoints[provider]
+    const endpoint = getProviderAuthEndpoint(provider)
     const token = encodeURIComponent(authToken.value)
     window.location.href = `${backendUrl}${endpoint}?token=${token}`
   }
@@ -183,7 +186,11 @@ export const useAuth = () => {
     if (authToken.value) {
       const isValid = await verifyToken()
       if (!isValid) {
-        await refreshTokens()
+        const refreshed = await refreshTokens()
+        if (!refreshed) {
+          // Clear invalid tokens if refresh fails
+          clearAuth()
+        }
       }
     }
   }

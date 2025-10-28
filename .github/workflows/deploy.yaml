@@ -87,6 +87,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.frontend_tags }}
+          build-args: |
+            NUXT_PUBLIC_API_URL=https://auto.eliasdrissi.dev
           labels: |
             org.opencontainers.image.source=${{ github.repositoryUrl }}
             org.opencontainers.image.revision=${{ github.sha }}

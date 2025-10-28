@@ -249,7 +249,18 @@
                           background: provider.color ? provider.color + '15' : 'rgba(148, 163, 184, 0.08)'
                         }"
                       >
-                        <UIcon :name="provider.icon" class="w-6 h-6" :style="provider.color ? { color: provider.color } : { color: '#1f2937' }" />
+                        <img
+                          v-if="provider.icon && provider.icon.startsWith('http')"
+                          :src="provider.icon"
+                          :alt="provider.displayName"
+                          class="w-6 h-6 object-contain"
+                        />
+                        <UIcon
+                          v-else
+                          :name="provider.icon"
+                          class="w-6 h-6"
+                          :style="provider.color ? { color: provider.color } : { color: '#1f2937' }"
+                        />
                       </div>
                       <div class="space-y-1">
                         <div class="flex items-center gap-2">
@@ -465,11 +476,11 @@ const isEditing = ref(false)
 const isSaving = ref(false)
 const activeTab = ref('overview')
 
-const SUPPORTED_OAUTH_PROVIDERS = ['google', 'gmail', 'discord', 'github', 'gitlab', 'dropbox'] as const
-type SupportedOAuthProvider = typeof SUPPORTED_OAUTH_PROVIDERS[number]
-
-const isSupportedProvider = (provider: string): provider is SupportedOAuthProvider => {
-  return SUPPORTED_OAUTH_PROVIDERS.includes(provider as SupportedOAuthProvider)
+// All OAuth providers from backend are now supported dynamically
+const isSupportedProvider = (provider: string): boolean => {
+  // Check if provider is configured (has OAuth auth type)
+  const providerInfo = providers.value.find(p => p.provider === provider)
+  return providerInfo?.isConfigured || false
 }
 
 const tabs = [
@@ -542,13 +553,14 @@ const handleLogout = async () => {
 
 const handleProviderLink = (provider: string) => {
   if (!isSupportedProvider(provider)) {
-    console.warn(`Provider ${provider} non supporté pour la liaison`)
+    console.warn(`Provider ${provider} non configuré`)
     return
   }
 
   try {
     providersError.value = null
-    linkProvider(provider.toLowerCase() as SupportedOAuthProvider)
+    // Tous les services utilisent maintenant /api/auth/{service}
+    linkProvider(provider.toLowerCase())
   } catch (error) {
     console.error('Provider link error:', error)
   }

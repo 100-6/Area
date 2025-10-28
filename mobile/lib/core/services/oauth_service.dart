@@ -3,15 +3,35 @@ import '../constants/api_constants.dart';
 
 /// Service pour gérer l'authentification OAuth
 class OAuthService {
-  /// Providers OAuth disponibles
-  static const List<OAuthProvider> availableProviders = [
+  /// Providers OAuth pour l'authentification (login/register)
+  /// Uniquement les services de connexion pure (en dur)
+  static const List<OAuthProvider> authenticationProviders = [
     OAuthProvider.google,
-    OAuthProvider.gmail,
+    OAuthProvider.discord,
     OAuthProvider.github,
     OAuthProvider.gitlab,
-    OAuthProvider.discord,
     OAuthProvider.dropbox,
   ];
+
+  /// Mapping des noms de services vers OAuthProvider
+  static OAuthProvider? getProviderByName(String name) {
+    switch (name.toLowerCase()) {
+      case 'google':
+        return OAuthProvider.google;
+      case 'gmail':
+        return OAuthProvider.gmail;
+      case 'github':
+        return OAuthProvider.github;
+      case 'gitlab':
+        return OAuthProvider.gitlab;
+      case 'discord':
+        return OAuthProvider.discord;
+      case 'dropbox':
+        return OAuthProvider.dropbox;
+      default:
+        return null;
+    }
+  }
 
   /// Lance le flux OAuth pour un provider
   Future<OAuthResult> signInWithProvider(OAuthProvider provider) async {
@@ -95,14 +115,22 @@ class OAuthService {
   /// Utilise les routes OAuth existantes (/api/auth/discord, etc.)
   String _getServiceAuthUrl(String serviceName) {
     final baseUrl = ApiConstants.baseUrl;
+    final service = serviceName.toLowerCase();
 
-    // Gmail a sa propre route spéciale
-    if (serviceName.toLowerCase() == 'gmail') {
+    // Services avec leur propre route /connect
+    if (service == 'gmail') {
       return '$baseUrl/api/gmail/connect';
+    }
+    if (service == 'outlook' || service == 'microsoft') {
+      return '$baseUrl/api/outlook/connect';
+    }
+    if (service == 'spotify') {
+      return '$baseUrl/api/spotify/connect';
     }
 
     // Réutilise les routes OAuth existantes pour les autres services
-    return '$baseUrl/api/auth/${serviceName.toLowerCase()}';
+    // (Discord, GitHub, GitLab, Dropbox, Google, Telegram)
+    return '$baseUrl/api/auth/$service';
   }
 
 }

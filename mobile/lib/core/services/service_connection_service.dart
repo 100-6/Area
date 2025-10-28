@@ -22,8 +22,8 @@ class ServiceConnectionService {
     }
   }
 
-  /// Récupère la liste des services connectés
-  Future<List<String>> getConnectedServices({
+  /// Récupère la liste des services connectés avec leurs détails
+  Future<List<Map<String, dynamic>>> getConnectedServices({
     required String token,
   }) async {
     try {
@@ -33,7 +33,7 @@ class ServiceConnectionService {
       );
 
       if (response['services'] != null) {
-        return List<String>.from(response['services']);
+        return List<Map<String, dynamic>>.from(response['services']);
       }
       return [];
     } catch (e) {

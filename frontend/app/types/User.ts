@@ -41,4 +41,5 @@ export interface AuthProviderInfo {
   isConnected: boolean
   isPrimary: boolean
   connectedAt?: string | null
+  // Plus besoin d'oauthEndpoint - tous les services utilisent /api/auth/{service}
 }
