@@ -26,12 +26,4 @@ router.get('/gitlab/callback', authController.gitLabCallback);
 router.get('/dropbox', authController.dropboxLogin);
 router.get('/dropbox/callback', authController.dropboxCallback);
 
-router.get('/spotify', (req, res) => {
-  res.redirect(`/api/spotify/connect?${req.url.split('?')[1] || ''}`)
-});
-
-router.get('/gmail', (req, res) => {
-  res.redirect(`/api/gmail/connect?${req.url.split('?')[1] || ''}`)
-});
-
 export default router;
