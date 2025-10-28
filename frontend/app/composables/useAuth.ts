@@ -134,8 +134,14 @@ export const useAuth = () => {
   }
 
   const getProviderAuthEndpoint = (provider: string): string => {
-    // All services use the standard /api/auth/{service} pattern
-    return `/api/auth/${provider}`
+    // Services with special /connect endpoints
+    const specialEndpoints: Record<string, string> = {
+      gmail: '/api/gmail/connect',
+      spotify: '/api/spotify/connect',
+      outlook: '/api/outlook/connect'
+    }
+
+    return specialEndpoints[provider.toLowerCase()] || `/api/auth/${provider.toLowerCase()}`
   }
 
   const linkProvider = (provider: string): void => {
