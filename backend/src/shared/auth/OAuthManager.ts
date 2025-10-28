@@ -6,6 +6,7 @@ import { GitLabProvider } from './oauth/providers/GitLabProvider';
 import { DropboxProvider } from './oauth/providers/DropboxProvider';
 import { DiscordProvider } from './oauth/providers/DiscordProvider';
 import { SpotifyProvider } from './oauth/providers/SpotifyProvider';
+import { RedditProvider } from './oauth/providers/RedditProvider';
 import { User } from '../../core/models/User';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
 
@@ -32,6 +33,7 @@ export class OAuthManager {
     private dropboxProvider: DropboxProvider;
     private discordProvider: DiscordProvider;
     private spotifyProvider: SpotifyProvider;
+    private redditProvider: RedditProvider;
 
     constructor() {
         this.googleProvider = new GoogleProvider();
@@ -42,6 +44,7 @@ export class OAuthManager {
         this.dropboxProvider = new DropboxProvider();
         this.discordProvider = new DiscordProvider();
         this.spotifyProvider = new SpotifyProvider();
+        this.redditProvider = new RedditProvider();
     }
 
     /**
@@ -77,6 +80,13 @@ export class OAuthManager {
      */
     getSpotifyAuthUrl(state?: string): string {
         return this.spotifyProvider.getAuthUrl(state);
+    }
+
+    /**
+     * Generate Reddit OAuth URL
+     */
+    getRedditAuthUrl(state?: string): string {
+        return this.redditProvider.getAuthUrl(state);
     }
 
     /**
@@ -136,6 +146,18 @@ export class OAuthManager {
             return await this.findOrCreateUserFromOAuth('spotify', spotifyProfile, authenticatedUserId);
         } catch (error) {
             throw new Error(`Spotify OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Handle Reddit OAuth callback
+     */
+    async handleRedditCallback(code: string, authenticatedUserId?: string): Promise<OAuthUser> {
+        try {
+            const redditProfile = await this.redditProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('reddit', redditProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Reddit OAuth error: ${error}`);
         }
     }
 
