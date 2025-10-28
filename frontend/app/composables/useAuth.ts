@@ -15,14 +15,14 @@ export const useAuth = () => {
     default: () => '',
     secure: false, // false en développement pour HTTP
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24
+    maxAge: 60 * 60 * 24 * 7  // 7 jours au lieu de 1
   })
 
   const refreshToken = useCookie('refresh-token', {
     default: () => '',
     secure: false, // false en développement pour HTTP
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7
+    maxAge: 60 * 60 * 24 * 30  // 30 jours
   })
 
   const login = async (credentials: LoginData): Promise<void> => {
