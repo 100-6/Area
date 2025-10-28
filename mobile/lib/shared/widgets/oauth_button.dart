@@ -140,7 +140,7 @@ class _OAuthButtonsState extends State<OAuthButtons> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ...OAuthService.availableProviders.map(
+        ...OAuthService.authenticationProviders.map(
           (provider) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: OAuthButton(
@@ -283,7 +283,7 @@ class _CompactOAuthButtonsState extends State<CompactOAuthButtons> {
       spacing: 16,
       runSpacing: 16,
       alignment: WrapAlignment.center,
-      children: OAuthService.availableProviders.map(
+      children: OAuthService.authenticationProviders.map(
         (provider) => CompactOAuthButton(
           provider: provider,
           onPressed: () => _handleOAuthLogin(provider),

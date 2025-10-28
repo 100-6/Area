@@ -115,7 +115,7 @@ class AreaService {
 
   /// Récupérer les services disponibles
   Future<List<ServiceInfo>> getAvailableServices() async {
-    final response = await _apiService.get('/about.json');
+    final response = await _apiService.get('/api/about.json');
 
     if (response['server'] != null &&
         response['server']['services'] != null) {

@@ -42,8 +42,14 @@ class _AutoAppState extends State<AutoApp> {
       _authRepository,
       onServiceConnected: (serviceName) {
         // Callback quand un service est connecté via OAuth
-        print('Service $serviceName connecté ! Le deep link ramène automatiquement à l\'app.');
         _showSuccessMessage('Service $serviceName connecté avec succès !');
+
+        // Rediriger vers le dashboard après connexion réussie
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _router.go('/dashboard');
+          }
+        });
       },
       onOAuthError: (error) {
         // Callback en cas d'erreur OAuth
