@@ -232,7 +232,13 @@ const canConfirm = computed(() => {
 })
 
 const loadAvailableVariables = async () => {
+  console.log('[Modal Debug] loadAvailableVariables called')
+  console.log('[Modal Debug] blockType:', props.blockType)
+  console.log('[Modal Debug] availablePreviousNodes:', props.availablePreviousNodes)
+  console.log('[Modal Debug] workflowBlocks:', props.workflowBlocks)
+
   if (props.blockType !== 'action') {
+    console.log('[Modal Debug] Not an action, clearing variables')
     availableVariables.value = []
     return
   }
@@ -243,23 +249,22 @@ const loadAvailableVariables = async () => {
     // Use blocks mode if we have workflow blocks (create mode)
     let sources: VariableSource[] = []
 
-    if (props.workflowBlocks?.length > 0) {
-      // Only get blocks that come before the current block being configured
-      let previousBlocks = props.workflowBlocks
-      if (props.currentBlockIndex >= 0) {
-        previousBlocks = props.workflowBlocks.slice(0, props.currentBlockIndex)
-      }
-
-      const lastBlock = previousBlocks.length ? [previousBlocks[previousBlocks.length - 1]] : []
-
-      console.log(`[Variables] Loading variables from ${lastBlock.length} previous block(s) (latest only)`)
-      sources = lastBlock.length ? await getAvailableOutputVariablesFromBlocks(lastBlock) : []
-    }
-    // Use node IDs mode if we have saved nodes (edit mode)
-    else if (props.availablePreviousNodes?.length > 0) {
-      const lastNodeId = props.availablePreviousNodes[props.availablePreviousNodes.length - 1]
-      console.log(`[Variables] Loading variables from last previous node: ${lastNodeId}`)
-      sources = lastNodeId ? await getAvailableOutputVariables([lastNodeId]) : []
+    if (props.workflowBlocks?.length > 0 && props.availablePreviousNodes?.length > 0) {
+      // Create mode: use workflow blocks in memory
+      console.log(`[Variables] Create mode - Loading variables from ${props.availablePreviousNodes.length} connected block(s):`, props.availablePreviousNodes)
+      // Find the connected workflow blocks
+      const connectedBlocks = props.workflowBlocks.filter(block =>
+        props.availablePreviousNodes!.includes(block.id)
+      )
+      sources = connectedBlocks.length ? await getAvailableOutputVariablesFromBlocks(connectedBlocks) : []
+    } else if (props.availablePreviousNodes?.length > 0) {
+      // Edit mode: use backend API to get variables from saved nodes
+      console.log(`[Variables] Edit mode - Loading variables from ${props.availablePreviousNodes.length} connected node(s):`, props.availablePreviousNodes)
+      sources = await getAvailableOutputVariables(props.availablePreviousNodes)
+    } else {
+      // No connections available
+      console.log(`[Variables] No connected nodes available`)
+      sources = []
     }
 
     availableVariables.value = sources.filter((source) => source.variables && source.variables.length > 0)

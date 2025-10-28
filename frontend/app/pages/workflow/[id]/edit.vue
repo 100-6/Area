@@ -228,8 +228,6 @@
         :service="selectedService"
         :block-type="selectedBlockType"
         :initial-config="currentConfiguration"
-        :workflow-blocks="workflowBlocks"
-        :current-block-index="modalCurrentBlockIndex"
         :available-previous-nodes="modalPreviousNodeIds"
         @configuration-confirmed="handleConfigurationConfirmed"
       />
@@ -543,14 +541,34 @@ const modalCurrentBlockIndex = computed(() => {
 })
 
 const modalPreviousNodeIds = computed(() => {
+  console.log('[Edit Debug] modalPreviousNodeIds computed called')
+  console.log('[Edit Debug] selectedBlockType:', selectedBlockType.value)
+  console.log('[Edit Debug] configModalContext:', configModalContext.value)
+  console.log('[Edit Debug] connections:', connections.value)
+
   if (selectedBlockType.value !== 'action') {
+    console.log('[Edit Debug] Not an action, returning empty array')
     return []
   }
-  const index = modalCurrentBlockIndex.value
-  if (index <= 0) {
-    return []
+
+  // Si on configure un bloc existant
+  if (configModalContext.value?.blockId) {
+    const currentBlockId = configModalContext.value.blockId
+    console.log('[Edit Debug] Current block ID:', currentBlockId)
+
+    // Trouver toutes les connexions qui pointent vers cette node
+    const incomingConnections = connections.value.filter(conn => conn.to === currentBlockId)
+    console.log('[Edit Debug] Incoming connections:', incomingConnections)
+
+    // Retourner les IDs des nodes source
+    const sourceIds = incomingConnections.map(conn => conn.from)
+    console.log('[Edit Debug] Source IDs:', sourceIds)
+    return sourceIds
   }
-  return workflowBlocks.value.slice(0, index).map(block => block.id)
+
+  // Si on ajoute un nouveau bloc, pas de connexions encore définies
+  console.log('[Edit Debug] No blockId in context, returning empty array')
+  return []
 })
 
 const getConnectionPointOrFallback = (blockId: string, isOutput: boolean) => {

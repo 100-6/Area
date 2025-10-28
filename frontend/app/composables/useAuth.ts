@@ -121,6 +121,7 @@ export const useAuth = () => {
 
       authToken.value = response.token
       refreshToken.value = response.refreshToken
+      await fetchUserData()
       return true
     } catch (error) {
       console.error('Token refresh error:', error)
@@ -134,8 +135,14 @@ export const useAuth = () => {
   }
 
   const getProviderAuthEndpoint = (provider: string): string => {
-    // All services use the standard /api/auth/{service} pattern
-    return `/api/auth/${provider}`
+    // Special routes for certain providers
+    const specialRoutes: Record<string, string> = {
+      spotify: '/api/spotify/connect',
+      gmail: '/api/gmail/connect',
+      outlook: '/api/outlook/connect',
+    }
+
+    return specialRoutes[provider] || `/api/auth/${provider}`
   }
 
   const linkProvider = (provider: string): void => {
@@ -179,7 +186,11 @@ export const useAuth = () => {
     if (authToken.value) {
       const isValid = await verifyToken()
       if (!isValid) {
-        await refreshTokens()
+        const refreshed = await refreshTokens()
+        if (!refreshed) {
+          // Clear invalid tokens if refresh fails
+          clearAuth()
+        }
       }
     }
   }

@@ -14,7 +14,8 @@ const getDefaultIcon = (serviceName: string): string => {
     microsoft: 'i-logos-microsoft-icon',
     outlook: 'i-logos-microsoft-outlook',
     telegram: 'i-logos-telegram',
-    slack: 'i-logos-slack-icon'
+    slack: 'i-logos-slack-icon',
+    spotify: 'i-logos-spotify-icon'
   }
   return iconMap[name] || 'i-heroicons-link'
 }
@@ -31,7 +32,8 @@ const getDefaultColor = (serviceName: string): string | undefined => {
     microsoft: '#00BCF2',
     outlook: '#0078D4',
     telegram: '#26A5E4',
-    slack: '#4A154B'
+    slack: '#4A154B',
+    spotify: '#1DB954'
   }
   return colorMap[name]
 }
@@ -56,8 +58,8 @@ export const useAuthProviders = () => {
     return {
       provider: normalizedKey,
       displayName: service.displayName || service.name || rawKey,
-      icon: service.icon || getDefaultIcon(rawKey),
-      color: service.color || getDefaultColor(rawKey),
+      icon: service.iconUrl && service.iconUrl.startsWith('http') ? service.iconUrl : getDefaultIcon(rawKey),
+      color: getDefaultColor(rawKey),
       description: service.description || '',
       isConfigured: isOauth,
       isConnected: !!service.connected,

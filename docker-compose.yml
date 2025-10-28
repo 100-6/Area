@@ -134,6 +134,7 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV}
       - NUXT_PUBLIC_API_URL=http://localhost:${BACKEND_PORT}
+      - BACKEND_URL=http://area_backend_dev:8080
       - PORT=${FRONTEND_PORT}
     volumes:
       - ./frontend:/app

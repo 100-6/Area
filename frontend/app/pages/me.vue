@@ -249,7 +249,18 @@
                           background: provider.color ? provider.color + '15' : 'rgba(148, 163, 184, 0.08)'
                         }"
                       >
-                        <UIcon :name="provider.icon" class="w-6 h-6" :style="provider.color ? { color: provider.color } : { color: '#1f2937' }" />
+                        <img
+                          v-if="provider.icon && provider.icon.startsWith('http')"
+                          :src="provider.icon"
+                          :alt="provider.displayName"
+                          class="w-6 h-6 object-contain"
+                        />
+                        <UIcon
+                          v-else
+                          :name="provider.icon"
+                          class="w-6 h-6"
+                          :style="provider.color ? { color: provider.color } : { color: '#1f2937' }"
+                        />
                       </div>
                       <div class="space-y-1">
                         <div class="flex items-center gap-2">
