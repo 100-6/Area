@@ -13,6 +13,7 @@ import { rssModule } from './rss/service';
 import { webhookModule } from './webhook/service';
 import { shodanModule } from './shodan/service';
 import { spotifyModule } from './spotify/service';
+import { redditModule } from './reddit/service';
 import 'colors';
 
 /**
@@ -61,6 +62,7 @@ class ModuleRegistry {
             await this.registerModule(webhookModule);
             await this.registerModule(shodanModule);
             await this.registerModule(spotifyModule);
+            await this.registerModule(redditModule);
             this.initialized = true;
             console.log(`[Registry] Successfully initialized ${this.modules.size} module(s)`.green.bold);
         } catch (error) {
