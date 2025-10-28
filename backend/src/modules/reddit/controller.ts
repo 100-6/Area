@@ -167,11 +167,14 @@ export class RedditController {
                 return next(error);
             }
 
+            console.log(`[Reddit Controller] Fetching saved posts for user ${userId}`.gray);
             const apiService = redditModule.getApiService();
             const posts = await apiService.getSavedPosts(redditAuth.access_token, limit);
 
+            console.log(`[Reddit Controller] ✓ Returning ${posts.length} saved posts`.green);
             res.json({ posts, count: posts.length });
-        } catch (error) {
+        } catch (error: any) {
+            console.error(`[Reddit Controller] Error in getSavedPosts:`.red, error.message);
             next(error);
         }
     });

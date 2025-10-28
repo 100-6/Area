@@ -111,11 +111,18 @@ export class OnNewSavedPostTrigger extends BaseTrigger {
     private async initializeKnownPosts(areaId: string): Promise<void> {
         try {
             const area = await Area.findById(areaId);
-            if (!area) return;
+            if (!area) {
+                console.error(`[OnNewSavedPost] AREA ${areaId} not found`.red);
+                return;
+            }
 
             const redditAuth = await UserAuthProvider.findByUserAndProvider(area.user_id, 'reddit');
-            if (!redditAuth || !redditAuth.access_token) return;
+            if (!redditAuth || !redditAuth.access_token) {
+                console.error(`[OnNewSavedPost] No Reddit authentication found for user ${area.user_id}`.red);
+                return;
+            }
 
+            console.log(`[OnNewSavedPost] Initializing known posts for AREA ${areaId}`.gray);
             const accessToken = redditAuth.access_token;
             const apiService = this.redditModule.getApiService();
 
@@ -123,9 +130,17 @@ export class OnNewSavedPostTrigger extends BaseTrigger {
             const postIds = new Set(savedPosts.map(post => post.id));
 
             this.lastKnownPostIds.set(areaId, postIds);
-            console.log(`[OnNewSavedPost] Initialized with ${postIds.size} existing saved posts`.gray);
-        } catch (error) {
-            console.error(`[OnNewSavedPost] Error initializing known posts:`.red, error);
+            console.log(`[OnNewSavedPost] ✓ Initialized with ${postIds.size} existing saved posts`.green);
+        } catch (error: any) {
+            console.error(`[OnNewSavedPost] ❌ Error initializing known posts:`.red, error.message);
+            
+            // Initialize with empty set so polling can continue
+            // (user might fix auth or API issues later)
+            this.lastKnownPostIds.set(areaId, new Set());
+            console.log(`[OnNewSavedPost] Initialized with empty set, will retry on next poll`.yellow);
+            
+            // Re-throw to let the caller know initialization failed
+            throw error;
         }
     }
 

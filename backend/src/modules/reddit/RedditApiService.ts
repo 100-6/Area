@@ -72,18 +72,46 @@ export class RedditApiService {
      */
     async getSavedPosts(accessToken: string, limit: number = 25): Promise<any[]> {
         try {
-            const response = await this.client.get('/user/me/saved', {
+            // First, get the current user to obtain their username
+            const userResponse = await this.client.get('/api/v1/me', {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+
+            const username = userResponse.data.name;
+            console.log(`[Reddit API] Fetching saved posts for user: ${username}`.gray);
+
+            // Then fetch saved posts using the username
+            const response = await this.client.get(`/user/${username}/saved`, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`
                 },
                 params: {
-                    limit: Math.min(limit, 100)
+                    limit: Math.min(limit, 100),
+                    raw_json: '1'
                 }
             });
 
+            console.log(`[Reddit API] ✓ Fetched ${response.data.data.children.length} saved posts`.green);
             return response.data.data.children.map((child: any) => child.data);
         } catch (error: any) {
-            console.error('[Reddit API] Error fetching saved posts:'.red, error.response?.data || error.message);
+            console.error('[Reddit API] Error fetching saved posts:'.red, {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+                message: error.message
+            });
+            
+            // Provide more helpful error messages
+            if (error.response?.status === 400) {
+                throw new Error('Reddit API returned 400 Bad Request. This may be due to missing OAuth scopes (history) or invalid endpoint.');
+            } else if (error.response?.status === 401) {
+                throw new Error('Reddit access token is invalid or expired. Please re-authenticate.');
+            } else if (error.response?.status === 403) {
+                throw new Error('Access forbidden. Make sure the OAuth token has the "history" scope.');
+            }
+            
             throw new Error(`Failed to fetch saved posts: ${error.message}`);
         }
     }
