@@ -129,25 +129,21 @@ export const useAuth = () => {
     }
   }
 
-  const loginWithProvider = (provider: 'google' | 'discord' | 'github' | 'gitlab' | 'dropbox'): void => {
+  const loginWithProvider = (provider: string): void => {
     window.location.href = `${backendUrl}/api/auth/${provider}`
   }
 
-  const providerAuthEndpoints: Record<'google' | 'gmail' | 'discord' | 'github' | 'gitlab' | 'dropbox', string> = {
-    google: '/api/auth/google',
-    gmail: '/api/gmail/connect',
-    discord: '/api/auth/discord',
-    github: '/api/auth/github',
-    gitlab: '/api/auth/gitlab',
-    dropbox: '/api/auth/dropbox'
+  const getProviderAuthEndpoint = (provider: string): string => {
+    // All services use the standard /api/auth/{service} pattern
+    return `/api/auth/${provider}`
   }
 
-  const linkProvider = (provider: 'google' | 'gmail' | 'discord' | 'github' | 'gitlab' | 'dropbox'): void => {
+  const linkProvider = (provider: string): void => {
     if (!authToken.value) {
       throw new Error('Non authentifié')
     }
 
-    const endpoint = providerAuthEndpoints[provider]
+    const endpoint = getProviderAuthEndpoint(provider)
     const token = encodeURIComponent(authToken.value)
     window.location.href = `${backendUrl}${endpoint}?token=${token}`
   }
