@@ -52,35 +52,64 @@ class DeepLinkService {
     }
   }
 
-  /// Gère les callbacks OAuth
+  /// Gère les callbacks OAuth de manière générique
   void _handleOAuthCallback(Uri uri) {
     final path = uri.path;
     final queryParams = uri.queryParameters;
 
     print('OAuth callback - Path: $path, Params: $queryParams');
 
-    // Gérer les variantes de "success" (avec faute de frappe du backend)
-    if (path == '/auth/success' || path == '/auth/succes') {
+    // Vérifier si c'est une erreur (priorité haute)
+    if (queryParams.containsKey('error') || path.contains('error')) {
+      final error = queryParams['error'] ?? queryParams['message'] ?? 'Erreur OAuth inconnue';
+      _handleOAuthError(error);
+      return;
+    }
+
+    // 1. Authentification (login/register) - Contient un token
+    if (queryParams.containsKey('token')) {
       final token = queryParams['token'];
       final refreshToken = queryParams['refresh'];
       final provider = queryParams['provider'];
 
-      if (token != null) {
-        _handleOAuthSuccess(token, refreshToken, provider);
-      } else {
-        _handleOAuthError('Token manquant');
-      }
-    } else if (path == '/service/success' || path == '/service/succes') {
-      // Connexion à un service externe (Discord, GitHub, etc.)
-      final provider = queryParams['provider'];
-      final serviceName = queryParams['service'];
-
-      print('Service OAuth connecté: $serviceName / $provider');
-      _handleServiceConnected(serviceName ?? provider ?? 'unknown');
-    } else if (path == '/auth/error' || path == '/service/error') {
-      final error = queryParams['error'] ?? queryParams['message'] ?? 'Erreur OAuth inconnue';
-      _handleOAuthError(error);
+      print('OAuth authentication - Provider: $provider');
+      _handleOAuthSuccess(token!, refreshToken, provider);
+      return;
     }
+
+    // 2. Connexion de service - Chercher le nom du service dans les query params
+    // Supports: ?service=..., ?success=..., ?provider=...
+    final serviceName = queryParams['service'] ??
+                        queryParams['success'] ??
+                        queryParams['provider'];
+
+    if (serviceName != null && serviceName.isNotEmpty) {
+      print('Service OAuth connecté: $serviceName');
+      _handleServiceConnected(serviceName);
+      return;
+    }
+
+    // 3. Fallback: Si le path contient "success" sans paramètres, extraire du path
+    if (path.contains('success') || path.contains('succes')) {
+      // Essayer d'extraire le service du path (ex: /github/success -> github)
+      final pathSegments = uri.pathSegments;
+      if (pathSegments.isNotEmpty) {
+        // Chercher un segment qui n'est pas 'auth', 'service', 'success', 'oauth'
+        final serviceFromPath = pathSegments.firstWhere(
+          (segment) => !['auth', 'service', 'services', 'success', 'succes', 'oauth'].contains(segment),
+          orElse: () => 'unknown',
+        );
+
+        if (serviceFromPath != 'unknown') {
+          print('Service OAuth connecté (extrait du path): $serviceFromPath');
+          _handleServiceConnected(serviceFromPath);
+          return;
+        }
+      }
+    }
+
+    // Si aucun cas ne correspond, logger
+    print('OAuth callback non géré: $path avec params $queryParams');
   }
 
   /// Gère le succès OAuth
