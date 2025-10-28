@@ -92,27 +92,46 @@ export class DropboxApiService {
     ): Promise<DropboxEntry[]> {
         try {
             const url = `${this.baseUrl}/files/list_folder`;
+            
+            console.log('[Dropbox API] listFolder called with:');
+            console.log('  - Path:', path);
+            console.log('  - Recursive:', recursive);
+            console.log('  - URL:', url);
+            
+            const requestBody = {
+                path: path || '',
+                recursive,
+                include_deleted: false,
+                include_has_explicit_shared_members: false,
+                include_mounted_folders: true
+            };
+            
+            console.log('[Dropbox API] Request body:', JSON.stringify(requestBody));
+            
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    path: path || '',
-                    recursive,
-                    include_deleted: false,
-                    include_has_explicit_shared_members: false,
-                    include_mounted_folders: true
-                })
+                body: JSON.stringify(requestBody)
             });
+
+            console.log('[Dropbox API] Response status:', response.status);
+            console.log('[Dropbox API] Response headers:', Object.fromEntries(response.headers.entries()));
 
             if (!response.ok) {
                 const error = await response.text();
+                console.error('[Dropbox API] Error response:', error);
                 throw new Error(`Dropbox API error: ${response.status} - ${error}`);
             }
 
             const data = await response.json() as DropboxListFolderResponse;
+            
+            console.log('[Dropbox API] Initial response:');
+            console.log('  - Entries count:', data.entries.length);
+            console.log('  - Has more:', data.has_more);
+            console.log('  - First entry:', data.entries.length > 0 ? data.entries[0] : 'none');
             
             // Handle pagination if has_more is true
             let allEntries = data.entries;
@@ -120,12 +139,15 @@ export class DropboxApiService {
             let hasMore = data.has_more;
 
             while (hasMore) {
+                console.log('[Dropbox API] Fetching more entries with cursor...');
                 const continueResponse = await this.listFolderContinue(cursor, accessToken);
                 allEntries = allEntries.concat(continueResponse.entries);
                 cursor = continueResponse.cursor;
                 hasMore = continueResponse.has_more;
+                console.log('[Dropbox API] Total entries now:', allEntries.length);
             }
 
+            console.log('[Dropbox API] Final entries count:', allEntries.length);
             return allEntries;
         } catch (error) {
             console.error('[Dropbox API] Error listing folder:'.red, error);
