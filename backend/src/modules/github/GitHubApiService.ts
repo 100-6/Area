@@ -84,6 +84,57 @@ export interface GitHubBranch {
 }
 
 /**
+ * Interface representing a GitHub organization returned by the API
+ * @interface GitHubOrganization
+ * @property {string} login - Organization username
+ * @property {number} id - Unique organization ID
+ * @property {string} avatar_url - URL of the organization's avatar
+ * @property {string} description - Organization description
+ * @property {string} url - API URL of the organization
+ */
+export interface GitHubOrganization {
+    login: string;
+    id: number;
+    avatar_url: string;
+    description: string | null;
+    url: string;
+}
+
+/**
+ * Interface representing a GitHub repository returned by the API
+ * @interface GitHubRepository
+ * @property {number} id - Unique repository ID
+ * @property {string} name - Repository name
+ * @property {string} full_name - Full repository name (owner/repo)
+ * @property {string} html_url - Full URL of the repository on GitHub
+ * @property {string} description - Repository description
+ * @property {boolean} private - Whether the repository is private
+ * @property {boolean} fork - Whether the repository is a fork
+ * @property {Object} owner - Repository owner information
+ * @property {string} owner.login - Owner username
+ * @property {string} owner.avatar_url - Owner avatar URL
+ * @property {string} default_branch - Default branch name
+ * @property {string} created_at - Creation timestamp (ISO 8601)
+ * @property {string} updated_at - Last update timestamp (ISO 8601)
+ */
+export interface GitHubRepository {
+    id: number;
+    name: string;
+    full_name: string;
+    html_url: string;
+    description: string | null;
+    private: boolean;
+    fork: boolean;
+    owner: {
+        login: string;
+        avatar_url: string;
+    };
+    default_branch: string;
+    created_at: string;
+    updated_at: string;
+}
+
+/**
  * Abstraction service to interact with the GitHub REST API v3
  * Centralizes all API calls to GitHub to facilitate maintenance
  * and error handling.
@@ -330,6 +381,164 @@ export class GitHubApiService {
         } catch {
             return false;
         }
+    }
+
+    /**
+     * Fetches authenticated user information
+     * Useful for debugging and verifying token validity
+     * 
+     * @async
+     * @param {string} accessToken - GitHub OAuth token
+     * @returns {Promise<any>} User information
+     */
+    async getAuthenticatedUser(accessToken: string): Promise<any> {
+        try {
+            const response = await fetch(`${this.baseUrl}/user`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'AREA-Platform'
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`GitHub API error: ${response.status} - ${error}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('[GitHub API] Error fetching authenticated user:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Fetches all organizations the authenticated user belongs to
+     * 
+     * @async
+     * @param {string} accessToken - User's GitHub OAuth token (scope: read:org)
+     * @param {number} [perPage=100] - Number of organizations to retrieve per page (1-100)
+     * @returns {Promise<GitHubOrganization[]>} List of organizations
+     * @throws {Error} If the GitHub API returns an error (401, 403, etc.)
+     * @example
+     * const orgs = await githubApi.getUserOrganizations('ghp_abc123...');
+     * console.log(orgs.map(o => o.login)); // ['github', 'nodejs', 'microsoft']
+     */
+    async getUserOrganizations(
+        accessToken: string,
+        perPage: number = 100
+    ): Promise<GitHubOrganization[]> {
+        try {
+            const url = `${this.baseUrl}/user/orgs?per_page=${perPage}`;
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'AREA-Platform'
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`GitHub API error: ${response.status} - ${error}`);
+            }
+
+            return await response.json() as GitHubOrganization[];
+        } catch (error) {
+            console.error('[GitHub API] Error fetching user organizations:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Fetches all repositories accessible to the authenticated user
+     * Includes owned repos, organization repos, and collaborator repos
+     * 
+     * @async
+     * @param {string} accessToken - User's GitHub OAuth token (scope: repo)
+     * @param {number} [perPage=100] - Number of repositories to retrieve per page (1-100)
+     * @param {'all' | 'owner' | 'member'} [affiliation='all'] - Filter by affiliation type
+     * @param {'created' | 'updated' | 'pushed' | 'full_name'} [sort='updated'] - Sort method
+     * @returns {Promise<GitHubRepository[]>} List of repositories
+     * @throws {Error} If the GitHub API returns an error (401, 403, etc.)
+     * @example
+     * const repos = await githubApi.getAllRepositories('ghp_abc123...', 100, 'owner');
+     * console.log(repos.map(r => r.full_name)); // ['user/repo1', 'user/repo2']
+     */
+    async getAllRepositories(
+        accessToken: string,
+        perPage: number = 100,
+        affiliation: 'all' | 'owner' | 'member' = 'all',
+        sort: 'created' | 'updated' | 'pushed' | 'full_name' = 'updated'
+    ): Promise<GitHubRepository[]> {
+        try {
+            // Essayer d'abord avec /user/repos (repos de l'utilisateur authentifié)
+            const url = `${this.baseUrl}/user/repos?per_page=${perPage}&sort=${sort}&direction=desc`;
+            console.log('[GitHub API] Fetching repositories from:', url);
+            
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'AREA-Platform'
+                }
+            });
+
+            console.log('[GitHub API] Response status:', response.status);
+            console.log('[GitHub API] Response headers:', Object.fromEntries(response.headers.entries()));
+
+            if (!response.ok) {
+                const error = await response.text();
+                console.error('[GitHub API] Error response:', error);
+                throw new Error(`GitHub API error: ${response.status} - ${error}`);
+            }
+
+            const repos = await response.json() as GitHubRepository[];
+            console.log('[GitHub API] Fetched', repos.length, 'repositories');
+            
+            // Si on a demandé un filtrage spécifique, le faire côté serveur
+            if (affiliation !== 'all') {
+                const filtered = repos.filter(repo => {
+                    if (affiliation === 'owner') {
+                        return !repo.fork; // Approximation: les repos non-fork sont généralement owned
+                    } else if (affiliation === 'member') {
+                        return repo.fork; // Approximation
+                    }
+                    return true;
+                });
+                return filtered;
+            }
+
+            return repos;
+        } catch (error) {
+            console.error('[GitHub API] Error fetching repositories:'.red, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Fetches all branches from a specific GitHub repository
+     * This is an alias for the existing getBranches method
+     * 
+     * @async
+     * @param {string} owner - Repository owner name (username or organization)
+     * @param {string} repo - Repository name
+     * @param {string} accessToken - User's GitHub OAuth token (scope: repo)
+     * @param {number} [perPage=100] - Number of branches to retrieve per page (1-100)
+     * @returns {Promise<GitHubBranch[]>} List of branches
+     * @throws {Error} If the GitHub API returns an error (401, 404, etc.)
+     * @example
+     * const branches = await githubApi.getRepositoryBranches('octocat', 'Hello-World', 'ghp_abc123...');
+     * console.log(branches.map(b => b.name)); // ['main', 'develop', 'feature/xyz']
+     */
+    async getRepositoryBranches(
+        owner: string,
+        repo: string,
+        accessToken: string,
+        perPage: number = 100
+    ): Promise<GitHubBranch[]> {
+        return this.getBranches(owner, repo, accessToken, perPage);
     }
 }
 
