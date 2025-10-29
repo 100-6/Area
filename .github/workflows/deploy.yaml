@@ -77,10 +77,15 @@ jobs:
         run: |
           flutter pub get
           flutter build apk --release
-          mkdir -p ../backend/public
-          cp build/app/outputs/flutter-apk/app-release.apk ../backend/public/app.apk
-          echo "✅ APK built and copied to backend/public/"
-          ls -lh ../backend/public/app.apk
+          echo "✅ APK built successfully"
+          ls -lh build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Prepare APK for Docker build
+        run: |
+          mkdir -p backend/public
+          cp mobile/build/app/outputs/flutter-apk/app-release.apk backend/public/app.apk
+          echo "✅ APK copied to backend/public/"
+          ls -lh backend/public/app.apk
 
       # ==========================================
       # BUILD & PUSH BACKEND
