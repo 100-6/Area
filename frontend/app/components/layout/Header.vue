@@ -26,10 +26,10 @@
             :is-active="route.path === '/services'"
           />
           <UiNavButton
-            label="Tarifs"
-            icon="i-heroicons-currency-dollar"
-            to="/pricing"
-            :is-active="route.path === '/pricing'"
+            label="Téléchargement"
+            icon="i-heroicons-arrow-down-tray"
+            to="/download"
+            :is-active="route.path === '/download'"
           />
           <UiNavButton
             label="Documentation"
@@ -141,13 +141,13 @@
             <span>Services</span>
           </NuxtLink>
           <NuxtLink
-            to="/pricing"
+            to="/download"
             class="nav-item-mobile group flex items-center px-3 py-3 rounded-lg transition-all duration-200"
-            :class="{ 'nav-active-mobile': $route.path === '/pricing' }"
+            :class="{ 'nav-active-mobile': $route.path === '/download' }"
             @click="isMenuOpen = false"
           >
-            <UIcon name="i-heroicons-currency-dollar" class="w-5 h-5 mr-3" />
-            <span>Tarifs</span>
+            <UIcon name="i-heroicons-arrow-down-tray" class="w-5 h-5 mr-3" />
+            <span>Téléchargement</span>
           </NuxtLink>
           <NuxtLink
             to="/docs"

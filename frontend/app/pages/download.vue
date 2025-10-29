@@ -7,7 +7,7 @@
           <div class="hero-text">
             <h1 class="hero-title">
               Automatisez vos tâches
-              <span class="highlight">partout avec vous</span>
+              <span class="highlight-gradient">partout avec vous</span>
             </h1>
             <p class="hero-description">
               Découvrez AREA Mobile - L'application qui vous permet de créer et gérer vos automatisations
@@ -16,11 +16,13 @@
             <div class="hero-buttons">
               <UButton
                 size="xl"
-                color="primary"
-                icon="i-simple-icons-googleplay"
-                class="download-btn"
+                class="download-btn tertiary-btn"
+                style="background-color: #166534 !important; background: #166534 !important; color: #FFFFFF !important; border-color: #166534 !important;"
                 @click="handleDownload"
               >
+                <template #leading>
+                  <GooglePlayIcon :size="20" />
+                </template>
                 Télécharger sur Google Play
               </UButton>
               <UButton
@@ -50,12 +52,12 @@
           <div class="hero-phone">
             <div class="phone-mockup">
               <div class="phone-screen">
-                <div class="screen-placeholder">
-                  <div class="placeholder-content">
-                    <UIcon name="i-heroicons-device-phone-mobile" class="phone-icon" />
-                    <p>Screenshot principal<br/>de l'application</p>
-                  </div>
-                </div>
+                <ScreenshotPlaceholder
+                  image-src="/screenshots/mobile/home-screen.png"
+                  alt="AREA Mobile - Application principale"
+                  placeholder="Screenshot principal de l'application"
+                  icon="i-heroicons-device-phone-mobile"
+                />
               </div>
             </div>
           </div>
@@ -122,9 +124,13 @@
         <div class="screenshots-carousel">
           <div class="screenshot-item">
             <div class="screenshot-mockup">
-              <div class="screenshot-placeholder">
-                <UIcon name="i-heroicons-home" class="screenshot-icon" />
-                <p>Écran d'accueil</p>
+              <div class="phone-inner-frame">
+                <ScreenshotPlaceholder
+                  image-src="/screenshots/mobile/home-screen.png"
+                  alt="Écran d'accueil AREA Mobile"
+                  placeholder="Écran d'accueil"
+                  icon="i-heroicons-home"
+                />
               </div>
             </div>
             <h4>Tableau de bord</h4>
@@ -133,9 +139,13 @@
 
           <div class="screenshot-item">
             <div class="screenshot-mockup">
-              <div class="screenshot-placeholder">
-                <UIcon name="i-heroicons-plus" class="screenshot-icon" />
-                <p>Création d'automatisation</p>
+              <div class="phone-inner-frame">
+                <ScreenshotPlaceholder
+                  image-src="/screenshots/mobile/workflow-creator.png"
+                  alt="Créateur de workflow AREA Mobile"
+                  placeholder="Création d'automatisation"
+                  icon="i-heroicons-plus"
+                />
               </div>
             </div>
             <h4>Créateur visuel</h4>
@@ -144,9 +154,13 @@
 
           <div class="screenshot-item">
             <div class="screenshot-mockup">
-              <div class="screenshot-placeholder">
-                <UIcon name="i-heroicons-cog-8-tooth" class="screenshot-icon" />
-                <p>Configuration des services</p>
+              <div class="phone-inner-frame">
+                <ScreenshotPlaceholder
+                  image-src="/screenshots/mobile/service-config.png"
+                  alt="Configuration des services AREA Mobile"
+                  placeholder="Configuration des services"
+                  icon="i-heroicons-cog-8-tooth"
+                />
               </div>
             </div>
             <h4>Paramètres</h4>
@@ -155,9 +169,13 @@
 
           <div class="screenshot-item">
             <div class="screenshot-mockup">
-              <div class="screenshot-placeholder">
-                <UIcon name="i-heroicons-chart-bar" class="screenshot-icon" />
-                <p>Statistiques d'usage</p>
+              <div class="phone-inner-frame">
+                <ScreenshotPlaceholder
+                  image-src="/screenshots/mobile/analytics.png"
+                  alt="Statistiques AREA Mobile"
+                  placeholder="Statistiques d'usage"
+                  icon="i-heroicons-chart-bar"
+                />
               </div>
             </div>
             <h4>Analytics</h4>
@@ -178,11 +196,13 @@
           <div class="cta-buttons">
             <UButton
               size="xl"
-              color="primary"
-              icon="i-simple-icons-googleplay"
-              class="cta-download-btn"
+              class="cta-download-btn tertiary-btn"
+              style="background-color: #166534 !important; background: #166534 !important; color: #FFFFFF !important; border-color: #166534 !important;"
               @click="handleDownload"
             >
+              <template #leading>
+                <GooglePlayIcon :size="20" />
+              </template>
               Télécharger gratuitement
             </UButton>
           </div>
@@ -249,6 +269,9 @@
 </template>
 
 <script setup lang="ts">
+import ScreenshotPlaceholder from '~/components/ui/ScreenshotPlaceholder.vue'
+import GooglePlayIcon from '~/components/ui/GooglePlayIcon.vue'
+
 definePageMeta({
   layout: 'default'
 })
@@ -275,14 +298,14 @@ const handleDownload = () => {
 }
 
 useHead({
-  title: 'AREA Mobile - Automatisez vos tâches partout avec vous',
+  title: 'Télécharger AREA Mobile - Application Android Gratuite',
   meta: [
     {
       name: 'description',
-      content: 'Découvrez AREA Mobile pour Android. Créez et gérez vos automatisations directement depuis votre smartphone. Téléchargement gratuit sur Google Play.'
+      content: 'Téléchargez gratuitement AREA Mobile pour Android. Automatisez vos tâches directement depuis votre smartphone. Compatible Android 7.0+.'
     },
-    { property: 'og:title', content: 'AREA Mobile - L\'automation dans votre poche' },
-    { property: 'og:description', content: 'Application mobile Android pour créer et gérer vos automatisations AREA partout avec vous.' },
+    { property: 'og:title', content: 'Télécharger AREA Mobile - Automatisation Mobile' },
+    { property: 'og:description', content: 'Application mobile gratuite pour créer et gérer vos automatisations AREA. Téléchargement APK disponible.' },
     { property: 'og:type', content: 'website' }
   ]
 })
@@ -326,6 +349,15 @@ useHead({
   color: var(--color-primary);
 }
 
+.highlight-gradient {
+  background: linear-gradient(90deg, #16a34a 0%, #4ade80 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  display: inline-block;
+}
+
 .hero-description {
   font-size: 1.25rem;
   color: var(--text-secondary);
@@ -337,11 +369,45 @@ useHead({
   display: flex;
   gap: 1rem;
   margin-bottom: 3rem;
+  min-height: 72px;
+  align-items: center;
 }
 
 .download-btn, .demo-btn {
   padding: 1rem 2rem !important;
   font-size: 1.1rem !important;
+  min-width: 200px !important;
+  min-height: 56px !important;
+  transition: none !important;
+  white-space: nowrap !important;
+}
+
+.tertiary-btn {
+  background-color: var(--color-tertiary) !important;
+  background: var(--color-tertiary) !important;
+  color: var(--text-white) !important;
+  border: none !important;
+  border-color: var(--color-tertiary) !important;
+}
+
+.tertiary-btn:hover {
+  background-color: var(--color-tertiary-hover) !important;
+  background: var(--color-tertiary-hover) !important;
+}
+
+/* Force les styles Nuxt UI */
+
+/* Styles spécifiques pour UButton */
+.tertiary-btn :deep(*) {
+  background-color: #166534 !important;
+  background: #166534 !important;
+  color: #FFFFFF !important;
+  border-color: #166534 !important;
+}
+
+.tertiary-btn:hover :deep(*) {
+  background-color: #115E2D !important;
+  background: #115E2D !important;
 }
 
 .hero-stats {
@@ -357,7 +423,7 @@ useHead({
   display: block;
   font-size: 2rem;
   font-weight: 700;
-  color: var(--color-primary);
+  color: #059669;
 }
 
 .stat-label {
@@ -376,7 +442,7 @@ useHead({
   height: 600px;
   background: #1a1a1a;
   border-radius: 30px;
-  padding: 20px;
+  padding: 12px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   position: relative;
 }
@@ -503,35 +569,21 @@ useHead({
   height: 400px;
   background: #1a1a1a;
   border-radius: 20px;
-  padding: 15px;
+  padding: 10px;
   margin: 0 auto 1.5rem;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
-.screenshot-placeholder {
+.phone-inner-frame {
   width: 100%;
   height: 100%;
-  background: var(--bg-card);
+  background: #f8f9fa;
   border-radius: 15px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border: 1px dashed var(--border-color);
+  padding: 5px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
 }
 
-.screenshot-icon {
-  width: 3rem;
-  height: 3rem;
-  color: var(--color-primary);
-  margin-bottom: 1rem;
-}
-
-.screenshot-placeholder p {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  text-align: center;
-}
+/* Styles pour screenshot-placeholder supprimés car gérés par le composant ScreenshotPlaceholder */
 
 .screenshot-item h4 {
   font-size: 1.1rem;
@@ -569,9 +621,48 @@ useHead({
   margin-bottom: 2rem;
 }
 
+.cta-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  min-height: 80px;
+  align-items: center;
+  justify-content: center;
+}
+
 .cta-download-btn {
   padding: 1.25rem 3rem !important;
   font-size: 1.25rem !important;
+  min-width: 280px !important;
+  min-height: 64px !important;
+  transition: none !important;
+  white-space: nowrap !important;
+}
+
+.cta-download-btn.tertiary-btn {
+  background-color: var(--color-tertiary) !important;
+  background: var(--color-tertiary) !important;
+  color: var(--text-white) !important;
+  border: none !important;
+  border-color: var(--color-tertiary) !important;
+}
+
+.cta-download-btn.tertiary-btn:hover {
+  background-color: var(--color-tertiary-hover) !important;
+  background: var(--color-tertiary-hover) !important;
+}
+
+/* Force les styles pour le CTA aussi */
+.cta-download-btn.tertiary-btn >>> * {
+  background-color: #166534 !important;
+  background: #166534 !important;
+  color: #FFFFFF !important;
+  border-color: #166534 !important;
+}
+
+.cta-download-btn.tertiary-btn:hover >>> * {
+  background-color: #115E2D !important;
+  background: #115E2D !important;
 }
 
 .download-info {
@@ -602,7 +693,7 @@ useHead({
   height: 300px;
   background: #1a1a1a;
   border-radius: 20px;
-  padding: 10px;
+  padding: 6px;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
