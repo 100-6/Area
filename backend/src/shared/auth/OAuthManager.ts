@@ -7,6 +7,7 @@ import { DropboxProvider } from './oauth/providers/DropboxProvider';
 import { DiscordProvider } from './oauth/providers/DiscordProvider';
 import { SpotifyProvider } from './oauth/providers/SpotifyProvider';
 import { RedditProvider } from './oauth/providers/RedditProvider';
+import { StravaProvider } from './oauth/providers/StravaProvider';
 import { User } from '../../core/models/User';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
 
@@ -34,6 +35,7 @@ export class OAuthManager {
     private discordProvider: DiscordProvider;
     private spotifyProvider: SpotifyProvider;
     private redditProvider: RedditProvider;
+    private stravaProvider: StravaProvider;
 
     constructor() {
         this.googleProvider = new GoogleProvider();
@@ -45,6 +47,7 @@ export class OAuthManager {
         this.discordProvider = new DiscordProvider();
         this.spotifyProvider = new SpotifyProvider();
         this.redditProvider = new RedditProvider();
+        this.stravaProvider = new StravaProvider();
     }
 
     /**
@@ -87,6 +90,13 @@ export class OAuthManager {
      */
     getRedditAuthUrl(state?: string): string {
         return this.redditProvider.getAuthUrl(state);
+    }
+
+    /**
+     * Generate Strava OAuth URL
+     */
+    getStravaAuthUrl(state?: string): string {
+        return this.stravaProvider.getAuthUrl(state);
     }
 
     /**
@@ -158,6 +168,18 @@ export class OAuthManager {
             return await this.findOrCreateUserFromOAuth('reddit', redditProfile, authenticatedUserId);
         } catch (error) {
             throw new Error(`Reddit OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Handle Strava OAuth callback
+     */
+    async handleStravaCallback(code: string, authenticatedUserId?: string, scope?: string): Promise<OAuthUser> {
+        try {
+            const stravaProfile = await this.stravaProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('strava', stravaProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Strava OAuth error: ${error}`);
         }
     }
 
@@ -247,6 +269,13 @@ export class OAuthManager {
      */
     isSpotifyConfigured(): boolean {
         return this.spotifyProvider.isConfigured();
+    }
+
+    /**
+     * Check if Strava OAuth is configured
+     */
+    isStravaConfigured(): boolean {
+        return this.stravaProvider.isConfigured();
     }
 
     /**

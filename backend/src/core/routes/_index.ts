@@ -16,6 +16,7 @@ import spotifyRoutes from '../../modules/spotify/routes';
 import redditRoutes from '../../modules/reddit/routes';
 import githubRoutes from '../../modules/github/routes';
 import dropboxRoutes from '../../modules/dropbox/routes';
+import stravaRoutes from '../../modules/strava/routes';
 
 const router = Router();
 
@@ -39,5 +40,6 @@ router.use('/api/spotify', spotifyRoutes);
 router.use('/api/reddit', redditRoutes);
 router.use('/api/github', githubRoutes);
 router.use('/api/dropbox', dropboxRoutes);
+router.use('/api/strava', stravaRoutes);
 
 export default router;
