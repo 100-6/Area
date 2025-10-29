@@ -100,6 +100,8 @@ jobs:
             org.opencontainers.image.created=${{ steps.meta.outputs.date }}
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
+          provenance: false
+          sbom: false
 
       # ==========================================
       # BUILD & PUSH FRONTEND
