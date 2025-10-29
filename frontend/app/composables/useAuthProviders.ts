@@ -58,7 +58,7 @@ export const useAuthProviders = () => {
     return {
       provider: normalizedKey,
       displayName: service.displayName || service.name || rawKey,
-      icon: service.iconUrl && service.iconUrl.startsWith('http') ? service.iconUrl : getDefaultIcon(rawKey),
+      icon: service.iconUrl || getDefaultIcon(rawKey),
       color: getDefaultColor(rawKey),
       description: service.description || '',
       isConfigured: isOauth,
