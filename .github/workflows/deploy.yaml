@@ -7,6 +7,7 @@ on:
     paths:
       - 'backend/**'
       - 'frontend/**'
+      - 'mobile/**'
       - '.github/workflows/deploy.yaml'
 
 env:
@@ -55,6 +56,31 @@ jobs:
           echo "sha=${SHA}" >> $GITHUB_OUTPUT
           echo "backend_tags=${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:latest,${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:${DATE}-${SHA}" >> $GITHUB_OUTPUT
           echo "frontend_tags=${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest,${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${DATE}-${SHA}" >> $GITHUB_OUTPUT
+
+      # ==========================================
+      # BUILD MOBILE APK
+      # ==========================================
+      - name: Setup Java for Flutter
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+
+      - name: Build Flutter APK
+        working-directory: ./mobile
+        run: |
+          flutter pub get
+          flutter build apk --release
+          mkdir -p ../backend/public
+          cp build/app/outputs/flutter-apk/app-release.apk ../backend/public/app.apk
+          echo "✅ APK built and copied to backend/public/"
+          ls -lh ../backend/public/app.apk
 
       # ==========================================
       # BUILD & PUSH BACKEND
@@ -137,7 +163,7 @@ jobs:
           echo ""
           echo " Frontend tags:"
           echo "   - ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest"
-          echo "   - ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ steps.meta.outputs.date }}-${{ steps.meta.output.sha }}"
+          echo "   - ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ steps.meta.outputs.date }}-${{ steps.meta.outputs.sha }}"
           echo ""
           echo " Security scans completed"
           echo " Watchtower will detect and deploy in ~5 minutes"

@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { moduleRegistry } from '../../modules/registry';
 import { appBootstrap } from '../../shared/bootstrap/ApplicationBootstrap';
+import path from 'path';
+import fs from 'fs';
 import 'colors';
 
 const router = Router();
@@ -83,6 +85,34 @@ router.get('/health', (req: Request, res: Response) => {
             error: 'Health check failed',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
+    }
+});
+
+/**
+ * GET /download/apk
+ * Télécharge l'APK de l'application mobile
+ */
+router.get('/download/apk', (req: Request, res: Response): void => {
+    try {
+        const apkPath = path.join(__dirname, '../../../public/app.apk');
+
+        if (!fs.existsSync(apkPath)) {
+            console.error('[System] APK file not found at:'.red, apkPath);
+            res.status(404).json({error: 'APK file not found', message: 'Please ensure the APK file is placed in the public directory'});
+            return;
+        }
+        console.log('[System] APK download requested from'.green, req.ip || 'unknown');
+        res.download(apkPath, 'auto.apk', (err) => {
+            if (err) {
+                console.error('[System] APK download failed:'.red, err);
+                if (!res.headersSent)
+                    res.status(500).json({ error: 'Download failed' });
+            } else
+                console.log('[System] APK downloaded successfully'.green);
+        });
+    } catch (error) {
+        console.error('[System] APK download error:'.red, error);
+        res.status(500).json({error: 'Download failed', message: error instanceof Error ? error.message : 'Unknown error'});
     }
 });
 
