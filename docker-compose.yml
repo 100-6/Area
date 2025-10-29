@@ -105,6 +105,9 @@ services:
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI}
+      - REDDIT_CLIENT_ID=${REDDIT_CLIENT_ID}
+      - REDDIT_CLIENT_SECRET=${REDDIT_CLIENT_SECRET}
+      - REDDIT_REDIRECT_URI=${REDDIT_REDIRECT_URI}
     volumes:
       - ./backend/src:/app/src:ro
       - ./backend/package.json:/app/package.json:ro
@@ -131,6 +134,7 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV}
       - NUXT_PUBLIC_API_URL=http://localhost:${BACKEND_PORT}
+      - BACKEND_URL=http://area_backend_dev:8080
       - PORT=${FRONTEND_PORT}
     volumes:
       - ./frontend:/app
