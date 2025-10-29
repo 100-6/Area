@@ -450,11 +450,20 @@ const modalPreviousNodeIds = computed(() => {
   if (selectedBlockType.value !== 'action') {
     return []
   }
-  const index = modalCurrentBlockIndex.value
-  if (index <= 0) {
-    return []
+
+  // Si on configure un bloc existant
+  if (configModalContext.value?.blockId) {
+    const currentBlockId = configModalContext.value.blockId
+
+    // Trouver toutes les connexions qui pointent vers cette node
+    const incomingConnections = connections.value.filter(conn => conn.to === currentBlockId)
+
+    // Retourner les IDs des nodes source
+    return incomingConnections.map(conn => conn.from)
   }
-  return workflowBlocks.value.slice(0, index).map(block => block.id)
+
+  // Si on ajoute un nouveau bloc, pas de connexions encore définies
+  return []
 })
 
 const openSaveModal = () => {

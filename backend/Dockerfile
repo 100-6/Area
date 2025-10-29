@@ -52,6 +52,7 @@ RUN npm run build
 FROM base AS production
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/public ./public
 
 ENV NODE_ENV=production
 ENV PORT=8080
