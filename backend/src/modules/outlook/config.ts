@@ -6,7 +6,7 @@ export default {
     name: 'outlook',
     displayName: 'Microsoft Outlook',
     description: 'Send, read, and manage emails and calendar with Outlook',
-    iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/d/df/Microsoft_Office_Outlook_%282018%E2%80%93present%29.svg',
+    iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Microsoft_Office_Outlook_%282018%E2%80%932024%29.svg/826px-Microsoft_Office_Outlook_%282018%E2%80%932024%29.svg.png',
     color: '#0078D4',
     authType: 'oauth2',
     isActive: true,

@@ -1,5 +1,6 @@
-public/
-*.apk
+# Keep public directory - it contains the APK
+# public/
+# *.apk
 
 node_modules
 npm-debug.log
