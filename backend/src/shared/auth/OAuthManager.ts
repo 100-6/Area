@@ -7,6 +7,7 @@ import { DropboxProvider } from './oauth/providers/DropboxProvider';
 import { DiscordProvider } from './oauth/providers/DiscordProvider';
 import { SpotifyProvider } from './oauth/providers/SpotifyProvider';
 import { RedditProvider } from './oauth/providers/RedditProvider';
+import { TrelloProvider } from './oauth/providers/TrelloProvider';
 import { User } from '../../core/models/User';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
 
@@ -34,6 +35,7 @@ export class OAuthManager {
     private discordProvider: DiscordProvider;
     private spotifyProvider: SpotifyProvider;
     private redditProvider: RedditProvider;
+    private trelloProvider: TrelloProvider;
 
     constructor() {
         this.googleProvider = new GoogleProvider();
@@ -45,6 +47,7 @@ export class OAuthManager {
         this.discordProvider = new DiscordProvider();
         this.spotifyProvider = new SpotifyProvider();
         this.redditProvider = new RedditProvider();
+        this.trelloProvider = new TrelloProvider();
     }
 
     /**
@@ -87,6 +90,13 @@ export class OAuthManager {
      */
     getRedditAuthUrl(state?: string): string {
         return this.redditProvider.getAuthUrl(state);
+    }
+
+    /**
+     * Generate Trello OAuth URL
+     */
+    getTrelloAuthUrl(state?: string): string {
+        return this.trelloProvider.getAuthUrl(state);
     }
 
     /**
@@ -158,6 +168,19 @@ export class OAuthManager {
             return await this.findOrCreateUserFromOAuth('reddit', redditProfile, authenticatedUserId);
         } catch (error) {
             throw new Error(`Reddit OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Handle Trello OAuth callback
+     * Note: Trello uses token instead of code
+     */
+    async handleTrelloCallback(token: string, authenticatedUserId?: string): Promise<OAuthUser> {
+        try {
+            const trelloProfile = await this.trelloProvider.handleCallback(token);
+            return await this.findOrCreateUserFromOAuth('trello', trelloProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Trello OAuth error: ${error}`);
         }
     }
 
@@ -250,6 +273,13 @@ export class OAuthManager {
     }
 
     /**
+     * Check if Trello OAuth is configured
+     */
+    isTrelloConfigured(): boolean {
+        return this.trelloProvider.isConfigured();
+    }
+
+    /**
      * Get all OAuth providers status
      */
     getProvidersStatus(): {
@@ -258,6 +288,7 @@ export class OAuthManager {
         outlook: { isConfigured: boolean; status: any };
         discord: { isConfigured: boolean; status: any };
         spotify: { isConfigured: boolean; status: any };
+        trello: { isConfigured: boolean; status: any };
     } {
         return {
             google: {
@@ -279,6 +310,10 @@ export class OAuthManager {
             spotify: {
                 isConfigured: this.spotifyProvider.isConfigured(),
                 status: this.spotifyProvider.getConfigStatus()
+            },
+            trello: {
+                isConfigured: this.trelloProvider.isConfigured(),
+                status: this.trelloProvider.getConfigStatus()
             }
         };
     }
@@ -411,6 +446,13 @@ export class OAuthManager {
      */
     isDropboxConfigured(): boolean {
         return !!(process.env.DROPBOX_CLIENT_ID && process.env.DROPBOX_CLIENT_SECRET);
+    }
+
+    /**
+     * Get Trello provider instance (for module usage)
+     */
+    getTrelloProvider(): TrelloProvider {
+        return this.trelloProvider;
     }
 
 }
