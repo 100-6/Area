@@ -46,4 +46,8 @@ router.get('/gmail', (req, res) => {
   res.redirect(`/api/gmail/connect?${req.url.split('?')[1] || ''}`)
 });
 
+router.get('/bitly', (req, res) => {
+  res.redirect(`/api/bitly/connect?${req.url.split('?')[1] || ''}`)
+});
+
 export default router;

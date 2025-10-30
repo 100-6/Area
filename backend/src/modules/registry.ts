@@ -15,6 +15,7 @@ import { shodanModule } from './shodan/service';
 import { spotifyModule } from './spotify/service';
 import { redditModule } from './reddit/service';
 import { stravaModule } from './strava/service';
+import { bitlyModule } from './bitly/service';
 import 'colors';
 
 /**
@@ -65,6 +66,7 @@ class ModuleRegistry {
             await this.registerModule(spotifyModule);
             await this.registerModule(redditModule);
             await this.registerModule(stravaModule);
+            await this.registerModule(bitlyModule);
             this.initialized = true;
             console.log(`[Registry] Successfully initialized ${this.modules.size} module(s)`.green.bold);
         } catch (error) {
