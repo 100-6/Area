@@ -8,6 +8,7 @@ import { DiscordProvider } from './oauth/providers/DiscordProvider';
 import { SpotifyProvider } from './oauth/providers/SpotifyProvider';
 import { RedditProvider } from './oauth/providers/RedditProvider';
 import { StravaProvider } from './oauth/providers/StravaProvider';
+import { BitlyProvider } from './oauth/providers/BitlyProvider';
 import { User } from '../../core/models/User';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
 
@@ -36,6 +37,7 @@ export class OAuthManager {
     private spotifyProvider: SpotifyProvider;
     private redditProvider: RedditProvider;
     private stravaProvider: StravaProvider;
+    private bitlyProvider: BitlyProvider;
 
     constructor() {
         this.googleProvider = new GoogleProvider();
@@ -48,6 +50,7 @@ export class OAuthManager {
         this.spotifyProvider = new SpotifyProvider();
         this.redditProvider = new RedditProvider();
         this.stravaProvider = new StravaProvider();
+        this.bitlyProvider = new BitlyProvider();
     }
 
     /**
@@ -97,6 +100,13 @@ export class OAuthManager {
      */
     getStravaAuthUrl(state?: string): string {
         return this.stravaProvider.getAuthUrl(state);
+    }
+
+    /**
+     * Generate Bitly OAuth URL
+     */
+    getBitlyAuthUrl(state?: string): string {
+        return this.bitlyProvider.getAuthUrl(state);
     }
 
     /**
@@ -180,6 +190,18 @@ export class OAuthManager {
             return await this.findOrCreateUserFromOAuth('strava', stravaProfile, authenticatedUserId);
         } catch (error) {
             throw new Error(`Strava OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Handle Bitly OAuth callback
+     */
+    async handleBitlyCallback(code: string, authenticatedUserId?: string): Promise<OAuthUser> {
+        try {
+            const bitlyProfile = await this.bitlyProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('bitly', bitlyProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Bitly OAuth error: ${error}`);
         }
     }
 
@@ -279,6 +301,13 @@ export class OAuthManager {
     }
 
     /**
+     * Check if Bitly OAuth is configured
+     */
+    isBitlyConfigured(): boolean {
+        return this.bitlyProvider.isConfigured();
+    }
+
+    /**
      * Get all OAuth providers status
      */
     getProvidersStatus(): {
@@ -287,6 +316,7 @@ export class OAuthManager {
         outlook: { isConfigured: boolean; status: any };
         discord: { isConfigured: boolean; status: any };
         spotify: { isConfigured: boolean; status: any };
+        bitly: { isConfigured: boolean; status: any };
     } {
         return {
             google: {
@@ -308,6 +338,10 @@ export class OAuthManager {
             spotify: {
                 isConfigured: this.spotifyProvider.isConfigured(),
                 status: this.spotifyProvider.getConfigStatus()
+            },
+            bitly: {
+                isConfigured: this.bitlyProvider.isConfigured(),
+                status: this.bitlyProvider.getConfigStatus()
             }
         };
     }

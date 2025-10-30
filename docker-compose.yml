@@ -111,6 +111,9 @@ services:
       - STRAVA_CLIENT_ID=${STRAVA_CLIENT_ID}
       - STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET}
       - STRAVA_REDIRECT_URI=${STRAVA_REDIRECT_URI}
+      - BITLY_CLIENT_ID=${BITLY_CLIENT_ID}
+      - BITLY_CLIENT_SECRET=${BITLY_CLIENT_SECRET}
+      - BITLY_REDIRECT_URI=${BITLY_REDIRECT_URI}
     volumes:
       - ./backend/src:/app/src:ro
       - ./backend/package.json:/app/package.json:ro
