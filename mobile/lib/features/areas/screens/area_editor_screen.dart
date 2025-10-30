@@ -255,10 +255,15 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
           final token = await authRepo.getToken();
 
           if (token != null && mounted) {
-            debugPrint('Saving trigger config to backend: $config');
+            // Convertir la config mobile vers le format backend
+            final backendConfig = SchemaConverter.convertMobileConfigToBackend(
+              config,
+              _triggerNode!.serviceId ?? '',
+            );
+            debugPrint('Saving trigger config to backend: $backendConfig');
             await _areaService.updateWorkflowNode(
               nodeId: _triggerNode!.id,
-              config: config,
+              config: backendConfig,
               token: token,
             );
             debugPrint('Trigger config saved successfully');
@@ -429,10 +434,15 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
         final token = await authRepo.getToken();
 
         if (token != null && mounted) {
-          debugPrint('Saving action config to backend: $config');
+          // Convertir la config mobile vers le format backend
+          final backendConfig = SchemaConverter.convertMobileConfigToBackend(
+            config,
+            node.serviceId ?? '',
+          );
+          debugPrint('Saving action config to backend: $backendConfig');
           await _areaService.updateWorkflowNode(
             nodeId: node.id,
-            config: config,
+            config: backendConfig,
             token: token,
           );
           debugPrint('Action config saved successfully');

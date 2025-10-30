@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/service_constants.dart';
 import '../models/service_info.dart';
 import '../services/area_service.dart';
 import 'service_actions_screen.dart';
@@ -272,7 +273,10 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
   }
 
   Widget _buildServiceCard(ServiceInfo service, List<dynamic> items) {
-    final serviceColor = _getServiceColor(service.name);
+    // Utiliser la couleur du backend si disponible, sinon fallback
+    final serviceColor = service.color != null
+        ? _parseColor(service.color!)
+        : _getServiceColor(service.name);
     
     return Container(
       decoration: BoxDecoration(
@@ -330,11 +334,7 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
                       ),
                     ],
                   ),
-                  child: Icon(
-                    _getServiceIcon(service.name),
-                    size: 32,
-                    color: Colors.white,
-                  ),
+                  child: _buildServiceIcon(service),
                 ),
                 const SizedBox(height: 12),
                 // Nom du service
@@ -410,60 +410,63 @@ class _ServiceSelectorScreenState extends State<ServiceSelectorScreen> {
   }
 
 
-  Color _getServiceColor(String serviceName) {
-    switch (serviceName.toLowerCase()) {
-      case 'timer':
-        return const Color(0xFF9C27B0);
-      case 'console':
-        return const Color(0xFFFF9800);
-      case 'discord':
-        return const Color(0xFF5865F2);
-      case 'github':
-        return const Color(0xFF24292E);
-      case 'gitlab':
-        return const Color(0xFFFC6D26);
-      case 'dropbox':
-        return const Color(0xFF0061FF);
-      case 'google':
-        return const Color(0xFF4285F4);
-      case 'openai':
-        return const Color(0xFF10A37F);
-      case 'gmail':
-      case 'email':
-        return const Color(0xFFEA4335);
-      case 'slack':
-        return const Color(0xFF4A154B);
-      default:
-        return const Color(0xFF2196F3);
+  /// Parse une couleur hex (#RRGGBB) en Color
+  Color _parseColor(String hexColor) {
+    try {
+      final hex = hexColor.replaceAll('#', '');
+      if (hex.length == 6) {
+        return Color(int.parse('FF$hex', radix: 16));
+      }
+      return const Color(0xFF2196F3); // Bleu par défaut
+    } catch (e) {
+      return const Color(0xFF2196F3); // Bleu par défaut en cas d'erreur
     }
   }
 
+  Color _getServiceColor(String serviceName) {
+    return ServiceConstants.getServiceColor(serviceName);
+  }
+
   IconData _getServiceIcon(String serviceName) {
-    switch (serviceName.toLowerCase()) {
-      case 'timer':
-        return Icons.schedule_rounded;
-      case 'console':
-        return Icons.terminal_rounded;
-      case 'discord':
-        return Icons.discord;
-      case 'github':
-        return Icons.code_rounded;
-      case 'gitlab':
-        return Icons.source_rounded;
-      case 'dropbox':
-        return Icons.cloud_rounded;
-      case 'google':
-        return Icons.g_mobiledata_rounded;
-      case 'openai':
-        return Icons.auto_awesome_rounded;
-      case 'gmail':
-      case 'email':
-        return Icons.email_rounded;
-      case 'slack':
-        return Icons.chat_bubble_rounded;
-      default:
-        return Icons.widgets_rounded;
+    return ServiceConstants.getServiceIcon(serviceName);
+  }
+
+  /// Construit l'icône/logo du service
+  Widget _buildServiceIcon(ServiceInfo service) {
+    // Essayer d'abord avec l'iconUrl du backend
+    final backendIconUrl = service.iconUrl;
+
+    // Si pas d'iconUrl du backend, utiliser les URLs hardcodées
+    final iconUrl = backendIconUrl ?? ServiceConstants.getServiceIconUrl(service.name);
+
+    if (iconUrl != null && iconUrl.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Image.network(
+          iconUrl,
+          width: 28,
+          height: 28,
+          fit: BoxFit.contain,
+          color: Colors.white,
+          colorBlendMode: BlendMode.srcIn,
+          errorBuilder: (context, error, stackTrace) {
+            // Fallback sur l'icône Material en cas d'erreur
+            return Icon(
+              _getServiceIcon(service.name),
+              size: 24,
+              color: Colors.white,
+            );
+          },
+        ),
+      );
     }
+
+    // Fallback sur icône Material
+    return Icon(
+      _getServiceIcon(service.name),
+      size: 24,
+      color: Colors.white,
+    );
   }
 
 }
