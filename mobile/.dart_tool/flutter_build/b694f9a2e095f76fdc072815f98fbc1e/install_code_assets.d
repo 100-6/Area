@@ -1,0 +1,1 @@
+ /home/eric/tek3/log/Mirror-Area/mobile/.dart_tool/flutter_build/b694f9a2e095f76fdc072815f98fbc1e/native_assets.json: 
