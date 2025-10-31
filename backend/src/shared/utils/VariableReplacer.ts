@@ -101,7 +101,6 @@ export class VariableReplacer {
                         Object.assign(data, nodeOutput.data);
                     if (nodeOutput.data && typeof nodeOutput.data === 'object')
                         Object.assign(data, nodeOutput.data);
-                }
             }
         }
         if (context.triggerData)
