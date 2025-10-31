@@ -17,6 +17,10 @@ import redditRoutes from '../../modules/reddit/routes';
 import githubRoutes from '../../modules/github/routes';
 import dropboxRoutes from '../../modules/dropbox/routes';
 import trelloRoutes from '../../modules/trello/routes';
+import stravaRoutes from '../../modules/strava/routes';
+import slackRoutes from '../../modules/slack/routes';
+import bitlyRoutes from '../../modules/bitly/routes';
+import twitchRoutes from '../../modules/twitch/routes';
 
 const router = Router();
 
@@ -41,15 +45,9 @@ router.use('/api/reddit', redditRoutes);
 router.use('/api/github', githubRoutes);
 router.use('/api/dropbox', dropboxRoutes);
 router.use('/api/trello', trelloRoutes);
+router.use('/api/strava', stravaRoutes);
+router.use('/api/slack', slackRoutes);
+router.use('/api/bitly', bitlyRoutes);
+router.use('/api/twitch', twitchRoutes);
 
 export default router;
-
-
-feat(trello): Add complete Trello integration with triggers and actions
-
-Features:
-- Add Trello OAuth 2.0 authentication flow
-- Implement 3 triggers: board.created, board.updated, board.closed
-- Implement 5 actions: card.create, card.move, card.delete, list.create, list.delete
-- Add polling mechanism (60s interval) for real-time board detection
-- Add comprehensive API routes for boards and lists management

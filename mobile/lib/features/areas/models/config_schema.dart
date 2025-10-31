@@ -107,7 +107,8 @@ class ConfigFieldType {
   static const String discordGuild = 'discord_guild';
   static const String discordChannel = 'discord_channel';
   static const String discordRole = 'discord_role';
-  static const String githubRepo = 'github_repo';
+  static const String githubRepository = 'github_repository';
+  static const String githubBranch = 'github_branch';
   static const String gitlabProject = 'gitlab_project';
   static const String email = 'email';
   static const String url = 'url';
@@ -118,7 +119,8 @@ class ConfigFieldType {
       discordGuild,
       discordChannel,
       discordRole,
-      githubRepo,
+      githubRepository,
+      githubBranch,
       gitlabProject,
     ].contains(type);
   }
@@ -132,8 +134,10 @@ class ConfigFieldType {
         return 'discord_channels';
       case discordRole:
         return 'discord_roles';
-      case githubRepo:
-        return 'github_repos';
+      case githubRepository:
+        return 'github_repositories';
+      case githubBranch:
+        return 'github_branches';
       case gitlabProject:
         return 'gitlab_projects';
       default:

@@ -647,6 +647,59 @@ class AuthService {
     isSpotifyConfigured(): boolean {
         return this.oauthManager.isSpotifyConfigured();
     }
+
+    /**
+     * Obtenir l'URL d'authentification Twitch
+     */
+    getTwitchAuthUrl(state?: string): string {
+        if (!this.oauthManager.isTwitchConfigured())
+            throw new Error('TWITCH_OAUTH_NOT_CONFIGURED');
+        return this.oauthManager.getTwitchAuthUrl(state);
+    }
+
+    /**
+     * Gérer le callback Twitch OAuth
+     * @param code - OAuth authorization code
+     * @param authenticatedUserId - Optional user ID if already authenticated (for linking accounts)
+     */
+    async handleTwitchCallback(code: string, authenticatedUserId?: string): Promise<AuthResult> {
+        try {
+            const user = await this.oauthManager.handleTwitchCallback(code, authenticatedUserId);
+
+            if (!user || !user.id || !user.email)
+                throw new Error('INVALID_OAUTH_USER_DATA');
+            if (!user.is_active)
+                throw new Error('ACCOUNT_INACTIVE');
+            const token = this.jwtManager.generateToken({ userId: user.id, email: user.email });
+            const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
+            const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            await UserSession.create(user.id, refreshToken, refreshExpiry);
+            console.log(`SUCCESS: Twitch OAuth login: ${user.email} (ID: ${user.id})`.green);
+            return {
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.first_name || '',
+                    lastName: user.last_name || '',
+                    createdAt: user.created_at
+                },
+                token,
+                refreshToken
+            };
+        } catch (error) {
+            console.error('Twitch OAuth callback error:'.red, error);
+            if (error instanceof Error)
+                throw error;
+            throw new Error('OAUTH_CALLBACK_FAILED');
+        }
+    }
+
+    /**
+     * Vérifier si Twitch OAuth est configuré
+     */
+    isTwitchConfigured(): boolean {
+        return this.oauthManager.isTwitchConfigured();
+    }
 }
 
 export default AuthService;

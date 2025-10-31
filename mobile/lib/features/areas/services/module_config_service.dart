@@ -215,7 +215,28 @@ class SchemaConverter {
       }
     }
 
+    // Pour GitHub, transformer owner+repo en sélecteur de repository
+    if (moduleName == 'github') {
+      final hasOwner = apiSchema.properties.containsKey('owner');
+      final hasRepo = apiSchema.properties.containsKey('repo');
+
+      if (hasOwner && hasRepo) {
+        // Ajouter un sélecteur de repository au lieu de owner/repo séparés
+        fields.add({
+          'key': 'repository',
+          'type': 'github_repository',
+          'label': 'Repository',
+          'hint': 'Select a GitHub repository',
+          'required': true,
+        });
+      }
+    }
+
     apiSchema.properties.forEach((key, field) {
+      // Pour GitHub, skip owner et repo car on les a déjà transformés en repository
+      if (moduleName == 'github' && (key == 'owner' || key == 'repo')) {
+        return;
+      }
       fields.add(_convertField(key, field, moduleName));
     });
 
@@ -259,7 +280,8 @@ class SchemaConverter {
 
     // Champs spécifiques GitHub
     if (moduleName == 'github') {
-      if (key == 'repository' || key == 'repo') return 'github_repo';
+      if (key == 'repository') return 'github_repository';
+      if (key == 'branch') return 'github_branch';
     }
 
     // Champs spécifiques GitLab
@@ -306,7 +328,32 @@ class SchemaConverter {
     if (moduleName == 'discord') {
       if (key == 'channelId' || key == 'roleId') return 'guildId';
     }
+    if (moduleName == 'github') {
+      if (key == 'branch') return 'repository';
+    }
     return null;
+  }
+
+  /// Convertit une configuration mobile vers le format backend
+  /// Par exemple: transforme repository:"owner/repo" en owner:"owner" + repo:"repo"
+  static Map<String, dynamic> convertMobileConfigToBackend(
+    Map<String, dynamic> mobileConfig,
+    String moduleName,
+  ) {
+    final backendConfig = Map<String, dynamic>.from(mobileConfig);
+
+    // Pour GitHub, transformer repository en owner + repo
+    if (moduleName == 'github' && mobileConfig.containsKey('repository')) {
+      final repository = mobileConfig['repository'] as String;
+      if (repository.contains('/')) {
+        final parts = repository.split('/');
+        backendConfig['owner'] = parts[0];
+        backendConfig['repo'] = parts[1];
+        backendConfig.remove('repository');
+      }
+    }
+
+    return backendConfig;
   }
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/services/oauth_service.dart';
+import '../../../core/constants/service_constants.dart';
 
 /// Dialogue pour demander à l'utilisateur de se connecter à un service
 class ServiceConnectionDialog extends StatelessWidget {
@@ -40,8 +41,8 @@ class ServiceConnectionDialog extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Color(provider.color),
-                    Color(provider.color).withValues(alpha: 0.8),
+                    ServiceConstants.getServiceColor(provider.name),
+                    ServiceConstants.getServiceColor(provider.name).withValues(alpha: 0.8),
                   ],
                 ),
                 borderRadius: const BorderRadius.only(
@@ -58,11 +59,7 @@ class ServiceConnectionDialog extends StatelessWidget {
                       color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Icon(
-                      _getServiceIcon(provider),
-                      size: 36,
-                      color: Colors.white,
-                    ),
+                    child: _buildProviderIcon(provider),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -129,7 +126,7 @@ class ServiceConnectionDialog extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: () => Navigator.pop(context, true),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(provider.color),
+                            backgroundColor: ServiceConstants.getServiceColor(provider.name),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             elevation: 0,
@@ -157,21 +154,29 @@ class ServiceConnectionDialog extends StatelessWidget {
     );
   }
 
-  IconData _getServiceIcon(OAuthProvider provider) {
-    switch (provider) {
-      case OAuthProvider.discord:
-        return Icons.discord;
-      case OAuthProvider.github:
-        return Icons.code;
-      case OAuthProvider.gitlab:
-        return Icons.source;
-      case OAuthProvider.google:
-        return Icons.g_mobiledata;
-      case OAuthProvider.gmail:
-        return Icons.email_rounded;
-      case OAuthProvider.dropbox:
-        return Icons.cloud;
+  /// Construit l'icône/logo du provider
+  Widget _buildProviderIcon(OAuthProvider provider) {
+    final iconUrl = ServiceConstants.getServiceIconUrl(provider.name);
+
+    if (iconUrl != null) {
+      return Image.network(
+        iconUrl,
+        width: 36,
+        height: 36,
+        fit: BoxFit.contain,
+        color: Colors.white,
+        colorBlendMode: BlendMode.srcIn,
+        errorBuilder: (context, error, stackTrace) {
+          // Fallback sur icône Material en cas d'erreur
+          final icon = ServiceConstants.getServiceIcon(provider.name);
+          return Icon(icon, size: 36, color: Colors.white);
+        },
+      );
     }
+
+    // Fallback sur icône Material
+    final icon = ServiceConstants.getServiceIcon(provider.name);
+    return Icon(icon, size: 36, color: Colors.white);
   }
 
   /// Affiche le dialogue et retourne true si l'utilisateur veut se connecter

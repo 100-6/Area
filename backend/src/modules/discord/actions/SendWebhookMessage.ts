@@ -70,31 +70,17 @@ export class SendWebhookMessage extends BaseAction {
         return true;
     }
 
-    parseVariables(template: string, context: ActionContext): string {
-        return template.replace(/{{\s*([^}]+)\s*}}/g, (match, p1) => {
-            const keys = p1.split('.');
-            let value: any = context;
-            for (const key of keys) {
-                if (value && key in value) {
-                    value = value[key];
-                } else {
-                    return match; // Return the original placeholder if not found
-                }
-            }
-            return String(value);
-        });
-    }
-
     async execute(config: ActionConfig, context: ActionContext): Promise<ActionResult> {
+        // Use the standard replaceVariables method from BaseAction instead of custom parseVariables
         const payload: any = {
-            content: this.parseVariables(config.content, context)
+            content: this.replaceVariables(config.content, context)
         };
 
         if (config.username) {
-            payload.username = this.parseVariables(config.username, context);
+            payload.username = this.replaceVariables(config.username, context);
         }
         if (config.avatarUrl) {
-            payload.avatar_url = this.parseVariables(config.avatarUrl, context);
+            payload.avatar_url = this.replaceVariables(config.avatarUrl, context);
         }
 
         const response = await fetch(config.webhookUrl, {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +10,14 @@ import 'features/auth/data/auth_repository.dart';
 import 'features/auth/presentation/auth_provider.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Verrouiller l'orientation en mode portrait uniquement
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   runApp(const AutoApp());
 }
 

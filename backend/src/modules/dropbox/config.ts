@@ -6,7 +6,7 @@ export default {
     name: 'dropbox',
     displayName: 'Dropbox',
     description: 'Automate your Dropbox workflows with file upload detection and file management',
-    iconUrl: 'https://cfl.dropboxstatic.com/static/images/logo_catalog/dropbox_webclip_152.png',
+    iconUrl: 'https://cdn.prod.website-files.com/66c503d081b2f012369fc5d2/674000d6c0a42d41f8c331be_dropbox-2-logo-png-transparent.png',
     color: '#0061FF',
     authType: 'oauth2',
     isActive: true,

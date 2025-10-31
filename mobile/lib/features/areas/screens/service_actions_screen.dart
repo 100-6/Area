@@ -4,6 +4,7 @@ import '../models/service_info.dart';
 import '../widgets/service_connection_dialog.dart';
 import '../../../core/services/oauth_service.dart';
 import '../../../core/services/service_connection_service.dart';
+import '../../../core/constants/service_constants.dart';
 import '../../auth/data/auth_repository.dart';
 
 class ServiceActionsScreen extends StatelessWidget {
@@ -89,11 +90,7 @@ class ServiceActionsScreen extends StatelessWidget {
                     width: 2,
                   ),
                 ),
-                child: Icon(
-                  _getServiceIcon(service.name),
-                  color: Colors.white,
-                  size: 26,
-                ),
+                child: _buildServiceIcon(),
               ),
             ],
           ),
@@ -107,6 +104,8 @@ class ServiceActionsScreen extends StatelessWidget {
               height: 1.1,
               letterSpacing: -1,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 8),
           Container(
@@ -343,7 +342,7 @@ class ServiceActionsScreen extends StatelessWidget {
                                 color: Color(0xFF1A1A1A),
                                 letterSpacing: -0.3,
                               ),
-                              maxLines: 1,
+                              maxLines: 3,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -389,59 +388,62 @@ class ServiceActionsScreen extends StatelessWidget {
   }
 
   Color _getServiceColor(String serviceName) {
-    switch (serviceName.toLowerCase()) {
-      case 'timer':
-        return const Color(0xFF9C27B0);
-      case 'console':
-        return const Color(0xFFFF9800);
-      case 'discord':
-        return const Color(0xFF5865F2);
-      case 'github':
-        return const Color(0xFF24292E);
-      case 'gitlab':
-        return const Color(0xFFFC6D26);
-      case 'dropbox':
-        return const Color(0xFF0061FF);
-      case 'google':
-        return const Color(0xFF4285F4);
-      case 'openai':
-        return const Color(0xFF10A37F);
-      case 'gmail':
-      case 'email':
-        return const Color(0xFFEA4335);
-      case 'slack':
-        return const Color(0xFF4A154B);
-      default:
-        return const Color(0xFF2196F3);
+    // Utiliser la couleur du backend si disponible, sinon ServiceConstants
+    return service.color != null
+        ? _parseColor(service.color!)
+        : ServiceConstants.getServiceColor(serviceName);
+  }
+
+  /// Parse une couleur hex (#RRGGBB) en Color
+  Color _parseColor(String hexColor) {
+    try {
+      final hex = hexColor.replaceAll('#', '');
+      if (hex.length == 6) {
+        return Color(int.parse('FF$hex', radix: 16));
+      }
+      return const Color(0xFF2196F3);
+    } catch (e) {
+      return const Color(0xFF2196F3);
     }
   }
 
   IconData _getServiceIcon(String serviceName) {
-    switch (serviceName.toLowerCase()) {
-      case 'timer':
-        return Icons.schedule_rounded;
-      case 'console':
-        return Icons.terminal_rounded;
-      case 'discord':
-        return Icons.discord;
-      case 'github':
-        return Icons.code_rounded;
-      case 'gitlab':
-        return Icons.source_rounded;
-      case 'dropbox':
-        return Icons.cloud_rounded;
-      case 'google':
-        return Icons.g_mobiledata_rounded;
-      case 'openai':
-        return Icons.auto_awesome_rounded;
-      case 'gmail':
-      case 'email':
-        return Icons.email_rounded;
-      case 'slack':
-        return Icons.chat_bubble_rounded;
-      default:
-        return Icons.widgets_rounded;
+    return ServiceConstants.getServiceIcon(serviceName);
+  }
+
+  /// Construit l'icône/logo du service
+  Widget _buildServiceIcon() {
+    // Essayer d'abord avec l'iconUrl du backend, sinon utiliser les URLs hardcodées
+    final iconUrl = service.iconUrl ?? ServiceConstants.getServiceIconUrl(service.name);
+
+    if (iconUrl != null && iconUrl.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Image.network(
+          iconUrl,
+          width: 28,
+          height: 28,
+          fit: BoxFit.contain,
+          color: Colors.white,
+          colorBlendMode: BlendMode.srcIn,
+          errorBuilder: (context, error, stackTrace) {
+            // Fallback sur icône Material en cas d'erreur
+            return Icon(
+              _getServiceIcon(service.name),
+              size: 24,
+              color: Colors.white,
+            );
+          },
+        ),
+      );
     }
+
+    // Fallback sur icône Material
+    return Icon(
+      _getServiceIcon(service.name),
+      size: 24,
+      color: Colors.white,
+    );
   }
 
   bool _requiresOAuthConnection(String serviceName) {

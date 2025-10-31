@@ -160,7 +160,6 @@ const getApiEndpoint = (): string | null => {
     return '/api/openai/models'
   }
 
-  // Cas particulier pour les channels Discord
   if (paramName.includes('channel') || description.includes('channel')) {
     return '/api/discord/guilds'
   }
@@ -215,6 +214,16 @@ const fetchApiOptions = async () => {
       apiOptions.value = response.models.map((model: any) => ({
         label: model.name,
         value: model.id
+      }))
+    } else if (endpoint === '/api/github/organizations' && response.organizations) {
+      apiOptions.value = response.organizations.map((org: any) => ({
+        label: org.login,
+        value: org.login
+      }))
+    } else if (endpoint === '/api/github/repositories' && response.repositories) {
+      apiOptions.value = response.repositories.map((repo: any) => ({
+        label: `${repo.full_name} ${repo.private ? '(privé)' : '(public)'}`,
+        value: repo.full_name
       }))
     } else if (endpoint === '/api/discord/guilds') {
       const guilds = Array.isArray(response)

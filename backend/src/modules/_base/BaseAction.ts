@@ -28,6 +28,7 @@ export interface ActionResult {
     data?: any;
     error?: string;
     executionTime?: number;
+    message?: string;
 }
 
 /**

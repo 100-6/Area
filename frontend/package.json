@@ -12,6 +12,9 @@
     "lint": "eslint app --ext .ts,.vue"
   },
   "dependencies": {
+    "@iconify-json/heroicons": "^1.2.3",
+    "@iconify-json/logos": "^1.2.10",
+    "@iconify-json/lucide": "^1.2.71",
     "@nuxt/ui": "^4.0.0",
     "nuxt": "^4.1.2",
     "vue": "^3.5.21",

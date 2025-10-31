@@ -52,12 +52,15 @@ export class ModuleSync {
      * Insérer ou mettre à jour un service
      */
     private async upsertService(module: any): Promise<string> {
+        const moduleConfig = (module as any)?.config || {};
+
         const query = `
-            INSERT INTO services (name, display_name, description, auth_type, is_active)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO services (name, display_name, description, icon_url, auth_type, is_active)
+            VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (name) DO UPDATE SET
                 display_name = EXCLUDED.display_name,
                 description = EXCLUDED.description,
+                icon_url = EXCLUDED.icon_url,
                 auth_type = EXCLUDED.auth_type,
                 is_active = EXCLUDED.is_active,
                 updated_at = CURRENT_TIMESTAMP
@@ -68,6 +71,7 @@ export class ModuleSync {
             module.getName(),
             module.getDisplayName(),
             module.getDescription(),
+            moduleConfig.iconUrl || null,
             module.getAuthType(),
             module.isActive()
         ];
