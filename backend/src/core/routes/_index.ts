@@ -18,6 +18,7 @@ import githubRoutes from '../../modules/github/routes';
 import dropboxRoutes from '../../modules/dropbox/routes';
 import stravaRoutes from '../../modules/strava/routes';
 import bitlyRoutes from '../../modules/bitly/routes';
+import twitchRoutes from '../../modules/twitch/routes';
 
 const router = Router();
 
@@ -43,5 +44,6 @@ router.use('/api/github', githubRoutes);
 router.use('/api/dropbox', dropboxRoutes);
 router.use('/api/strava', stravaRoutes);
 router.use('/api/bitly', bitlyRoutes);
+router.use('/api/twitch', twitchRoutes);
 
 export default router;

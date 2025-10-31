@@ -9,6 +9,7 @@ import { SpotifyProvider } from './oauth/providers/SpotifyProvider';
 import { RedditProvider } from './oauth/providers/RedditProvider';
 import { StravaProvider } from './oauth/providers/StravaProvider';
 import { BitlyProvider } from './oauth/providers/BitlyProvider';
+import { TwitchProvider } from './oauth/providers/TwitchProvider';
 import { User } from '../../core/models/User';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
 
@@ -38,6 +39,7 @@ export class OAuthManager {
     private redditProvider: RedditProvider;
     private stravaProvider: StravaProvider;
     private bitlyProvider: BitlyProvider;
+    private twitchProvider: TwitchProvider;
 
     constructor() {
         this.googleProvider = new GoogleProvider();
@@ -51,6 +53,7 @@ export class OAuthManager {
         this.redditProvider = new RedditProvider();
         this.stravaProvider = new StravaProvider();
         this.bitlyProvider = new BitlyProvider();
+        this.twitchProvider = new TwitchProvider();
     }
 
     /**
@@ -107,6 +110,13 @@ export class OAuthManager {
      */
     getBitlyAuthUrl(state?: string): string {
         return this.bitlyProvider.getAuthUrl(state);
+    }
+
+    /**
+     * Generate Twitch OAuth URL
+     */
+    getTwitchAuthUrl(state?: string): string {
+        return this.twitchProvider.getAuthUrl(state);
     }
 
     /**
@@ -202,6 +212,18 @@ export class OAuthManager {
             return await this.findOrCreateUserFromOAuth('bitly', bitlyProfile, authenticatedUserId);
         } catch (error) {
             throw new Error(`Bitly OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Handle Twitch OAuth callback
+     */
+    async handleTwitchCallback(code: string, authenticatedUserId?: string): Promise<OAuthUser> {
+        try {
+            const twitchProfile = await this.twitchProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('twitch', twitchProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Twitch OAuth error: ${error}`);
         }
     }
 
@@ -308,6 +330,13 @@ export class OAuthManager {
     }
 
     /**
+     * Check if Twitch OAuth is configured
+     */
+    isTwitchConfigured(): boolean {
+        return this.twitchProvider.isConfigured();
+    }
+
+    /**
      * Get all OAuth providers status
      */
     getProvidersStatus(): {
@@ -317,6 +346,7 @@ export class OAuthManager {
         discord: { isConfigured: boolean; status: any };
         spotify: { isConfigured: boolean; status: any };
         bitly: { isConfigured: boolean; status: any };
+        twitch: { isConfigured: boolean; status: any };
     } {
         return {
             google: {
@@ -342,6 +372,10 @@ export class OAuthManager {
             bitly: {
                 isConfigured: this.bitlyProvider.isConfigured(),
                 status: this.bitlyProvider.getConfigStatus()
+            },
+            twitch: {
+                isConfigured: this.twitchProvider.isConfigured(),
+                status: this.twitchProvider.getConfigStatus()
             }
         };
     }
