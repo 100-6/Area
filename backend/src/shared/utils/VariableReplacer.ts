@@ -41,9 +41,17 @@ export class VariableReplacer {
             const path = match[1];
             const value = this.getNestedValue(availableData, path);
             if (value !== undefined && value !== null) {
-                result = result.replace(fullMatch, String(value));
+                let stringValue: string;
+
+                if (Array.isArray(value))
+                    stringValue = value.join(', ');
+                else if (typeof value === 'object')
+                    stringValue = JSON.stringify(value);
+                else
+                    stringValue = String(value);
+                result = result.replace(fullMatch, stringValue);
                 if (debug)
-                    console.log(`[VariableReplacer] Replaced ${fullMatch} -> ${value}`.green);
+                    console.log(`[VariableReplacer] Replaced ${fullMatch} -> ${stringValue}`.green);
             } else {
                 if (debug)
                     console.log(`[VariableReplacer] No value found for ${fullMatch}`.red);
@@ -84,7 +92,16 @@ export class VariableReplacer {
         if (context.previousOutputs) {
             for (const nodeId in context.previousOutputs) {
                 const nodeOutput = context.previousOutputs[nodeId];
-                Object.assign(data, nodeOutput);
+                    if (
+                        nodeOutput.data &&
+                        typeof nodeOutput.data === 'object' &&
+                        !Array.isArray(nodeOutput.data) &&
+                        nodeOutput.data !== null
+                    )
+                        Object.assign(data, nodeOutput.data);
+                    if (nodeOutput.data && typeof nodeOutput.data === 'object')
+                        Object.assign(data, nodeOutput.data);
+                }
             }
         }
         if (context.triggerData)
@@ -168,7 +185,16 @@ export class VariableReplacer {
             return paths;
         for (const [key, value] of Object.entries(obj)) {
             const currentPath = prefix ? `${prefix}.${key}` : key;
-            if (value !== null && typeof value === 'object' && !Array.isArray(value))
+            if (Array.isArray(value)) {
+                paths.push(currentPath);
+                value.forEach((item, index) => {
+                    const indexPath = `${currentPath}.${index}`;
+                    if (item !== null && typeof item === 'object')
+                        paths.push(...this.flattenObjectPaths(item, indexPath));
+                    else
+                        paths.push(indexPath);
+                });
+            } else if (value !== null && typeof value === 'object')
                 paths.push(...this.flattenObjectPaths(value, currentPath));
             else
                 paths.push(currentPath);
