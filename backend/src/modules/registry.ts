@@ -16,6 +16,7 @@ import { spotifyModule } from './spotify/service';
 import { redditModule } from './reddit/service';
 import { stravaModule } from './strava/service';
 import { bitlyModule } from './bitly/service';
+import { twitchModule } from './twitch/module';
 import 'colors';
 
 /**
@@ -67,6 +68,7 @@ class ModuleRegistry {
             await this.registerModule(redditModule);
             await this.registerModule(stravaModule);
             await this.registerModule(bitlyModule);
+            await this.registerModule(twitchModule);
             this.initialized = true;
             console.log(`[Registry] Successfully initialized ${this.modules.size} module(s)`.green.bold);
         } catch (error) {
