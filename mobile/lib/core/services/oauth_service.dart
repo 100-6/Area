@@ -127,6 +127,12 @@ class OAuthService {
     if (service == 'spotify') {
       return '$baseUrl/api/spotify/connect';
     }
+    if (service == 'strava') {
+      return '$baseUrl/api/strava/connect';
+    }
+    if (service == 'reddit') {
+      return '$baseUrl/api/reddit/connect';
+    }
 
     // Réutilise les routes OAuth existantes pour les autres services
     // (Discord, GitHub, GitLab, Dropbox, Google, Telegram)
@@ -159,42 +165,6 @@ enum OAuthProvider {
         return 'Discord';
       case OAuthProvider.dropbox:
         return 'Dropbox';
-    }
-  }
-
-  /// Icône du provider
-  String get iconName {
-    switch (this) {
-      case OAuthProvider.google:
-        return 'google';
-      case OAuthProvider.gmail:
-        return 'gmail';
-      case OAuthProvider.github:
-        return 'github';
-      case OAuthProvider.gitlab:
-        return 'gitlab';
-      case OAuthProvider.discord:
-        return 'discord';
-      case OAuthProvider.dropbox:
-        return 'dropbox';
-    }
-  }
-
-  /// Couleur principale du provider
-  int get color {
-    switch (this) {
-      case OAuthProvider.google:
-        return 0xFF4285F4; // Bleu Google
-      case OAuthProvider.gmail:
-        return 0xFFEA4335; // Rouge Gmail
-      case OAuthProvider.github:
-        return 0xFF181717; // Noir GitHub
-      case OAuthProvider.gitlab:
-        return 0xFFFC6D26; // Orange GitLab
-      case OAuthProvider.discord:
-        return 0xFF5865F2; // Violet Discord
-      case OAuthProvider.dropbox:
-        return 0xFF0061FF; // Bleu Dropbox
     }
   }
 }

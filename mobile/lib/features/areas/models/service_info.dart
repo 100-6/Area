@@ -2,11 +2,17 @@ import 'config_schema.dart';
 
 class ServiceInfo {
   final String name;
+  final String? displayName;
+  final String? iconUrl;
+  final String? color;
   final List<ServiceAction> actions;
   final List<ServiceReaction> reactions;
 
   ServiceInfo({
     required this.name,
+    this.displayName,
+    this.iconUrl,
+    this.color,
     required this.actions,
     required this.reactions,
   });
@@ -14,6 +20,9 @@ class ServiceInfo {
   factory ServiceInfo.fromJson(Map<String, dynamic> json) {
     return ServiceInfo(
       name: json['name'] as String,
+      displayName: json['displayName'] as String?,
+      iconUrl: json['iconUrl'] as String?,
+      color: json['color'] as String?,
       actions: (json['actions'] as List<dynamic>)
           .map((e) => ServiceAction.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -26,6 +35,9 @@ class ServiceInfo {
   Map<String, dynamic> toJson() {
     return {
       'name': name,
+      if (displayName != null) 'displayName': displayName,
+      if (iconUrl != null) 'iconUrl': iconUrl,
+      if (color != null) 'color': color,
       'actions': actions.map((e) => e.toJson()).toList(),
       'reactions': reactions.map((e) => e.toJson()).toList(),
     };

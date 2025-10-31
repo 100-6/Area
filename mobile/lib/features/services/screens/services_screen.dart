@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/services/oauth_service.dart';
 import '../../../core/services/service_connection_service.dart';
 import '../../../core/models/service_provider.dart';
+import '../../../core/constants/service_constants.dart';
 import '../../auth/data/auth_repository.dart';
 
 /// Écran de gestion des connexions aux services
@@ -282,7 +283,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 ],
               ),
               child: Center(
-                child: _getServiceIcon(service.name),
+                child: _buildServiceIcon(service),
               ),
             ),
             const SizedBox(width: 16),
@@ -293,7 +294,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    service.displayName,
+                    _getDisplayName(service),
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -344,51 +345,40 @@ class _ServicesScreenState extends State<ServicesScreen> {
     );
   }
 
-  Widget _getServiceIcon(String serviceName) {
-    IconData icon;
+  Widget _buildServiceIcon(ServiceProvider service) {
+    // Utiliser prioritairement les URLs hardcodées (meilleures qualité/compatibilité)
+    final iconUrl = ServiceConstants.getServiceIconUrl(service.name) ?? service.iconUrl;
 
-    switch (serviceName.toLowerCase()) {
-      case 'google':
-        icon = Icons.g_mobiledata;
-        break;
-      case 'gmail':
-        icon = Icons.email_rounded;
-        break;
-      case 'github':
-        icon = Icons.code;
-        break;
-      case 'gitlab':
-        icon = Icons.source;
-        break;
-      case 'discord':
-        icon = Icons.discord;
-        break;
-      case 'dropbox':
-        icon = Icons.cloud;
-        break;
-      case 'telegram':
-        icon = Icons.telegram;
-        break;
-      case 'outlook':
-        icon = Icons.email;
-        break;
-      case 'spotify':
-        icon = Icons.music_note;
-        break;
-      case 'rss':
-        icon = Icons.rss_feed;
-        break;
-      case 'webhook':
-        icon = Icons.webhook;
-        break;
-      case 'openai':
-        icon = Icons.auto_awesome;
-        break;
-      default:
-        icon = Icons.api; // Icône par défaut
-        break;
+    if (iconUrl != null && iconUrl.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Image.network(
+          iconUrl,
+          width: 24,
+          height: 24,
+          fit: BoxFit.contain,
+          color: Colors.white,
+          colorBlendMode: BlendMode.srcIn,
+          errorBuilder: (context, error, stackTrace) {
+            // Fallback sur l'icône Material en cas d'erreur
+            final icon = ServiceConstants.getServiceIcon(service.name);
+            return Icon(icon, size: 20, color: Colors.white);
+          },
+        ),
+      );
     }
 
-    return Icon(icon, size: 28, color: Colors.white);
+    // Sinon utiliser l'icône Material du fichier de constantes
+    final icon = ServiceConstants.getServiceIcon(service.name);
+    return Icon(icon, size: 20, color: Colors.white);
+  }
+
+  /// Obtient le nom d'affichage du service (avec personnalisations)
+  String _getDisplayName(ServiceProvider service) {
+    // Raccourcir "Microsoft Outlook" en "Outlook"
+    if (service.displayName.toLowerCase().contains('microsoft outlook')) {
+      return 'Outlook';
+    }
+    return service.displayName;
   }
 }

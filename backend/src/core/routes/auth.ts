@@ -26,6 +26,9 @@ router.get('/gitlab/callback', authController.gitLabCallback);
 router.get('/dropbox', authController.dropboxLogin);
 router.get('/dropbox/callback', authController.dropboxCallback);
 
+router.get('/twitch', authController.twitchLogin);
+router.get('/twitch/callback', authController.twitchCallback);
+
 router.get('/spotify', (req, res) => {
   res.redirect(`/api/spotify/connect?${req.url.split('?')[1] || ''}`)
 });
@@ -34,8 +37,20 @@ router.get('/reddit', (req, res) => {
   res.redirect(`/api/reddit/connect?${req.url.split('?')[1] || ''}`)
 });
 
+router.get('/strava', (req, res) => {
+  res.redirect(`/api/strava/connect?${req.url.split('?')[1] || ''}`)
+});
+
+router.get('/strava/callback', (req, res) => {
+  res.redirect(`/api/strava/callback?${req.url.split('?')[1] || ''}`)
+});
+
 router.get('/gmail', (req, res) => {
   res.redirect(`/api/gmail/connect?${req.url.split('?')[1] || ''}`)
+});
+
+router.get('/bitly', (req, res) => {
+  res.redirect(`/api/bitly/connect?${req.url.split('?')[1] || ''}`)
 });
 
 export default router;

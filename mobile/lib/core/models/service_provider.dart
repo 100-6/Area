@@ -1,3 +1,5 @@
+import '../constants/service_constants.dart';
+
 /// Représente un service/provider disponible dans l'application
 class ServiceProvider {
   final String name;
@@ -35,28 +37,7 @@ class ServiceProvider {
 
   /// Couleur par défaut basée sur le nom du service
   int get color {
-    switch (name.toLowerCase()) {
-      case 'google':
-        return 0xFF4285F4; // Bleu Google
-      case 'gmail':
-        return 0xFFEA4335; // Rouge Gmail
-      case 'github':
-        return 0xFF181717; // Noir GitHub
-      case 'gitlab':
-        return 0xFFFC6D26; // Orange GitLab
-      case 'discord':
-        return 0xFF5865F2; // Violet Discord
-      case 'dropbox':
-        return 0xFF0061FF; // Bleu Dropbox
-      case 'telegram':
-        return 0xFF0088CC; // Bleu Telegram
-      case 'outlook':
-        return 0xFF0078D4; // Bleu Outlook
-      case 'spotify':
-        return 0xFF1DB954; // Vert Spotify
-      default:
-        return 0xFF6B7280; // Gris par défaut
-    }
+    return ServiceConstants.getServiceColorInt(name);
   }
 
 }

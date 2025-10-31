@@ -50,7 +50,18 @@ const fieldId = computed(() => `config-${props.parameter.name}-${Math.random().t
 
 // Déterminer le type d'input basé sur le format attendu
 const inputType = computed(() => {
-  if (props.parameter.placeholder?.includes('T') || props.parameter.description?.toLowerCase().includes('heure')) {
+  const desc = props.parameter.description?.toLowerCase() || ''
+  const placeholder = props.parameter.placeholder || ''
+  
+  // Détecte si c'est un datetime (avec heure)
+  if (
+    placeholder.includes('T') || 
+    desc.includes('heure') || 
+    desc.includes('time') ||
+    desc.includes('datetime') ||
+    desc.includes('date and time') ||
+    desc.includes('date et heure')
+  ) {
     return 'datetime-local'
   }
   return 'date'

@@ -1,4 +1,5 @@
 import 'discord_service.dart';
+import 'github_service.dart';
 
 /// Interface pour un fournisseur de ressources
 abstract class ResourceProvider {
@@ -106,13 +107,79 @@ class DiscordRoleProvider implements ResourceProvider {
   }
 }
 
+/// Provider pour les repositories GitHub
+class GitHubRepositoryProvider implements ResourceProvider {
+  final GitHubService _githubService = GitHubService();
+
+  @override
+  Future<List<ResourceItem>> fetchResources({
+    required String token,
+    Map<String, dynamic>? params,
+  }) async {
+    final repositories = await _githubService.getRepositories(token: token);
+    return repositories.map((repo) {
+      return ResourceItem(
+        id: repo.fullName, // Utiliser fullName comme ID (owner/repo)
+        name: repo.fullName,
+        metadata: {
+          'description': repo.description,
+          'owner': repo.owner,
+          'repoName': repo.name,
+          'isPrivate': repo.isPrivate,
+          'language': repo.language,
+          'stars': repo.stargazersCount,
+          'forks': repo.forksCount,
+        },
+      );
+    }).toList();
+  }
+}
+
+/// Provider pour les branches GitHub
+class GitHubBranchProvider implements ResourceProvider {
+  final GitHubService _githubService = GitHubService();
+
+  @override
+  Future<List<ResourceItem>> fetchResources({
+    required String token,
+    Map<String, dynamic>? params,
+  }) async {
+    final repository = params?['repository'] as String?;
+    if (repository == null || !repository.contains('/')) {
+      throw Exception('repository (format: owner/repo) is required for github_branches');
+    }
+
+    final parts = repository.split('/');
+    final owner = parts[0];
+    final repo = parts[1];
+
+    final branches = await _githubService.getBranches(
+      owner: owner,
+      repo: repo,
+      token: token,
+    );
+
+    return branches.map((branch) {
+      return ResourceItem(
+        id: branch.name,
+        name: branch.name,
+        metadata: {
+          'commitSha': branch.commitSha,
+          'isProtected': branch.isProtected,
+        },
+      );
+    }).toList();
+  }
+}
+
 /// Service centralisé pour gérer les ressources
 class ServiceResourceProvider {
   static final Map<String, ResourceProvider> _providers = {
     'discord_guilds': DiscordGuildProvider(),
     'discord_channels': DiscordChannelProvider(),
     'discord_roles': DiscordRoleProvider(),
-    // Ajouter d'autres providers ici (github_repos, gitlab_projects, etc.)
+    'github_repositories': GitHubRepositoryProvider(),
+    'github_branches': GitHubBranchProvider(),
   };
 
   /// Récupère les ressources pour un type donné

@@ -7,6 +7,10 @@ import { DropboxProvider } from './oauth/providers/DropboxProvider';
 import { DiscordProvider } from './oauth/providers/DiscordProvider';
 import { SpotifyProvider } from './oauth/providers/SpotifyProvider';
 import { RedditProvider } from './oauth/providers/RedditProvider';
+import { StravaProvider } from './oauth/providers/StravaProvider';
+import { SlackProvider } from './oauth/providers/SlackProvider';
+import { BitlyProvider } from './oauth/providers/BitlyProvider';
+import { TwitchProvider } from './oauth/providers/TwitchProvider';
 import { User } from '../../core/models/User';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
 
@@ -34,6 +38,10 @@ export class OAuthManager {
     private discordProvider: DiscordProvider;
     private spotifyProvider: SpotifyProvider;
     private redditProvider: RedditProvider;
+    private stravaProvider: StravaProvider;
+    private slackProvider: SlackProvider;
+    private bitlyProvider: BitlyProvider;
+    private twitchProvider: TwitchProvider;
 
     constructor() {
         this.googleProvider = new GoogleProvider();
@@ -45,6 +53,10 @@ export class OAuthManager {
         this.discordProvider = new DiscordProvider();
         this.spotifyProvider = new SpotifyProvider();
         this.redditProvider = new RedditProvider();
+        this.stravaProvider = new StravaProvider();
+        this.slackProvider = new SlackProvider();
+        this.bitlyProvider = new BitlyProvider();
+        this.twitchProvider = new TwitchProvider();
     }
 
     /**
@@ -87,6 +99,33 @@ export class OAuthManager {
      */
     getRedditAuthUrl(state?: string): string {
         return this.redditProvider.getAuthUrl(state);
+    }
+
+    /**
+     * Generate Strava OAuth URL
+     */
+    getStravaAuthUrl(state?: string): string {
+        return this.stravaProvider.getAuthUrl(state);
+    }
+
+    /**
+     * Generate Slack OAuth URL
+     */
+    getSlackAuthUrl(state?: string): string {
+        return this.slackProvider.getAuthUrl(state);
+    }
+    /**
+     * Generate Bitly OAuth URL
+     */
+    getBitlyAuthUrl(state?: string): string {
+        return this.bitlyProvider.getAuthUrl(state);
+    }
+
+    /**
+     * Generate Twitch OAuth URL
+     */
+    getTwitchAuthUrl(state?: string): string {
+        return this.twitchProvider.getAuthUrl(state);
     }
 
     /**
@@ -158,6 +197,54 @@ export class OAuthManager {
             return await this.findOrCreateUserFromOAuth('reddit', redditProfile, authenticatedUserId);
         } catch (error) {
             throw new Error(`Reddit OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Handle Strava OAuth callback
+     */
+    async handleStravaCallback(code: string, authenticatedUserId?: string, scope?: string): Promise<OAuthUser> {
+        try {
+            const stravaProfile = await this.stravaProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('strava', stravaProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Strava OAuth error: ${error}`);
+        }
+    }
+
+    /**
+<<<<<<< HEAD
+     * Handle Slack OAuth callback
+     */
+    async handleSlackCallback(code: string, authenticatedUserId?: string): Promise<OAuthUser> {
+        try {
+            const slackProfile = await this.slackProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('slack', slackProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Slack OAuth error: ${error}`);
+        }
+    }
+    /**
+     * Handle Bitly OAuth callback
+     */
+    async handleBitlyCallback(code: string, authenticatedUserId?: string): Promise<OAuthUser> {
+        try {
+            const bitlyProfile = await this.bitlyProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('bitly', bitlyProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Bitly OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Handle Twitch OAuth callback
+     */
+    async handleTwitchCallback(code: string, authenticatedUserId?: string): Promise<OAuthUser> {
+        try {
+            const twitchProfile = await this.twitchProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('twitch', twitchProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Twitch OAuth error: ${error}`);
         }
     }
 
@@ -250,6 +337,27 @@ export class OAuthManager {
     }
 
     /**
+     * Check if Strava OAuth is configured
+     */
+    isStravaConfigured(): boolean {
+        return this.stravaProvider.isConfigured();
+    }
+
+    /**
+     * Check if Bitly OAuth is configured
+     */
+    isBitlyConfigured(): boolean {
+        return this.bitlyProvider.isConfigured();
+    }
+
+    /**
+     * Check if Twitch OAuth is configured
+     */
+    isTwitchConfigured(): boolean {
+        return this.twitchProvider.isConfigured();
+    }
+
+    /**
      * Get all OAuth providers status
      */
     getProvidersStatus(): {
@@ -258,6 +366,8 @@ export class OAuthManager {
         outlook: { isConfigured: boolean; status: any };
         discord: { isConfigured: boolean; status: any };
         spotify: { isConfigured: boolean; status: any };
+        bitly: { isConfigured: boolean; status: any };
+        twitch: { isConfigured: boolean; status: any };
     } {
         return {
             google: {
@@ -279,6 +389,14 @@ export class OAuthManager {
             spotify: {
                 isConfigured: this.spotifyProvider.isConfigured(),
                 status: this.spotifyProvider.getConfigStatus()
+            },
+            bitly: {
+                isConfigured: this.bitlyProvider.isConfigured(),
+                status: this.bitlyProvider.getConfigStatus()
+            },
+            twitch: {
+                isConfigured: this.twitchProvider.isConfigured(),
+                status: this.twitchProvider.getConfigStatus()
             }
         };
     }

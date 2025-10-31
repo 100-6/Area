@@ -1,0 +1,1 @@
+export { OnNewActivityTrigger } from './OnNewActivity';
