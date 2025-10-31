@@ -204,6 +204,8 @@ class _DynamicConfigFormState extends State<DynamicConfigForm> {
       case ConfigFieldType.discordGuild:
       case ConfigFieldType.discordChannel:
       case ConfigFieldType.discordRole:
+      case ConfigFieldType.githubRepository:
+      case ConfigFieldType.githubBranch:
         return _buildResourceDropdown(field);
 
       default:

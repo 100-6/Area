@@ -2,7 +2,6 @@ import { BaseAction, ActionConfig, ActionContext, ActionResult } from '../../_ba
 import { OutlookService } from '../service';
 import { Area } from '../../../core/models/Area';
 import { UserAuthProvider } from '../../../core/models/UserAuthProvider';
-import { VariableReplacer } from '../../../shared/utils/VariableReplacer';
 import 'colors';
 
 /**
@@ -81,12 +80,13 @@ export class CreateCalendarEvent extends BaseAction {
                 throw new Error('Outlook not connected for this user. Please connect your Outlook account.');
             const accessToken = outlookAuth.access_token;
             const refreshToken = outlookAuth.refresh_token;
-            const subject = VariableReplacer.replace(config.subject, context, true);
-            const start = VariableReplacer.replace(config.start, context, true);
-            const end = VariableReplacer.replace(config.end, context, true);
-            const location = config.location ? VariableReplacer.replace(config.location, context) : undefined;
-            const body = config.body ? VariableReplacer.replace(config.body, context) : undefined;
-            const attendees = config.attendees ? VariableReplacer.replace(config.attendees, context) : undefined;
+            // Use the standard replaceVariables method from BaseAction
+            const subject = this.replaceVariables(config.subject, context, true);
+            const start = this.replaceVariables(config.start, context, true);
+            const end = this.replaceVariables(config.end, context, true);
+            const location = config.location ? this.replaceVariables(config.location, context) : undefined;
+            const body = config.body ? this.replaceVariables(config.body, context) : undefined;
+            const attendees = config.attendees ? this.replaceVariables(config.attendees, context) : undefined;
             const result = await this.outlookService.createCalendarEvent(accessToken, subject, start, end, { location, body, attendees, refreshToken });
             const executionTime = Date.now() - startTime;
             console.log(`[CreateCalendarEvent] ✓ Calendar event created: ${subject}`.green);

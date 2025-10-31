@@ -138,9 +138,16 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
         );
         areaId = newArea.id;
 
+        // ÉTAPE 1 : Créer TOUS les nodes d'abord (comme le frontend)
+        debugPrint('💾 Step 1: Creating ALL nodes first...');
+
+        // Map pour stocker les IDs : tempId → realId
+        final Map<String, String> nodeIdMap = {};
+
         // Créer le trigger node si présent
         String? triggerNodeId;
         if (_triggerNode != null) {
+          debugPrint('💾 Creating trigger node: ${_triggerNode!.serviceId}/${_triggerNode!.actionId}');
           final createdTrigger = await _areaService.createWorkflowNode(
             areaId: areaId,
             nodeType: 'trigger',
@@ -153,15 +160,15 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
             token: token,
           );
           triggerNodeId = createdTrigger.id;
+          nodeIdMap[_triggerNode!.id] = createdTrigger.id;
+          debugPrint('✅ Trigger node created: ${createdTrigger.id}');
         }
 
-        // Créer les nodes d'action et les connexions en chaîne
-        debugPrint('💾 Creating ${_actionNodes.length} action nodes...');
-        String? previousNodeId = triggerNodeId;
-        int actionIndex = 0;
-
-        for (var actionNode in _actionNodes) {
-          debugPrint('💾 Creating action ${actionIndex + 1}/${_actionNodes.length}: ${actionNode.serviceId}/${actionNode.reactionId}');
+        // Créer TOUS les action nodes
+        final List<String> actionNodeIds = [];
+        for (int i = 0; i < _actionNodes.length; i++) {
+          final actionNode = _actionNodes[i];
+          debugPrint('💾 Creating action ${i + 1}/${_actionNodes.length}: ${actionNode.serviceId}/${actionNode.reactionId}');
 
           final createdAction = await _areaService.createWorkflowNode(
             areaId: areaId,
@@ -175,25 +182,35 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
             token: token,
           );
 
-          debugPrint('✅ Created action node: ${createdAction.id}');
+          actionNodeIds.add(createdAction.id);
+          nodeIdMap[actionNode.id] = createdAction.id;
+          debugPrint('✅ Action node created: ${createdAction.id}');
+        }
 
-          // Créer la connexion avec la node précédente (trigger ou action précédente)
+        debugPrint('✅ All ${1 + _actionNodes.length} nodes created successfully');
+
+        // ÉTAPE 2 : Créer TOUTES les connexions APRÈS (comme le frontend)
+        debugPrint('🔗 Step 2: Creating ALL connections...');
+
+        // Créer la liste des connexions en chaîne
+        String? previousNodeId = triggerNodeId;
+        int connectionIndex = 0;
+
+        for (final actionNodeId in actionNodeIds) {
           if (previousNodeId != null) {
-            debugPrint('🔗 Connecting $previousNodeId → ${createdAction.id}');
+            connectionIndex++;
+            debugPrint('🔗 Connection ${connectionIndex}: $previousNodeId → $actionNodeId');
             await _areaService.createWorkflowConnection(
               areaId: areaId,
               sourceNodeId: previousNodeId,
-              targetNodeId: createdAction.id,
+              targetNodeId: actionNodeId,
               token: token,
             );
           }
-
-          // La prochaine action se connectera à celle-ci
-          previousNodeId = createdAction.id;
-          actionIndex++;
+          previousNodeId = actionNodeId;
         }
 
-        debugPrint('✅ All ${_actionNodes.length} actions created successfully');
+        debugPrint('✅ All $connectionIndex connections created successfully');
       } else {
         // Mettre à jour l'AREA existante
         await _areaService.updateArea(
@@ -238,10 +255,15 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
           final token = await authRepo.getToken();
 
           if (token != null && mounted) {
-            debugPrint('Saving trigger config to backend: $config');
+            // Convertir la config mobile vers le format backend
+            final backendConfig = SchemaConverter.convertMobileConfigToBackend(
+              config,
+              _triggerNode!.serviceId ?? '',
+            );
+            debugPrint('Saving trigger config to backend: $backendConfig');
             await _areaService.updateWorkflowNode(
               nodeId: _triggerNode!.id,
-              config: config,
+              config: backendConfig,
               token: token,
             );
             debugPrint('Trigger config saved successfully');
@@ -412,10 +434,15 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
         final token = await authRepo.getToken();
 
         if (token != null && mounted) {
-          debugPrint('Saving action config to backend: $config');
+          // Convertir la config mobile vers le format backend
+          final backendConfig = SchemaConverter.convertMobileConfigToBackend(
+            config,
+            node.serviceId ?? '',
+          );
+          debugPrint('Saving action config to backend: $backendConfig');
           await _areaService.updateWorkflowNode(
             nodeId: node.id,
-            config: config,
+            config: backendConfig,
             token: token,
           );
           debugPrint('Action config saved successfully');
@@ -604,7 +631,7 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ElevatedButton.icon(
-                          onPressed: _saveArea,
+                          onPressed: _isLoading ? null : _saveArea,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             elevation: 0,

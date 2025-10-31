@@ -32,8 +32,8 @@ class ServiceConnectionService {
         headers: {'Authorization': 'Bearer $token'},
       );
 
-      if (response['services'] != null) {
-        return List<Map<String, dynamic>>.from(response['services']);
+      if (response['data'] != null) {
+        return List<Map<String, dynamic>>.from(response['data']);
       }
       return [];
     } catch (e) {

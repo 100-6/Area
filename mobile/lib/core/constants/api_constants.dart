@@ -4,7 +4,7 @@ class ApiConstants {
   // Pour l'émulateur Android : utilisez 10.0.2.2
   // Pour un appareil physique ou iOS : utilisez l'IP de votre machine
   // Appareil physique (CLT L09) : utilise l'IP locale
-  static const String baseUrl = 'https://area-eric.eliasdrissi.dev';
+  static const String baseUrl = 'https://auto.eliasdrissi.dev';
   
   // Endpoints d'authentification
   static const String authBase = '/api/auth';

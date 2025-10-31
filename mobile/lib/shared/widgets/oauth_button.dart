@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/services/oauth_service.dart';
+import '../../core/constants/service_constants.dart';
 
 /// Bouton OAuth stylisé
 class OAuthButton extends StatelessWidget {
@@ -22,7 +23,7 @@ class OAuthButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Color(provider.color),
+          backgroundColor: ServiceConstants.getServiceColor(provider.name),
           foregroundColor: Colors.white,
           elevation: 2,
           shape: RoundedRectangleBorder(
@@ -56,31 +57,26 @@ class OAuthButton extends StatelessWidget {
     );
   }
 
-  /// Récupère l'icône du provider
+  /// Récupère l'icône/logo du provider
   Widget _getProviderIcon(OAuthProvider provider) {
-    IconData icon;
+    final iconUrl = ServiceConstants.getServiceIconUrl(provider.name);
 
-    switch (provider) {
-      case OAuthProvider.google:
-        icon = Icons.g_mobiledata;
-        break;
-      case OAuthProvider.gmail:
-        icon = Icons.email_rounded;
-        break;
-      case OAuthProvider.github:
-        icon = Icons.code;
-        break;
-      case OAuthProvider.gitlab:
-        icon = Icons.source; // GitLab icon
-        break;
-      case OAuthProvider.discord:
-        icon = Icons.discord;
-        break;
-      case OAuthProvider.dropbox:
-        icon = Icons.cloud; // Dropbox icon
-        break;
+    if (iconUrl != null) {
+      return Image.network(
+        iconUrl,
+        width: 24,
+        height: 24,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          // Fallback sur icône Material en cas d'erreur
+          final icon = ServiceConstants.getServiceIcon(provider.name);
+          return Icon(icon, size: 24);
+        },
+      );
     }
 
+    // Fallback sur icône Material
+    final icon = ServiceConstants.getServiceIcon(provider.name);
     return Icon(icon, size: 24);
   }
 }
@@ -177,11 +173,11 @@ class CompactOAuthButton extends StatelessWidget {
         width: 60,
         height: 60,
         decoration: BoxDecoration(
-          color: Color(provider.color),
+          color: ServiceConstants.getServiceColor(provider.name),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Color(provider.color).withValues(alpha: 0.3),
+              color: ServiceConstants.getServiceColor(provider.name).withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -203,30 +199,28 @@ class CompactOAuthButton extends StatelessWidget {
     );
   }
 
+  /// Récupère l'icône/logo du provider
   Widget _getProviderIcon(OAuthProvider provider) {
-    IconData icon;
+    final iconUrl = ServiceConstants.getServiceIconUrl(provider.name);
 
-    switch (provider) {
-      case OAuthProvider.google:
-        icon = Icons.g_mobiledata;
-        break;
-      case OAuthProvider.gmail:
-        icon = Icons.email_rounded;
-        break;
-      case OAuthProvider.github:
-        icon = Icons.code;
-        break;
-      case OAuthProvider.gitlab:
-        icon = Icons.source; // GitLab icon
-        break;
-      case OAuthProvider.discord:
-        icon = Icons.discord;
-        break;
-      case OAuthProvider.dropbox:
-        icon = Icons.cloud; // Dropbox icon
-        break;
+    if (iconUrl != null) {
+      return Image.network(
+        iconUrl,
+        width: 28,
+        height: 28,
+        fit: BoxFit.contain,
+        color: Colors.white,
+        colorBlendMode: BlendMode.srcIn,
+        errorBuilder: (context, error, stackTrace) {
+          // Fallback sur icône Material en cas d'erreur
+          final icon = ServiceConstants.getServiceIcon(provider.name);
+          return Icon(icon, size: 28, color: Colors.white);
+        },
+      );
     }
 
+    // Fallback sur icône Material
+    final icon = ServiceConstants.getServiceIcon(provider.name);
     return Icon(icon, size: 28, color: Colors.white);
   }
 }
@@ -279,17 +273,46 @@ class _CompactOAuthButtonsState extends State<CompactOAuthButtons> {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 16,
-      runSpacing: 16,
-      alignment: WrapAlignment.center,
-      children: OAuthService.authenticationProviders.map(
-        (provider) => CompactOAuthButton(
-          provider: provider,
-          onPressed: () => _handleOAuthLogin(provider),
-          isLoading: _loadingProvider == provider,
+    final providers = OAuthService.authenticationProviders;
+
+    // Séparer les providers en deux lignes : 3 sur la première, le reste sur la deuxième
+    final firstRow = providers.take(3).toList();
+    final secondRow = providers.skip(3).toList();
+
+    return Column(
+      children: [
+        // Première ligne - 3 boutons
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: firstRow.map((provider) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: CompactOAuthButton(
+                provider: provider,
+                onPressed: () => _handleOAuthLogin(provider),
+                isLoading: _loadingProvider == provider,
+              ),
+            );
+          }).toList(),
         ),
-      ).toList(),
+        if (secondRow.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          // Deuxième ligne - reste des boutons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: secondRow.map((provider) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: CompactOAuthButton(
+                  provider: provider,
+                  onPressed: () => _handleOAuthLogin(provider),
+                  isLoading: _loadingProvider == provider,
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ],
     );
   }
 }

@@ -17,7 +17,12 @@ import redditRoutes from '../../modules/reddit/routes';
 import githubRoutes from '../../modules/github/routes';
 import dropboxRoutes from '../../modules/dropbox/routes';
 import stravaRoutes from '../../modules/strava/routes';
+<<<<<<< HEAD
 import slackRoutes from '../../modules/slack/routes';
+=======
+import bitlyRoutes from '../../modules/bitly/routes';
+import twitchRoutes from '../../modules/twitch/routes';
+>>>>>>> 26a71167db0cbcc8a02b9bbb811d28266fb08f55
 
 const router = Router();
 
@@ -42,6 +47,11 @@ router.use('/api/reddit', redditRoutes);
 router.use('/api/github', githubRoutes);
 router.use('/api/dropbox', dropboxRoutes);
 router.use('/api/strava', stravaRoutes);
+<<<<<<< HEAD
 router.use('/api/slack', slackRoutes);
+=======
+router.use('/api/bitly', bitlyRoutes);
+router.use('/api/twitch', twitchRoutes);
+>>>>>>> 26a71167db0cbcc8a02b9bbb811d28266fb08f55
 
 export default router;
