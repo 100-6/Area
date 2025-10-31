@@ -17,6 +17,11 @@ import { redditModule } from './reddit/service';
 import { stravaModule } from './strava/service';
 import { bitlyModule } from './bitly/service';
 import { twitchModule } from './twitch/module';
+import { weatherModule } from './weather/service';
+import { applemusicModule } from './applemusic/service';
+import { booksModule } from './books/service';
+import { currencyModule } from './currency/service';
+import { cryptoModule } from './crypto/service';
 import 'colors';
 
 /**
@@ -69,6 +74,11 @@ class ModuleRegistry {
             await this.registerModule(stravaModule);
             await this.registerModule(bitlyModule);
             await this.registerModule(twitchModule);
+            await this.registerModule(weatherModule);
+            await this.registerModule(applemusicModule);
+            await this.registerModule(booksModule);
+            await this.registerModule(currencyModule);
+            await this.registerModule(cryptoModule);
             this.initialized = true;
             console.log(`[Registry] Successfully initialized ${this.modules.size} module(s)`.green.bold);
         } catch (error) {
