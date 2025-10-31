@@ -2,7 +2,6 @@ import { BaseAction, ActionConfig, ActionContext, ActionResult } from '../../_ba
 import { GmailService } from '../service';
 import { Area } from '../../../core/models/Area';
 import { UserAuthProvider } from '../../../core/models/UserAuthProvider';
-import { VariableReplacer } from '../../../shared/utils/VariableReplacer';
 import 'colors';
 
 /**
@@ -78,12 +77,13 @@ export class SendEmail extends BaseAction {
                 throw new Error('Gmail not connected for this user. Please connect your Gmail account.');
             const accessToken = gmailAuth.access_token;
             const refreshToken = gmailAuth.refresh_token;
-            const to = VariableReplacer.replace(config.to, context, true);
-            const subject = VariableReplacer.replace(config.subject, context, true);
-            const body = VariableReplacer.replace(config.body, context, true);
-            const cc = config.cc ? VariableReplacer.replace(config.cc, context) : undefined;
-            const bcc = config.bcc ? VariableReplacer.replace(config.bcc, context) : undefined;
-            const inReplyTo = config.inReplyTo ? VariableReplacer.replace(config.inReplyTo, context) : undefined;
+            // Use the standard replaceVariables method from BaseAction
+            const to = this.replaceVariables(config.to, context, true);
+            const subject = this.replaceVariables(config.subject, context, true);
+            const body = this.replaceVariables(config.body, context, true);
+            const cc = config.cc ? this.replaceVariables(config.cc, context) : undefined;
+            const bcc = config.bcc ? this.replaceVariables(config.bcc, context) : undefined;
+            const inReplyTo = config.inReplyTo ? this.replaceVariables(config.inReplyTo, context) : undefined;
             const result = await this.gmailService.sendEmail(accessToken, to, subject, body, { cc, bcc, inReplyTo, refreshToken });
             const executionTime = Date.now() - startTime;
             console.log(`[SendEmail] ✓ Email sent to ${to}`.green);
