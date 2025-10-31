@@ -1,5 +1,6 @@
 import { EventBus } from '../../shared/queue/EventBus';
 import { WorkflowModel } from '../../core/models/WorkflowModel';
+import { Area } from '../../core/models/Area';
 import { moduleRegistry } from '../../modules/registry';
 import 'colors';
 
@@ -36,27 +37,31 @@ export class WorkflowExecutor {
 
     private async handleTriggerFired(triggerData: any): Promise<void> {
         const { areaId } = triggerData;
-        
+
         console.log(`[WorkflowExecutor] Executing workflow for AREA ${areaId}`.cyan);
-        
+
         try {
             const nodes = await this.workflowModel.getNodesByArea(areaId);
             const triggerNode = nodes.find(n => n.nodeType === 'trigger');
-            
+
             if (!triggerNode) return;
-            
+
             const connections = await this.workflowModel.getConnectionsByArea(areaId);
-            
+
             // ✨ Initialiser outputsMap avec les données du trigger
             const initialOutputs: Record<string, any> = {};
             if (triggerData.data) {
                 initialOutputs[triggerNode.id] = triggerData.data;
                 console.log(`[WorkflowExecutor] Stored trigger outputs from node ${triggerNode.id}`.blue);
             }
-            
+
             // Exécuter toutes les actions connectées au trigger
             await this.executeConnectedActions(triggerNode.id, nodes, connections, triggerData, new Set(), initialOutputs);
-            
+
+            // Mettre à jour last_triggered_at et execution_count
+            await Area.incrementExecutionCount(areaId);
+            console.log(`[WorkflowExecutor] Updated execution count for AREA ${areaId}`.green);
+
         } catch (error) {
             console.error('[WorkflowExecutor] Error:'.red, error);
         }

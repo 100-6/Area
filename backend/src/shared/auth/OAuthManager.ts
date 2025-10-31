@@ -8,6 +8,7 @@ import { DiscordProvider } from './oauth/providers/DiscordProvider';
 import { SpotifyProvider } from './oauth/providers/SpotifyProvider';
 import { RedditProvider } from './oauth/providers/RedditProvider';
 import { StravaProvider } from './oauth/providers/StravaProvider';
+import { SlackProvider } from './oauth/providers/SlackProvider';
 import { User } from '../../core/models/User';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
 
@@ -36,6 +37,7 @@ export class OAuthManager {
     private spotifyProvider: SpotifyProvider;
     private redditProvider: RedditProvider;
     private stravaProvider: StravaProvider;
+    private slackProvider: SlackProvider;
 
     constructor() {
         this.googleProvider = new GoogleProvider();
@@ -48,6 +50,7 @@ export class OAuthManager {
         this.spotifyProvider = new SpotifyProvider();
         this.redditProvider = new RedditProvider();
         this.stravaProvider = new StravaProvider();
+        this.slackProvider = new SlackProvider();
     }
 
     /**
@@ -97,6 +100,13 @@ export class OAuthManager {
      */
     getStravaAuthUrl(state?: string): string {
         return this.stravaProvider.getAuthUrl(state);
+    }
+
+    /**
+     * Generate Slack OAuth URL
+     */
+    getSlackAuthUrl(state?: string): string {
+        return this.slackProvider.getAuthUrl(state);
     }
 
     /**
@@ -180,6 +190,18 @@ export class OAuthManager {
             return await this.findOrCreateUserFromOAuth('strava', stravaProfile, authenticatedUserId);
         } catch (error) {
             throw new Error(`Strava OAuth error: ${error}`);
+        }
+    }
+
+    /**
+     * Handle Slack OAuth callback
+     */
+    async handleSlackCallback(code: string, authenticatedUserId?: string): Promise<OAuthUser> {
+        try {
+            const slackProfile = await this.slackProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('slack', slackProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Slack OAuth error: ${error}`);
         }
     }
 
