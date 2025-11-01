@@ -9,6 +9,10 @@ export default defineNuxtConfig({
   ui: {
     icons: ['heroicons', 'lucide', 'logos']
   },
+  icon: {
+    serverBundle: 'local',
+    collections: ['heroicons', 'lucide', 'logos']
+  },
   css: ['~/assets/css/main.css', '~/assets/css/transitions.css'],
   app: {
     pageTransition: {
