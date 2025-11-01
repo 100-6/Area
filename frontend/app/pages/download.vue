@@ -99,14 +99,6 @@
             <h3>Sécurisé & Privé</h3>
             <p>Vos données sont chiffrées et protégées selon les standards les plus élevés</p>
           </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">
-              <UIcon name="i-heroicons-bell" />
-            </div>
-            <h3>Notifications intelligentes</h3>
-            <p>Recevez des notifications pertinentes sur l'état de vos automatisations</p>
-          </div>
         </div>
       </div>
     </section>
@@ -214,24 +206,6 @@
           </div>
         </div>
 
-        <div class="cta-phones">
-          <div class="phone-mockup-small">
-            <div class="phone-screen-small">
-              <div class="screen-placeholder-small">
-                <UIcon name="i-heroicons-rocket-launch" class="placeholder-icon" />
-                <p>App en action</p>
-              </div>
-            </div>
-          </div>
-          <div class="phone-mockup-small">
-            <div class="phone-screen-small">
-              <div class="screen-placeholder-small">
-                <UIcon name="i-heroicons-sparkles" class="placeholder-icon" />
-                <p>Interface moderne</p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
 
@@ -257,11 +231,6 @@
             <h3>Mes données sont-elles sécurisées ?</h3>
             <p>Absolument. Nous utilisons un chiffrement de bout en bout et ne stockons jamais vos mots de passe.</p>
           </div>
-
-          <div class="faq-item">
-            <h3>Puis-je utiliser l'app hors ligne ?</h3>
-            <p>Vous pouvez consulter vos automatisations hors ligne, mais une connexion est requise pour les exécuter.</p>
-          </div>
         </div>
       </div>
     </section>
@@ -276,25 +245,60 @@ definePageMeta({
   layout: 'default'
 })
 
-const handleDownload = () => {
-  // Faux lien vers Google Play Store
-  const fakePlayStoreUrl = 'https://play.google.com/store/apps/details?id=com.area.mobile.fake'
+const config = useRuntimeConfig()
+const backendUrl = config.public.backendUrl || 'http://localhost:8080'
 
-  // Simulation d'un téléchargement
+const handleDownload = async () => {
   const toast = useToast()
-  toast.add({
-    title: 'Redirection vers Google Play',
-    description: 'Vous allez être redirigé vers le Play Store...',
-    color: 'green',
-    timeout: 3000,
-    icon: 'i-simple-icons-googleplay'
-  })
 
-  // Simuler une redirection (ne fonctionne pas vraiment)
-  setTimeout(() => {
-    console.log('Redirection simulée vers:', fakePlayStoreUrl)
-    // window.open(fakePlayStoreUrl, '_blank')
-  }, 1000)
+  try {
+    toast.add({
+      title: 'Téléchargement en cours',
+      description: 'Préparation du téléchargement de l\'APK...',
+      color: 'blue',
+      timeout: 2000,
+      icon: 'i-heroicons-arrow-down-tray'
+    })
+
+    // Appeler la route backend pour télécharger l'APK
+    const response = await fetch(`${backendUrl}/api/download/apk`)
+
+    if (!response.ok) {
+      throw new Error('Échec du téléchargement')
+    }
+
+    // Créer un blob à partir de la réponse
+    const blob = await response.blob()
+
+    // Créer un lien de téléchargement
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'area-mobile.apk'
+    document.body.appendChild(link)
+    link.click()
+
+    // Nettoyer
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    toast.add({
+      title: 'Téléchargement réussi',
+      description: 'L\'APK a été téléchargé avec succès',
+      color: 'green',
+      timeout: 3000,
+      icon: 'i-heroicons-check-circle'
+    })
+  } catch (error) {
+    console.error('Erreur lors du téléchargement:', error)
+    toast.add({
+      title: 'Erreur',
+      description: 'Impossible de télécharger l\'APK. Veuillez réessayer.',
+      color: 'red',
+      timeout: 3000,
+      icon: 'i-heroicons-exclamation-circle'
+    })
+  }
 }
 
 useHead({
@@ -682,51 +686,6 @@ useHead({
   color: var(--color-primary);
 }
 
-.cta-phones {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-}
-
-.phone-mockup-small {
-  width: 150px;
-  height: 300px;
-  background: #1a1a1a;
-  border-radius: 20px;
-  padding: 6px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-}
-
-.phone-screen-small {
-  width: 100%;
-  height: 100%;
-  background: var(--bg-card);
-  border-radius: 15px;
-  overflow: hidden;
-}
-
-.screen-placeholder-small {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border: 1px dashed var(--border-color);
-}
-
-.placeholder-icon {
-  width: 2rem;
-  height: 2rem;
-  color: var(--color-primary);
-  margin-bottom: 0.5rem;
-}
-
-.screen-placeholder-small p {
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  text-align: center;
-}
-
 /* FAQ Section */
 .faq-section {
   padding: 5rem 0;
@@ -786,11 +745,6 @@ useHead({
 
   .cta-title {
     font-size: 2rem;
-  }
-
-  .cta-phones {
-    flex-direction: column;
-    align-items: center;
   }
 }
 
