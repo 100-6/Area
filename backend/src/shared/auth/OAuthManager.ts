@@ -7,6 +7,7 @@ import { DropboxProvider } from './oauth/providers/DropboxProvider';
 import { DiscordProvider } from './oauth/providers/DiscordProvider';
 import { SpotifyProvider } from './oauth/providers/SpotifyProvider';
 import { RedditProvider } from './oauth/providers/RedditProvider';
+import { TrelloProvider } from './oauth/providers/TrelloProvider';
 import { StravaProvider } from './oauth/providers/StravaProvider';
 import { SlackProvider } from './oauth/providers/SlackProvider';
 import { BitlyProvider } from './oauth/providers/BitlyProvider';
@@ -38,6 +39,7 @@ export class OAuthManager {
     private discordProvider: DiscordProvider;
     private spotifyProvider: SpotifyProvider;
     private redditProvider: RedditProvider;
+    private trelloProvider: TrelloProvider;
     private stravaProvider: StravaProvider;
     private slackProvider: SlackProvider;
     private bitlyProvider: BitlyProvider;
@@ -53,6 +55,7 @@ export class OAuthManager {
         this.discordProvider = new DiscordProvider();
         this.spotifyProvider = new SpotifyProvider();
         this.redditProvider = new RedditProvider();
+        this.trelloProvider = new TrelloProvider();
         this.stravaProvider = new StravaProvider();
         this.slackProvider = new SlackProvider();
         this.bitlyProvider = new BitlyProvider();
@@ -102,6 +105,13 @@ export class OAuthManager {
     }
 
     /**
+     * Generate Trello OAuth URL
+     */
+    getTrelloAuthUrl(state?: string): string {
+        return this.trelloProvider.getAuthUrl(state);
+    }
+
+    /**
      * Generate Strava OAuth URL
      */
     getStravaAuthUrl(state?: string): string {
@@ -114,6 +124,7 @@ export class OAuthManager {
     getSlackAuthUrl(state?: string): string {
         return this.slackProvider.getAuthUrl(state);
     }
+
     /**
      * Generate Bitly OAuth URL
      */
@@ -201,6 +212,19 @@ export class OAuthManager {
     }
 
     /**
+     * Handle Trello OAuth callback
+     * Note: Trello uses token instead of code
+     */
+    async handleTrelloCallback(token: string, authenticatedUserId?: string): Promise<OAuthUser> {
+        try {
+            const trelloProfile = await this.trelloProvider.handleCallback(token);
+            return await this.findOrCreateUserFromOAuth('trello', trelloProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Trello OAuth error: ${error}`);
+        }
+    }
+
+    /**
      * Handle Strava OAuth callback
      */
     async handleStravaCallback(code: string, authenticatedUserId?: string, scope?: string): Promise<OAuthUser> {
@@ -213,7 +237,6 @@ export class OAuthManager {
     }
 
     /**
-<<<<<<< HEAD
      * Handle Slack OAuth callback
      */
     async handleSlackCallback(code: string, authenticatedUserId?: string): Promise<OAuthUser> {
@@ -224,6 +247,7 @@ export class OAuthManager {
             throw new Error(`Slack OAuth error: ${error}`);
         }
     }
+
     /**
      * Handle Bitly OAuth callback
      */
@@ -337,6 +361,13 @@ export class OAuthManager {
     }
 
     /**
+     * Check if Trello OAuth is configured
+     */
+    isTrelloConfigured(): boolean {
+        return this.trelloProvider.isConfigured();
+    }
+
+    /**
      * Check if Strava OAuth is configured
      */
     isStravaConfigured(): boolean {
@@ -366,6 +397,7 @@ export class OAuthManager {
         outlook: { isConfigured: boolean; status: any };
         discord: { isConfigured: boolean; status: any };
         spotify: { isConfigured: boolean; status: any };
+        trello: { isConfigured: boolean; status: any };
         bitly: { isConfigured: boolean; status: any };
         twitch: { isConfigured: boolean; status: any };
     } {
@@ -389,6 +421,10 @@ export class OAuthManager {
             spotify: {
                 isConfigured: this.spotifyProvider.isConfigured(),
                 status: this.spotifyProvider.getConfigStatus()
+            },
+            trello: {
+                isConfigured: this.trelloProvider.isConfigured(),
+                status: this.trelloProvider.getConfigStatus()
             },
             bitly: {
                 isConfigured: this.bitlyProvider.isConfigured(),
@@ -529,6 +565,13 @@ export class OAuthManager {
      */
     isDropboxConfigured(): boolean {
         return !!(process.env.DROPBOX_CLIENT_ID && process.env.DROPBOX_CLIENT_SECRET);
+    }
+
+    /**
+     * Get Trello provider instance (for module usage)
+     */
+    getTrelloProvider(): TrelloProvider {
+        return this.trelloProvider;
     }
 
 }

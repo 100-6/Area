@@ -26,6 +26,10 @@ router.get('/gitlab/callback', authController.gitLabCallback);
 router.get('/dropbox', authController.dropboxLogin);
 router.get('/dropbox/callback', authController.dropboxCallback);
 
+router.get('/trello', authController.trelloLogin);
+router.get('/trello/callback', authController.trelloCallback);
+router.post('/trello/process', authController.trelloProcess);
+
 router.get('/twitch', authController.twitchLogin);
 router.get('/twitch/callback', authController.twitchCallback);
 

@@ -543,6 +543,59 @@ class AuthService {
     }
 
     /**
+     * Obtenir l'URL d'authentification Trello
+     */
+    getTrelloAuthUrl(state?: string): string {
+        if (!this.oauthManager.isTrelloConfigured())
+            throw new Error('TRELLO_OAUTH_NOT_CONFIGURED');
+        return this.oauthManager.getTrelloAuthUrl(state);
+    }
+
+    /**
+     * Gérer le callback Trello OAuth
+     * @param token - OAuth token (Trello uses token instead of code)
+     * @param authenticatedUserId - Optional user ID if already authenticated (for linking accounts)
+     */
+    async handleTrelloCallback(token: string, authenticatedUserId?: string): Promise<AuthResult> {
+        try {
+            const user = await this.oauthManager.handleTrelloCallback(token, authenticatedUserId);
+
+            if (!user || !user.id || !user.email)
+                throw new Error('INVALID_OAUTH_USER_DATA');
+            if (!user.is_active)
+                throw new Error('ACCOUNT_INACTIVE');
+            const accessToken = this.jwtManager.generateToken({ userId: user.id, email: user.email });
+            const refreshToken = this.jwtManager.generateRefreshToken({ userId: user.id, email: user.email });
+            const refreshExpiry = this.jwtManager.getTokenExpiry(refreshToken) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            await UserSession.create(user.id, refreshToken, refreshExpiry);
+            console.log(`SUCCESS: Trello OAuth login: ${user.email} (ID: ${user.id})`.green);
+            return {
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.first_name || '',
+                    lastName: user.last_name || '',
+                    createdAt: user.created_at
+                },
+                token: accessToken,
+                refreshToken
+            };
+        } catch (error) {
+            console.error('Trello OAuth callback error:'.red, error);
+            if (error instanceof Error)
+                throw error;
+            throw new Error('OAUTH_CALLBACK_FAILED');
+        }
+    }
+
+    /**
+     * Vérifier si Trello OAuth est configuré
+     */
+    isTrelloConfigured(): boolean {
+        return this.oauthManager.isTrelloConfigured();
+    }
+
+    /**
      * Obtenir l'URL d'authentification Spotify
      */
     getSpotifyAuthUrl(state?: string): string {
