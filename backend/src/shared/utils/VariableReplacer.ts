@@ -92,15 +92,8 @@ export class VariableReplacer {
         if (context.previousOutputs) {
             for (const nodeId in context.previousOutputs) {
                 const nodeOutput = context.previousOutputs[nodeId];
-                    if (
-                        nodeOutput.data &&
-                        typeof nodeOutput.data === 'object' &&
-                        !Array.isArray(nodeOutput.data) &&
-                        nodeOutput.data !== null
-                    )
-                        Object.assign(data, nodeOutput.data);
-                    if (nodeOutput.data && typeof nodeOutput.data === 'object')
-                        Object.assign(data, nodeOutput.data);
+                if (nodeOutput && typeof nodeOutput === 'object')
+                    Object.assign(data, nodeOutput);
             }
         }
         if (context.triggerData)

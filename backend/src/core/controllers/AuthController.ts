@@ -543,6 +543,246 @@ export class AuthController {
     };
 
     /**
+     * Initiate Trello OAuth
+     * GET /api/auth/trello
+     */
+    public trelloLogin = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const token = req.query.token as string | undefined;
+            const isMobile = this.isMobileRequest(req);
+            let state: string | undefined;
+
+            if (token || isMobile) {
+                const stateData = { token, isMobile };
+                state = Buffer.from(JSON.stringify(stateData)).toString('base64');
+            }
+            const authUrl = this.authService.getTrelloAuthUrl(state);
+            res.redirect(authUrl);
+        } catch (error) {
+            console.error('Trello OAuth redirect error:'.red, error);
+            if (error instanceof Error && error.message === 'TRELLO_OAUTH_NOT_CONFIGURED')
+                res.status(500).json({ error: 'Trello OAuth not configured' });
+            else
+                res.status(500).json({ error: 'Failed to initiate Trello OAuth' });
+        }
+    };
+
+    /**
+     * Handle Trello OAuth callback
+     * GET /api/auth/trello/callback
+     * Note: Trello uses hash fragment (#token=...) instead of query parameters
+     * This endpoint serves an HTML page to extract the token from the hash
+     */
+    public trelloCallback = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { state } = req.query;
+            let stateData: { token?: string; isMobile?: boolean } = {};
+
+            if (state && typeof state === 'string') {
+                try {
+                    stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+                } catch (e) {
+                    console.warn('Failed to parse state:', e);
+                }
+            }
+            const isMobile = stateData.isMobile || this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
+            const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+            // Send HTML page that will extract token from hash and redirect
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:;");
+            res.send(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trello Authentication</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #f5f5f5; }
+        .container { max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .status { margin: 20px 0; font-size: 16px; }
+        .error { color: #d32f2f; }
+        .success { color: #388e3c; }
+        .debug { margin-top: 20px; padding: 10px; background: #f0f0f0; font-size: 12px; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Trello Authentication</h2>
+        <div class="status" id="status">Processing authentication...</div>
+        <div class="debug" id="debug"></div>
+    </div>
+    <script type="text/javascript">
+        (function() {
+            var statusEl = document.getElementById('status');
+            var debugEl = document.getElementById('debug');
+            
+            function debug(msg) {
+                console.log(msg);
+                debugEl.innerHTML += msg + '<br>';
+            }
+            
+            try {
+                debug('Page loaded');
+                debug('Full URL: ' + window.location.href);
+                
+                var hash = window.location.hash.substring(1);
+                debug('Hash: ' + hash);
+                
+                var params = new URLSearchParams(hash);
+                var token = params.get('token');
+                debug('Token: ' + (token ? token.substring(0, 20) + '...' : 'null'));
+                
+                if (!token) {
+                    statusEl.textContent = 'Error: Token missing from URL';
+                    statusEl.className = 'status error';
+                    setTimeout(function() {
+                        window.location.href = '${redirectUrl}/auth/error?message=' + encodeURIComponent('Token missing');
+                    }, 2000);
+                    return;
+                }
+                
+                statusEl.textContent = 'Token received, validating...';
+                
+                var processUrl = '/api/auth/trello/process';
+                debug('POST URL: ' + processUrl);
+                
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', processUrl, true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                
+                xhr.onload = function() {
+                    debug('Response status: ' + xhr.status);
+                    debug('Response text: ' + xhr.responseText.substring(0, 100));
+                    
+                    if (xhr.status === 200) {
+                        try {
+                            var data = JSON.parse(xhr.responseText);
+                            if (data.success) {
+                                statusEl.textContent = 'Success! Redirecting...';
+                                statusEl.className = 'status success';
+                                var redirectTarget = data.isAuthenticated 
+                                    ? '${redirectUrl}/service/success?service=trello'
+                                    : '${redirectUrl}/auth/success?token=' + data.token + '&provider=trello&refresh=' + data.refreshToken;
+                                debug('Redirecting to: ' + redirectTarget);
+                                setTimeout(function() {
+                                    window.location.href = redirectTarget;
+                                }, 1000);
+                            } else {
+                                statusEl.textContent = 'Error: ' + (data.error || 'Authentication failed');
+                                statusEl.className = 'status error';
+                                debug('Auth error: ' + (data.error || 'unknown'));
+                                setTimeout(function() {
+                                    window.location.href = '${redirectUrl}/auth/error?message=' + encodeURIComponent(data.error || 'Authentication failed');
+                                }, 2000);
+                            }
+                        } catch (e) {
+                            debug('JSON parse error: ' + e.message);
+                            statusEl.textContent = 'Error parsing response';
+                            statusEl.className = 'status error';
+                        }
+                    } else {
+                        statusEl.textContent = 'Server error: ' + xhr.status;
+                        statusEl.className = 'status error';
+                        setTimeout(function() {
+                            window.location.href = '${redirectUrl}/auth/error?message=' + encodeURIComponent('Server error');
+                        }, 2000);
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    debug('XHR error event fired');
+                    debug('XHR status: ' + xhr.status);
+                    debug('XHR readyState: ' + xhr.readyState);
+                    statusEl.textContent = 'Network error occurred';
+                    statusEl.className = 'status error';
+                    setTimeout(function() {
+                        window.location.href = '${redirectUrl}/auth/error?message=' + encodeURIComponent('Network error');
+                    }, 3000);
+                };
+                
+                var payload = JSON.stringify({ 
+                    token: token,
+                    state: '${state || ''}'
+                });
+                debug('Sending payload: ' + payload.substring(0, 100));
+                xhr.send(payload);
+                
+            } catch (err) {
+                debug('Exception: ' + err.message);
+                statusEl.textContent = 'Error: ' + err.message;
+                statusEl.className = 'status error';
+            }
+        })();
+    </script>
+</body>
+</html>`);
+        } catch (error) {
+            console.error('Trello OAuth callback error:'.red, error);
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
+            res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Authentication failed')}`);
+        }
+    };
+
+    /**
+     * Process Trello token (called from callback HTML page)
+     * POST /api/auth/trello/process
+     */
+    public trelloProcess = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { token, state } = req.body;
+            let stateData: { token?: string; isMobile?: boolean } = {};
+
+            if (state && typeof state === 'string') {
+                try {
+                    stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+                } catch (e) {
+                    console.warn('Failed to parse state:', e);
+                }
+            }
+
+            if (!token) {
+                res.json({ success: false, error: 'Token missing' });
+                return;
+            }
+
+            const isAlreadyAuthenticated = await this.authService.verifyJWT(stateData.token);
+            if (isAlreadyAuthenticated) {
+                const decoded = await this.authService.verifyToken(stateData.token as string);
+                await this.authService.handleTrelloCallback(token, decoded.userId);
+                res.json({ success: true, isAuthenticated: true });
+            } else {
+                const result = await this.authService.handleTrelloCallback(token);
+                res.json({ 
+                    success: true, 
+                    isAuthenticated: false,
+                    token: result.token, 
+                    refreshToken: result.refreshToken 
+                });
+            }
+        } catch (error) {
+            console.error('Trello OAuth process error:'.red, error);
+            let errorMessage = 'Authentication failed';
+            if (error instanceof Error) {
+                switch (error.message) {
+                    case 'INVALID_OAUTH_USER_DATA':
+                        errorMessage = 'Invalid user data received';
+                        break;
+                    case 'ACCOUNT_INACTIVE':
+                        errorMessage = 'Account is inactive';
+                        break;
+                    case 'OAUTH_CALLBACK_FAILED':
+                        errorMessage = 'OAuth authentication failed';
+                        break;
+                }
+            }
+            res.json({ success: false, error: errorMessage });
+        }
+    };
+
+    /**
      * Initiate Twitch OAuth
      * GET /api/auth/twitch
      */
