@@ -10,8 +10,13 @@ export default defineNuxtConfig({
     icons: ['heroicons', 'lucide', 'logos']
   },
   icon: {
-    serverBundle: 'local',
-    collections: ['heroicons', 'lucide', 'logos']
+    serverBundle: {
+      collections: ['heroicons', 'lucide', 'logos']
+    },
+    clientBundle: {
+      scan: true,
+      sizeLimitKb: 512
+    }
   },
   css: ['~/assets/css/main.css', '~/assets/css/transitions.css'],
   app: {
