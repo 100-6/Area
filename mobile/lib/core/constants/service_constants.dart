@@ -31,8 +31,14 @@ class ServiceConstants {
         return 'https://static-00.iconduck.com/assets.00/openai-icon-2021x2048-4rpe5x7n.png';
       case 'telegram':
         return 'https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg';
+      case 'slack':
+        return 'https://cdn.worldvectorlogo.com/logos/slack-new-logo.svg';
       case 'bitly':
         return 'https://cdn.iconscout.com/icon/free/png-256/free-bitly-5542272-4618164.png';
+      case 'trello':
+        return 'https://a.trello.services/prgb/dist/images/apple-touch-icon-152x152.4a0bb8a24ff2b2b8.png';
+      case 'twitch':
+        return 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIZIRMX5-Or4ggVfjID7HhXrLzrdeOJ3kkUQ&s';
       case 'ntfy':
         return 'https://assets.streamlinehq.com/image/private/w_300,h_300,ar_1/f_auto/v1/icons/logos/ntfy-atckcjo7xgwkpk7pyxqer.png/ntfy-dcq5om2vab62rm4qrck56n.png?_a=DATAg1AAZAA0';
       default:
@@ -98,6 +104,14 @@ class ServiceConstants {
       // Services OAuth2 - URL Shorteners
       case 'bitly':
         return const Color(0xFFEE6123); // Orange Bitly
+
+      // Services OAuth2 - Productivité
+      case 'trello':
+        return const Color(0xFF0079BF); // Bleu Trello
+
+      // Services OAuth2 - Streaming
+      case 'twitch':
+        return const Color(0xFF9146FF); // Violet Twitch
 
       // Services sans auth - Notifications
       case 'ntfy':
@@ -167,6 +181,14 @@ class ServiceConstants {
       // Services OAuth2 - URL Shorteners
       case 'bitly':
         return Icons.link_rounded;
+
+      // Services OAuth2 - Productivité
+      case 'trello':
+        return Icons.dashboard_rounded;
+
+      // Services OAuth2 - Streaming
+      case 'twitch':
+        return Icons.videocam_rounded;
 
       // Services sans auth - Notifications
       case 'ntfy':
