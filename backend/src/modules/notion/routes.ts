@@ -2,13 +2,35 @@ import { Router, Request, Response } from 'express';
 import { requireAuth } from '../../core/middleware/auth';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
 import { NotionApiService } from './NotionApiService';
+import { NotionOAuthController } from './NotionOAuthController';
 
 /**
  * Routes Notion
  * Prefix: /api/notion
  */
 const router = Router();
+const oauthController = new NotionOAuthController();
 
+/**
+ * PUBLIC OAuth routes (no auth required)
+ */
+
+/**
+ * GET /api/notion/authorize
+ * Initiate Notion OAuth flow
+ * Query params: userId (required)
+ */
+router.get('/authorize', oauthController.authorize);
+
+/**
+ * GET /api/notion/callback
+ * Handle Notion OAuth callback
+ */
+router.get('/callback', oauthController.callback);
+
+/**
+ * Protected routes (require auth)
+ */
 router.use(requireAuth);
 
 /**
