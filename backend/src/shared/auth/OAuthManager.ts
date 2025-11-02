@@ -12,6 +12,7 @@ import { StravaProvider } from './oauth/providers/StravaProvider';
 import { SlackProvider } from './oauth/providers/SlackProvider';
 import { BitlyProvider } from './oauth/providers/BitlyProvider';
 import { TwitchProvider } from './oauth/providers/TwitchProvider';
+import { NotionProvider } from './oauth/providers/NotionProvider';
 import { User } from '../../core/models/User';
 import { UserAuthProvider } from '../../core/models/UserAuthProvider';
 
@@ -44,6 +45,7 @@ export class OAuthManager {
     private slackProvider: SlackProvider;
     private bitlyProvider: BitlyProvider;
     private twitchProvider: TwitchProvider;
+    private notionProvider: NotionProvider;
 
     constructor() {
         this.googleProvider = new GoogleProvider();
@@ -60,6 +62,7 @@ export class OAuthManager {
         this.slackProvider = new SlackProvider();
         this.bitlyProvider = new BitlyProvider();
         this.twitchProvider = new TwitchProvider();
+        this.notionProvider = new NotionProvider();
     }
 
     /**
@@ -137,6 +140,13 @@ export class OAuthManager {
      */
     getTwitchAuthUrl(state?: string): string {
         return this.twitchProvider.getAuthUrl(state);
+    }
+
+    /**
+     * Generate Notion OAuth URL
+     */
+    getNotionAuthUrl(state?: string): string {
+        return this.notionProvider.getAuthUrl(state);
     }
 
     /**
@@ -273,6 +283,18 @@ export class OAuthManager {
     }
 
     /**
+     * Handle Notion OAuth callback
+     */
+    async handleNotionCallback(code: string, authenticatedUserId?: string): Promise<OAuthUser> {
+        try {
+            const notionProfile = await this.notionProvider.handleCallback(code);
+            return await this.findOrCreateUserFromOAuth('notion', notionProfile, authenticatedUserId);
+        } catch (error) {
+            throw new Error(`Notion OAuth error: ${error}`);
+        }
+    }
+
+    /**
      * Find or create user from OAuth profile (refactorisé pour être réutilisé)
      * @param provider - OAuth provider name (e.g., 'google', 'discord')
      * @param oauthProfile - OAuth profile data
@@ -389,6 +411,13 @@ export class OAuthManager {
     }
 
     /**
+     * Check if Notion OAuth is configured
+     */
+    isNotionConfigured(): boolean {
+        return this.notionProvider.isConfigured();
+    }
+
+    /**
      * Get all OAuth providers status
      */
     getProvidersStatus(): {
@@ -400,6 +429,7 @@ export class OAuthManager {
         trello: { isConfigured: boolean; status: any };
         bitly: { isConfigured: boolean; status: any };
         twitch: { isConfigured: boolean; status: any };
+        notion: { isConfigured: boolean; status: any };
     } {
         return {
             google: {
@@ -433,6 +463,10 @@ export class OAuthManager {
             twitch: {
                 isConfigured: this.twitchProvider.isConfigured(),
                 status: this.twitchProvider.getConfigStatus()
+            },
+            notion: {
+                isConfigured: this.notionProvider.isConfigured(),
+                status: this.notionProvider.getConfigStatus()
             }
         };
     }
@@ -572,6 +606,13 @@ export class OAuthManager {
      */
     getTrelloProvider(): TrelloProvider {
         return this.trelloProvider;
+    }
+
+    /**
+     * Get Notion provider instance (for module usage)
+     */
+    getNotionProvider(): NotionProvider {
+        return this.notionProvider;
     }
 
 }
