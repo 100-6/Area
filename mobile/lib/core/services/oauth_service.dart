@@ -139,9 +139,18 @@ class OAuthService {
     if (service == 'bitly') {
       return '$baseUrl/api/bitly/connect';
     }
+    if (service == 'twitch') {
+      return '$baseUrl/api/twitch/connect';
+    }
+    if (service == 'trello') {
+      return '$baseUrl/api/trello/connect';
+    }
+    if (service == 'notion') {
+      return '$baseUrl/api/notion/connect';
+    }
 
     // Réutilise les routes OAuth existantes pour les autres services
-    // (Discord, GitHub, GitLab, Dropbox, Google, Telegram, Trello, Twitch)
+    // (Discord, GitHub, GitLab, Dropbox, Google, Telegram)
     return '$baseUrl/api/auth/$service';
   }
 

@@ -142,7 +142,8 @@ export const useAuth = () => {
       outlook: '/api/outlook/connect',
       trello: '/api/trello/connect',
       slack: '/api/slack/connect',
-      twitch: '/api/twitch/connect'
+      twitch: '/api/twitch/connect',
+      notion: '/api/notion/connect'
     }
 
     return specialRoutes[provider] || `/api/auth/${provider}`
@@ -264,6 +265,33 @@ export const useAuth = () => {
     }
   }
 
+  const deleteAccount = async (): Promise<void> => {
+    if (!authToken.value) {
+      throw new Error('Non authentifié')
+    }
+
+    try {
+      const response = await $fetch<{ success: boolean, message: string }>('/api/users/me', {
+        method: 'DELETE',
+        baseURL: backendUrl,
+        headers: {
+          'Authorization': `Bearer ${authToken.value}`
+        }
+      })
+
+      if (response.success) {
+        // Clear auth and redirect to login
+        clearAuth()
+        await navigateTo('/login')
+      } else {
+        throw new Error(response.message || 'Échec de la suppression du compte')
+      }
+    } catch (error: any) {
+      console.error('Delete account error:', error)
+      throw new Error(getErrorMessage(error))
+    }
+  }
+
   return {
     user: readonly(user),
     isLoggedIn,
@@ -278,6 +306,7 @@ export const useAuth = () => {
     initAuth,
     clearAuth,
     updateProfile,
-    changePassword
+    changePassword,
+    deleteAccount
   }
 }

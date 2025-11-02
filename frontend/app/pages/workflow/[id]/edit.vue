@@ -306,7 +306,7 @@
 import type { AreaData, BackendWorkflow, Service, ServiceConfiguration } from '~/types'
 
 definePageMeta({
-  middleware: 'auth',
+  middleware: 'workflow-auth',
   layout: 'default'
 })
 

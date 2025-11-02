@@ -29,24 +29,20 @@ export class TrelloController {
                 error.statusCode = 401;
                 return next(error);
             }
-
             const trelloAuth = await UserAuthProvider.findByUserAndProvider(userId, 'trello');
             if (!trelloAuth || !trelloAuth.access_token) {
                 const error = new Error('Trello not connected') as CustomError;
                 error.statusCode = 400;
                 return next(error);
             }
-
             const apiKey = process.env.TRELLO_API_KEY;
             if (!apiKey) {
                 const error = new Error('TRELLO_API_KEY not configured') as CustomError;
                 error.statusCode = 500;
                 return next(error);
             }
-
             const apiService = trelloModule.getApiService();
             const boards = await apiService.getBoards(apiKey, trelloAuth.access_token);
-
             res.json({
                 success: true,
                 count: boards.length,
@@ -72,24 +68,20 @@ export class TrelloController {
                 error.statusCode = 401;
                 return next(error);
             }
-
             const trelloAuth = await UserAuthProvider.findByUserAndProvider(userId, 'trello');
             if (!trelloAuth || !trelloAuth.access_token) {
                 const error = new Error('Trello not connected') as CustomError;
                 error.statusCode = 400;
                 return next(error);
             }
-
             const apiKey = process.env.TRELLO_API_KEY;
             if (!apiKey) {
                 const error = new Error('TRELLO_API_KEY not configured') as CustomError;
                 error.statusCode = 500;
                 return next(error);
             }
-
             const apiService = trelloModule.getApiService();
             const board = await apiService.getBoard(boardId, apiKey, trelloAuth.access_token);
-
             res.json({
                 success: true,
                 board
@@ -100,48 +92,6 @@ export class TrelloController {
         }
     });
 
-    /**
-     * GET /api/trello/connect
-     * Vérifie la connexion Trello de l'utilisateur
-     */
-    public getConnection = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-        try {
-            const userId = req.user?.id;
-
-            if (!userId) {
-                const error = new Error('User not authenticated') as CustomError;
-                error.statusCode = 401;
-                return next(error);
-            }
-
-            const trelloAuth = await UserAuthProvider.findByUserAndProvider(userId, 'trello');
-            if (!trelloAuth || !trelloAuth.access_token) {
-                res.json({
-                    connected: false,
-                    message: 'Trello not connected'
-                });
-                return;
-            }
-
-            const apiKey = process.env.TRELLO_API_KEY;
-            if (!apiKey) {
-                const error = new Error('TRELLO_API_KEY not configured') as CustomError;
-                error.statusCode = 500;
-                return next(error);
-            }
-
-            const apiService = trelloModule.getApiService();
-            const isValid = await apiService.verifyConnection(apiKey, trelloAuth.access_token);
-
-            res.json({
-                connected: isValid,
-                message: isValid ? 'Trello connected' : 'Trello connection invalid'
-            });
-        } catch (error: any) {
-            console.error('[Trello] Error verifying connection:', error);
-            next(error);
-        }
-    });
 }
 
 export default TrelloController;

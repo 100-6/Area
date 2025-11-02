@@ -3,6 +3,8 @@
     v-model:open="isOpen"
     :prevent-close="false"
     @close="closeModal"
+    :title="`Configurer ${service.name}`"
+    :description="service.description"
     :ui="{
       content: 'fixed bg-white divide-y divide-gray-200 flex flex-col focus:outline-none border-0 ring-0 shadow-xl',
       overlay: 'fixed inset-0 bg-gray-900/50',

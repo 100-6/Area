@@ -2,8 +2,8 @@ export default {
     name: 'applemusic',
     displayName: 'Apple Music',
     description: 'Search the Apple Music / iTunes catalog for songs, albums and artists',
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/13/13973.png',
-    color: '#FA2C55',
+    iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg',
+    color: '#000000',
     authType: 'none',
     isActive: true,
 

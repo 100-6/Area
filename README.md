@@ -31,6 +31,7 @@
 - [Available Services](#available-services)
 - [API Documentation](#api-documentation)
 - [Diagrams](#diagrams)
+- [User Guide](#user-guide)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -893,6 +894,120 @@ graph TB
     Providers -->|HTTP REST| Routes
     DeepLink -.->|OAuth Callback| Routes
 ```
+
+---
+
+## User Guide
+
+### Complete User Journey
+
+This diagram shows the complete user journey through the AREA platform, from initial authentication to creating and managing workflows.
+
+```mermaid
+graph LR
+    Start([User arrives on AREA]) --> Login{Already registered?}
+
+    Login -->|No| Register[Register Page]
+    Login -->|Yes| LoginPage[Login Page]
+
+    Register --> RegChoice{Registration method?}
+    RegChoice -->|Email/Password| EmailReg[Fill registration form]
+    RegChoice -->|OAuth| OAuthReg[Choose provider:<br/>Google, GitHub, Discord, etc.]
+
+    EmailReg --> Dashboard
+    OAuthReg --> OAuthAuth[Authorize on provider]
+    OAuthAuth --> Dashboard
+
+    LoginPage --> LoginChoice{Login method?}
+    LoginChoice -->|Email/Password| EmailLogin[Enter credentials]
+    LoginChoice -->|OAuth| OAuthLogin[Choose provider]
+
+    EmailLogin --> Dashboard[Dashboard]
+    OAuthLogin --> OAuthAuth2[Authorize on provider]
+    OAuthAuth2 --> Dashboard
+
+    Dashboard --> DashChoice{What to do?}
+
+    DashChoice -->|Create workflow| CreateWorkflow[Create new AREA]
+    DashChoice -->|View workflows| ViewWorkflows[View all workflows]
+    DashChoice -->|Connect services| ConnectServices[Go to Profile]
+    DashChoice -->|Manage profile| Profile[Profile Page]
+    DashChoice -->|Download app| Download[Download APK]
+
+    CreateWorkflow --> SelectTrigger[Select Trigger<br/>Service + Event]
+    SelectTrigger --> ConfigTrigger[Configure trigger<br/>parameters]
+    ConfigTrigger --> SelectAction[Select Action<br/>Service + Action]
+    SelectAction --> ConfigAction[Configure action<br/>Use variables from trigger]
+    ConfigAction --> SaveWorkflow[Save & Activate]
+    SaveWorkflow --> Dashboard
+
+    ViewWorkflows --> WorkflowActions{Action?}
+    WorkflowActions -->|Edit| EditWorkflow[Edit workflow]
+    WorkflowActions -->|Activate/Deactivate| ToggleWorkflow[Toggle status]
+    WorkflowActions -->|View history| ViewHistory[Execution history]
+    WorkflowActions -->|Delete| DeleteWorkflow[Delete workflow]
+
+    EditWorkflow --> Dashboard
+    ToggleWorkflow --> Dashboard
+    ViewHistory --> Dashboard
+    DeleteWorkflow --> Dashboard
+
+    ConnectServices --> Profile
+    Profile --> ProfileChoice{What to manage?}
+
+    ProfileChoice -->|Edit info| EditProfile[Edit username/email]
+    ProfileChoice -->|Change password| ChangePassword[Change password]
+    ProfileChoice -->|Connect services| LinkService[Link OAuth service]
+    ProfileChoice -->|Disconnect services| UnlinkService[Disconnect service]
+    ProfileChoice -->|Delete account| DeleteAccount[Delete account]
+
+    EditProfile --> Profile
+    ChangePassword --> Profile
+    LinkService --> OAuthLink[Authorize service]
+    OAuthLink --> Profile
+    UnlinkService --> Profile
+    DeleteAccount --> Confirmation[Type SUPPRIMER]
+    Confirmation --> Logout[Logout & redirect]
+
+    Download --> DownloadAPK[Download Android APK]
+    DownloadAPK --> Dashboard
+
+    Profile --> Dashboard
+```
+
+### Key Features Explained
+
+#### 1. Authentication
+- **Email/Password**: Traditional registration with email verification
+- **OAuth Providers**: One-click sign-up with Google, GitHub, Discord, and more
+- **Secure**: JWT tokens with automatic refresh
+
+#### 2. Dashboard
+- **Workflow Overview**: See all your active and inactive workflows
+- **Quick Actions**: Create, edit, activate/deactivate workflows
+- **Execution History**: Monitor workflow runs and debug issues
+
+#### 3. Workflow Creation
+- **Trigger Selection**: Choose from 50+ triggers across 26 services
+- **Action Configuration**: Set up automated actions with dynamic parameters
+- **Variable System**: Use data from triggers in your actions (e.g., `{{author.username}}`)
+- **Visual Editor**: Drag-and-drop interface on web, simplified list on mobile
+
+#### 4. Service Management
+- **OAuth Integration**: Securely connect your accounts
+- **Multi-Service Support**: Link multiple services to create complex automations
+- **Easy Disconnection**: Revoke access anytime from your profile
+
+#### 5. Profile Management
+- **Edit Information**: Update username, email, and avatar
+- **Password Change**: Secure password update with current password verification
+- **Connected Services**: View and manage all linked OAuth accounts
+- **Account Deletion**: Permanently delete your account with confirmation
+
+#### 6. Mobile App
+- **Android APK**: Download the mobile app directly from the platform
+- **Full Features**: All web features available on mobile
+- **Deep Linking**: OAuth callbacks work seamlessly with the mobile app
 
 ---
 
