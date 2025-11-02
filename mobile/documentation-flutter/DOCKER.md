@@ -1,393 +1,596 @@
-# 🐳 Guide Docker pour l'Application Mobile Flutter (APK uniquement)
+# Docker Development Guide
 
-## 📋 Vue d'ensemble
-
-Le Dockerfile permet de **construire des APK Android** de manière reproductible et isolée, sans avoir besoin d'installer Flutter ou le SDK Android sur votre machine.
-
----
-
-## 🏗️ Architecture du Dockerfile
-
-```
-┌─────────────────────┐
-│  flutter-base       │  ← Ubuntu + Flutter + Android SDK
-└──────────┬──────────┘
-           │
-           ▼
-    ┌──────────┐
-    │  build   │  ← Compilation de l'APK
-    └─────┬────┘
-          │
-          ▼
-    ┌──────────┐
-    │  export  │  ← Export de l'APK (image légère)
-    └──────────┘
-```
-
-### Stages disponibles
-
-1. **flutter-base** (~4-5 GB)
-   - Ubuntu 22.04
-   - Flutter 3.24.3
-   - Android SDK 33
-   - Java 11
-
-2. **build** (~4-5 GB)
-   - Compilation de l'APK en mode release
-   - Optimisations activées
-
-3. **export** (~100 MB)
-   - Image légère Alpine
-   - Contient uniquement l'APK final
+**Version:** 1.0.0
+**Last Updated:** 2025-01-02
 
 ---
 
-## 🚀 Utilisation
+## Table of Contents
 
-### Option 1 : Build direct avec Docker Compose (Recommandé)
+1. [Overview](#overview)
+2. [Prerequisites](#prerequisites)
+3. [Development Setup](#development-setup)
+4. [Running the Backend](#running-the-backend)
+5. [Mobile Development with Docker](#mobile-development-with-docker)
+6. [Common Commands](#common-commands)
+7. [Troubleshooting](#troubleshooting)
 
-```bash
-# Build de l'APK
-docker compose --profile mobile build mobile-apk-builder
-docker compose --profile mobile run --rm mobile-apk-builder
+---
 
-# Récupérer l'APK
-docker cp area_mobile_apk_builder:/app/build/app/outputs/flutter-apk/app-release.apk ./app-release.apk
+## Overview
+
+The Mirror Area project uses Docker to provide a consistent development environment for the backend services. The mobile application connects to the backend API running in Docker containers.
+
+### Architecture
+
 ```
-
-### Option 2 : Avec le service d'export
-
-```bash
-# Build et export
-docker compose --profile mobile up -d mobile-apk-export
-
-# L'APK est disponible dans le volume
-docker cp area_mobile_apk_export:/output/app-release.apk ./app-release.apk
-
-# Nettoyage
-docker compose down mobile-apk-export
-```
-
-### Option 3 : Build manuel avec Docker
-
-```bash
-# Build de l'image
-docker build -t area-mobile:latest --target build ./mobile
-
-# Créer un container temporaire et copier l'APK
-docker create --name temp-mobile area-mobile:latest
-docker cp temp-mobile:/app/build/app/outputs/flutter-apk/app-release.apk ./
-docker rm temp-mobile
+┌─────────────────┐
+│  Mobile App     │
+│  (Flutter)      │
+└────────┬────────┘
+         │ HTTP/HTTPS
+         ▼
+┌─────────────────┐
+│  Backend API    │
+│  (Docker)       │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Database       │
+│  (PostgreSQL)   │
+└─────────────────┘
 ```
 
 ---
 
-## ⚙️ Configuration de l'API
+## Prerequisites
 
-L'URL de l'API backend peut être configurée via une variable d'environnement.
+### Required Software
 
-### Dans le fichier `.env`
+1. **Docker Desktop**
+   - [Download for macOS](https://docs.docker.com/desktop/install/mac-install/)
+   - [Download for Windows](https://docs.docker.com/desktop/install/windows-install/)
+   - [Download for Linux](https://docs.docker.com/desktop/install/linux-install/)
+
+2. **Docker Compose**
+   - Included with Docker Desktop
+   - Linux: `sudo apt-get install docker-compose`
+
+3. **Flutter SDK** (for mobile development)
+   - [Installation Guide](https://docs.flutter.dev/get-started/install)
+
+### Verify Installation
+
+```bash
+# Check Docker version
+docker --version
+# Output: Docker version 24.0.0, build ...
+
+# Check Docker Compose version
+docker-compose --version
+# Output: Docker Compose version v2.20.0
+
+# Check Docker is running
+docker ps
+# Should show running containers or empty list
+```
+
+---
+
+## Development Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-org/mirror-area.git
+cd mirror-area
+```
+
+### 2. Environment Configuration
+
+Create environment files for the backend:
+
+**`.env` (root directory):**
 
 ```env
-# URL de l'API pour l'APK
-MOBILE_API_URL=http://10.0.2.2:8080
+# Database
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=mirror_area
+DATABASE_URL=postgresql://postgres:postgres@db:5432/mirror_area
+
+# API
+API_PORT=8080
+API_HOST=0.0.0.0
+NODE_ENV=development
+
+# JWT
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+JWT_EXPIRES_IN=7d
+REFRESH_TOKEN_EXPIRES_IN=30d
+
+# OAuth (Optional - for testing OAuth flows)
+DISCORD_CLIENT_ID=your_discord_client_id
+DISCORD_CLIENT_SECRET=your_discord_client_secret
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+
+# Frontend URL (for OAuth callbacks)
+FRONTEND_URL=http://localhost:3000
+MOBILE_REDIRECT_SCHEME=autoarea
 ```
 
-### URLs selon l'environnement
+### 3. Mobile API Configuration
 
-- **Émulateur Android** : `http://10.0.2.2:8080` (par défaut)
-- **Appareil physique** : `http://VOTRE_IP:8080` (ex: `http://192.168.1.100:8080`)
-- **Production** : `https://api.votredomaine.com`
+Update the mobile app to point to the Docker backend:
 
-### Build avec une URL personnalisée
+**`mobile/lib/core/constants/api_constants.dart`:**
 
-```bash
-# Via docker-compose
-MOBILE_API_URL=https://api.production.com docker compose --profile mobile build mobile-apk-builder
+```dart
+class ApiConstants {
+  // Development - Docker on same machine
+  static const String baseUrl = 'http://localhost:8080';
 
-# Via docker build
-docker build --build-arg API_URL=https://api.production.com -t area-mobile ./mobile
+  // Development - Docker on network (use machine IP)
+  // static const String baseUrl = 'http://192.168.1.100:8080';
+
+  // Production
+  // static const String baseUrl = 'https://api.mirrorarea.com';
+}
 ```
 
----
+**Important for Android emulators:**
 
-## 📦 Workflow complet
+Android emulators can't reach `localhost` of the host machine. Use:
 
-### 1. Build de l'APK
-
-```bash
-# Build l'image (1ère fois: ~15-20 min, ensuite: ~5-10 min)
-docker compose --profile mobile build mobile-apk-builder
-
-# Générer l'APK
-docker compose --profile mobile run --rm mobile-apk-builder
-```
-
-### 2. Récupération de l'APK
-
-```bash
-# Copier depuis le container
-docker cp area_mobile_apk_builder:/app/build/app/outputs/flutter-apk/app-release.apk ./app-release.apk
-
-# Vérifier la taille
-ls -lh app-release.apk
-```
-
-### 3. Installation sur un appareil
-
-```bash
-# Via adb (Android Debug Bridge)
-adb install app-release.apk
-
-# Ou transférer le fichier manuellement sur votre téléphone
-```
-
----
-
-## 🐛 Troubleshooting
-
-### Le build est très lent la première fois
-
-**C'est normal !** Le premier build télécharge :
-- Flutter SDK (~800 MB)
-- Android SDK (~2 GB)
-- Dépendances système (~500 MB)
-
-Les builds suivants sont beaucoup plus rapides grâce au cache Docker.
-
-**Astuce** : Lancez le build et allez prendre un café ☕
-
-### APK non trouvé après le build
-
-```bash
-# Vérifier que le build a réussi
-docker compose logs mobile-apk-builder
-
-# Lister les fichiers dans le container
-docker run --rm -v area_mobile_builds:/data alpine ls -la /data
-
-# Rebuild sans cache
-docker compose build --no-cache mobile-apk-builder
-```
-
-### Erreur de licences Android
-
-Les licences Android sont pré-acceptées dans le Dockerfile. Si vous rencontrez une erreur :
-
-```bash
-# Rebuild complet
-docker compose build --no-cache mobile-apk-builder
-```
-
-### Problème de mémoire lors du build
-
-```bash
-# Augmenter la mémoire allouée à Docker
-# Docker Desktop → Settings → Resources → Memory: 8 GB minimum
-
-# Ou builder avec moins de jobs
-docker build --build-arg FLUTTER_BUILD_ARGS="--no-tree-shake-icons" ./mobile
-```
-
-### Changer la version de Flutter
-
-Éditez le `Dockerfile` :
-
-```dockerfile
-ENV FLUTTER_VERSION=3.27.0  # Au lieu de 3.24.3
-```
-
-Puis rebuild :
-
-```bash
-docker compose build --no-cache mobile-apk-builder
+```dart
+// For Android emulator
+static const String baseUrl = 'http://10.0.2.2:8080';
 ```
 
 ---
 
-## 📊 Tailles des images
+## Running the Backend
 
-| Image | Taille | Utilisation |
-|-------|--------|-------------|
-| flutter-base | ~4-5 GB | Base (jamais utilisée directement) |
-| build | ~4-5 GB | Build APK (temporaire) |
-| export | ~100 MB | Export APK uniquement |
-
----
-
-## 🔄 Intégration CI/CD
-
-### GitHub Actions
-
-```yaml
-name: Build APK
-on: [push]
-
-jobs:
-  build-apk:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Build APK with Docker
-        run: |
-          docker compose --profile mobile build mobile-apk-builder
-          docker compose --profile mobile run --rm mobile-apk-builder
-          docker cp area_mobile_apk_builder:/app/build/app/outputs/flutter-apk/app-release.apk ./
-      
-      - name: Upload APK
-        uses: actions/upload-artifact@v3
-        with:
-          name: app-release
-          path: app-release.apk
-```
-
-### GitLab CI
-
-```yaml
-build-apk:
-  stage: build
-  image: docker:latest
-  services:
-    - docker:dind
-  script:
-    - docker compose --profile mobile build mobile-apk-builder
-    - docker compose --profile mobile run --rm mobile-apk-builder
-    - docker cp area_mobile_apk_builder:/app/build/app/outputs/flutter-apk/app-release.apk ./
-  artifacts:
-    paths:
-      - app-release.apk
-    expire_in: 1 week
-```
-
----
-
-## 🧹 Nettoyage
-
-### Supprimer les containers et images
+### Start All Services
 
 ```bash
-# Arrêter et supprimer les containers
-docker compose down mobile-apk-builder mobile-apk-export
+# Navigate to project root
+cd mirror-area
 
-# Supprimer les images
-docker rmi area-mobile:latest
+# Start services in background
+docker-compose up -d
 
-# Supprimer le volume des builds
-docker volume rm area_mobile_builds
+# Or start with logs visible
+docker-compose up
 ```
 
-### Nettoyage complet
+### Verify Services are Running
 
 ```bash
-# Supprimer toutes les images non utilisées
-docker image prune -a
+docker-compose ps
+```
 
-# Supprimer tous les volumes non utilisés
-docker volume prune
+Expected output:
 
-# Nettoyage global
-docker system prune -a --volumes
+```
+NAME                COMMAND                  SERVICE             STATUS              PORTS
+mirror-area-api-1   "npm start"              api                 running             0.0.0.0:8080->8080/tcp
+mirror-area-db-1    "docker-entrypoint.s…"   db                  running             5432/tcp
+```
+
+### Check API Health
+
+```bash
+curl http://localhost:8080/health
+# Expected: {"status": "ok"}
+```
+
+### View Logs
+
+```bash
+# All services
+docker-compose logs -f
+
+# Specific service
+docker-compose logs -f api
+
+# Last 100 lines
+docker-compose logs --tail=100 api
+```
+
+### Stop Services
+
+```bash
+# Stop but keep data
+docker-compose stop
+
+# Stop and remove containers (keeps volumes)
+docker-compose down
+
+# Stop and remove everything including volumes
+docker-compose down -v
 ```
 
 ---
 
-## 💡 Bonnes pratiques
+## Mobile Development with Docker
 
-### 1. Développement local
+### Complete Development Workflow
 
-Pour le développement quotidien, **utilisez Flutter directement** sur votre machine :
+#### 1. Start Backend Services
+
+```bash
+cd mirror-area
+docker-compose up -d
+```
+
+#### 2. Run Mobile App
+
+**For iOS Simulator:**
 
 ```bash
 cd mobile
 flutter run
 ```
 
-Docker est **principalement pour** :
-- ✅ Builds de production
-- ✅ CI/CD
-- ✅ Environnement reproductible
-- ✅ Pas besoin d'installer Flutter localement
+The app will connect to `http://localhost:8080`.
 
-### 2. Optimiser le temps de build
+**For Android Emulator:**
 
-```bash
-# Build en parallèle si plusieurs services
-docker compose build --parallel
+1. Update API URL in `api_constants.dart`:
 
-# Utiliser BuildKit pour un cache amélioré
-export DOCKER_BUILDKIT=1
-docker build ./mobile
+```dart
+static const String baseUrl = 'http://10.0.2.2:8080';
 ```
 
-### 3. Versionning des APK
+2. Run the app:
 
 ```bash
-# Nommer l'APK avec la version
-docker cp area_mobile_apk_builder:/app/build/app/outputs/flutter-apk/app-release.apk ./app-v1.0.0.apk
+flutter run
+```
 
-# Ou utiliser un script
-VERSION=$(grep "version:" mobile/pubspec.yaml | cut -d " " -f2)
-docker cp area_mobile_apk_builder:/app/build/app/outputs/flutter-apk/app-release.apk ./app-v${VERSION}.apk
+**For Physical Device:**
+
+1. Find your computer's IP address:
+
+```bash
+# macOS/Linux
+ifconfig | grep "inet "
+
+# Windows
+ipconfig
+```
+
+2. Update API URL:
+
+```dart
+static const String baseUrl = 'http://192.168.1.100:8080';
+```
+
+3. Ensure device is on same network
+4. Run the app:
+
+```bash
+flutter run
+```
+
+### Testing OAuth Flows
+
+OAuth flows require accessible callback URLs:
+
+1. **Update backend environment:**
+
+```env
+FRONTEND_URL=http://192.168.1.100:8080
+MOBILE_REDIRECT_SCHEME=autoarea
+```
+
+2. **Restart backend:**
+
+```bash
+docker-compose restart api
+```
+
+3. **Test OAuth:**
+   - Open mobile app
+   - Navigate to Services screen
+   - Click "Connect" on any OAuth service
+   - Complete OAuth flow in browser
+   - App should receive callback via deep link
+
+---
+
+## Common Commands
+
+### Docker Compose Commands
+
+```bash
+# Start services
+docker-compose up -d
+
+# Stop services
+docker-compose down
+
+# Restart services
+docker-compose restart
+
+# Rebuild services
+docker-compose up -d --build
+
+# View running containers
+docker-compose ps
+
+# View logs
+docker-compose logs -f
+
+# Execute command in container
+docker-compose exec api sh
+
+# Remove all containers and volumes
+docker-compose down -v
+```
+
+### Database Commands
+
+```bash
+# Access PostgreSQL shell
+docker-compose exec db psql -U postgres -d mirror_area
+
+# Run SQL file
+docker-compose exec -T db psql -U postgres -d mirror_area < backup.sql
+
+# Create database backup
+docker-compose exec db pg_dump -U postgres mirror_area > backup.sql
+
+# View database tables
+docker-compose exec db psql -U postgres -d mirror_area -c "\dt"
+```
+
+### API Container Commands
+
+```bash
+# Access API container shell
+docker-compose exec api sh
+
+# Install npm packages
+docker-compose exec api npm install
+
+# Run migrations
+docker-compose exec api npm run migrate
+
+# View API logs
+docker-compose logs -f api
+
+# Restart API only
+docker-compose restart api
+```
+
+### Clean Up
+
+```bash
+# Remove stopped containers
+docker container prune
+
+# Remove unused images
+docker image prune
+
+# Remove unused volumes
+docker volume prune
+
+# Remove everything
+docker system prune -a --volumes
 ```
 
 ---
 
-## 📚 Commandes utiles
+## Troubleshooting
 
+### Issue: "Cannot connect to Docker daemon"
+
+**Cause**: Docker Desktop not running
+
+**Solution**:
 ```bash
-# Voir les logs du build
-docker compose logs mobile-apk-builder
+# Start Docker Desktop application
+# Wait for it to fully start
+docker ps
+```
 
-# Voir l'espace disque utilisé
-docker system df
+### Issue: "Port 8080 already in use"
 
-# Inspecter l'image
-docker image inspect area-mobile:latest
+**Cause**: Another service using port 8080
 
-# Voir l'historique des layers
-docker history area-mobile:latest
+**Solution**:
+```bash
+# Find process using port
+lsof -i :8080  # macOS/Linux
+netstat -ano | findstr :8080  # Windows
 
-# Exécuter une commande dans le container
-docker run --rm area-mobile:latest flutter --version
+# Kill process or change port in docker-compose.yml
+ports:
+  - "8081:8080"  # Use port 8081 instead
+```
 
-# Debugger un build qui échoue
-docker build --progress=plain --no-cache ./mobile
+### Issue: "Database connection failed"
+
+**Cause**: Database not ready or incorrect credentials
+
+**Solution**:
+```bash
+# Check if database is running
+docker-compose ps db
+
+# Check database logs
+docker-compose logs db
+
+# Restart database
+docker-compose restart db
+
+# Verify connection
+docker-compose exec db psql -U postgres -d mirror_area
+```
+
+### Issue: "Mobile app cannot reach backend"
+
+**Cause**: Incorrect API URL or network configuration
+
+**Solution**:
+
+1. **Check backend is running:**
+```bash
+curl http://localhost:8080/health
+```
+
+2. **For iOS Simulator:**
+```dart
+// Use localhost
+static const String baseUrl = 'http://localhost:8080';
+```
+
+3. **For Android Emulator:**
+```dart
+// Use special Android emulator address
+static const String baseUrl = 'http://10.0.2.2:8080';
+```
+
+4. **For Physical Device:**
+```dart
+// Use computer's network IP
+static const String baseUrl = 'http://192.168.1.100:8080';
+```
+
+### Issue: "OAuth callback not working"
+
+**Cause**: Backend redirect URL misconfigured
+
+**Solution**:
+
+1. **Update backend environment:**
+```env
+MOBILE_REDIRECT_SCHEME=autoarea
+FRONTEND_URL=http://your-ip:8080
+```
+
+2. **Restart backend:**
+```bash
+docker-compose restart api
+```
+
+3. **Verify deep link config** in mobile app (see [OAuth Integration](OAUTH_INTEGRATION.md))
+
+### Issue: "Container keeps restarting"
+
+**Cause**: Application error or missing dependencies
+
+**Solution**:
+```bash
+# Check logs for errors
+docker-compose logs api
+
+# Check container status
+docker-compose ps
+
+# Rebuild without cache
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+### Issue: "Database migrations not applied"
+
+**Cause**: Migrations not run after database creation
+
+**Solution**:
+```bash
+# Run migrations manually
+docker-compose exec api npm run migrate
+
+# Or recreate database
+docker-compose down -v
+docker-compose up -d
 ```
 
 ---
 
-## ✅ Checklist de déploiement
+## Best Practices
 
-- [ ] Vérifier que le backend est accessible depuis le réseau
-- [ ] Configurer `MOBILE_API_URL` dans `.env`
-- [ ] Builder l'APK : `docker compose --profile mobile build`
-- [ ] Récupérer l'APK
-- [ ] Tester l'APK sur un appareil Android
-- [ ] Vérifier la connexion à l'API
-- [ ] Tester l'inscription et la connexion
-- [ ] Publier l'APK (Play Store, distribution interne, etc.)
+### Development
+
+1. **Always use docker-compose** for starting/stopping services
+2. **Check logs regularly** for errors and warnings
+3. **Use environment variables** for configuration
+4. **Keep .env file secure** and never commit it to git
+5. **Use volumes** for persistent data
+
+### Performance
+
+1. **Use Docker Desktop's resource settings** to allocate appropriate CPU/Memory
+2. **Clean up unused images/containers** regularly
+3. **Use .dockerignore** to exclude unnecessary files
+4. **Restart containers** after significant changes
+
+### Security
+
+1. **Change default passwords** in production
+2. **Use secrets management** for sensitive data
+3. **Don't expose unnecessary ports**
+4. **Keep Docker updated** to latest stable version
+5. **Scan images** for vulnerabilities
 
 ---
 
-## 🎯 Résumé des commandes
+## Docker Compose Configuration
 
-```bash
-# BUILD APK
-docker compose --profile mobile build mobile-apk-builder
-docker compose --profile mobile run --rm mobile-apk-builder
+**Example `docker-compose.yml`:**
 
-# RÉCUPÉRER APK
-docker cp area_mobile_apk_builder:/app/build/app/outputs/flutter-apk/app-release.apk ./app.apk
+```yaml
+version: '3.8'
 
-# INSTALLER
-adb install app.apk
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: mirror-area-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-# NETTOYER
-docker compose down
-docker system prune -a
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mirror-area-api
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      NODE_ENV: ${NODE_ENV}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run dev
+
+volumes:
+  postgres_data:
 ```
 
 ---
 
-**Prêt à builder votre APK ! 🚀**
+**See also:**
+- [Quick Start Guide](QUICK_START_AREA_MOBILE.md)
+- [Mobile Build Guide](MOBILE_BUILD.md)
+- [Technical Documentation](TECHNICAL_DOCUMENTATION.md)

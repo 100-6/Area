@@ -633,7 +633,7 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
             reactionId: result['name'],
             config: config,
             positionX: 100,
-            positionY: 200 + (_actionNodes.length * 100),
+            positionY: 200 + (_actionNodes.length * 500),
             label: '${result['service']}: ${result['description']}',
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),

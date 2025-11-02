@@ -1,330 +1,671 @@
-# 🔐 Intégration OAuth Mobile
+# OAuth Integration Guide
 
-## ✅ Providers OAuth disponibles
-
-
-| Provider | Couleur | Icône |
-|----------|---------|-------|
-| **Google** | Bleu (#4285F4) | G |
-| **GitHub** | Noir (#181717) | Code |
-| **GitLab** | Orange (#FC6D26) | Source |
-| **Discord** | Violet (#5865F2) | Discord |
+**Version:** 1.0.0
+**Last Updated:** 2025-01-02
 
 ---
 
-## 📦 Dépendances ajoutées
+## Table of Contents
 
-```yaml
-# OAuth / URL Launcher
-url_launcher: ^6.3.1
-webview_flutter: ^4.10.0
-
-# Icons & SVG
-flutter_svg: ^2.0.10+1
-```
-
----
-
-## 📁 Fichiers créés
-
-### 1. **Service OAuth** (`lib/core/services/oauth_service.dart`)
-- `OAuthService` : Gère les connexions OAuth
-- `OAuthProvider` : Énumération des providers disponibles
-- `OAuthResult` : Résultat d'une opération OAuth
-
-### 2. **Widgets OAuth** (`lib/shared/widgets/oauth_button.dart`)
-- `OAuthButton` : Bouton OAuth pleine largeur
-- `CompactOAuthButton` : Bouton OAuth compact (carré)
-- `OAuthButtons` : Widget avec tous les boutons pleins
-- `CompactOAuthButtons` : Grille de boutons compacts ⭐ (utilisé dans l'app)
+1. [Overview](#overview)
+2. [OAuth Flow Architecture](#oauth-flow-architecture)
+3. [Supported Services](#supported-services)
+4. [Implementation](#implementation)
+5. [Deep Link Configuration](#deep-link-configuration)
+6. [Testing OAuth Flows](#testing-oauth-flows)
+7. [Troubleshooting](#troubleshooting)
 
 ---
 
-## 🎨 Intégration dans l'UI
+## Overview
 
-### Écran de Login (`login_screen.dart`)
+The Mirror Area mobile app supports OAuth 2.0 authentication for connecting to external services. The OAuth flow uses a combination of external browser authentication and deep linking for callback handling.
 
-```dart
-// Boutons OAuth compacts affichés sous le formulaire
-CompactOAuthButtons(
-  onProviderSelected: (provider) {
-    // Callback quand un provider est sélectionné
-  },
-)
+### OAuth Flow Summary
+
+```
+Mobile App → Browser → OAuth Provider → Backend → Deep Link → Mobile App
 ```
 
-### Écran de Signup (`signup_screen.dart`)
+### Key Components
 
-```dart
-// Même chose dans l'écran d'inscription
-CompactOAuthButtons(
-  onProviderSelected: (provider) {
-    // Callback quand un provider est sélectionné
-  },
-)
-```
+- **OAuthService**: Manages OAuth flow initiation
+- **DeepLinkService**: Handles OAuth callbacks
+- **ApiService**: Communicates with backend
+- **StorageService**: Stores access tokens
 
 ---
 
-## 🔄 Flux OAuth
+## OAuth Flow Architecture
 
-### 1. Utilisateur clique sur un bouton OAuth
+### Complete Flow Diagram
 
-```dart
-CompactOAuthButton(
-  provider: OAuthProvider.google,
-  onPressed: () => _handleOAuthLogin(OAuthProvider.google),
-)
+```
+┌─────────────┐
+│ Mobile App  │
+│             │
+│ User clicks │
+│ "Connect    │
+│  Discord"   │
+└──────┬──────┘
+       │
+       │ 1. Open OAuth URL
+       ▼
+┌─────────────────────┐
+│ External Browser    │
+│                     │
+│ User authenticates  │
+│ with Discord        │
+└──────┬──────────────┘
+       │
+       │ 2. User grants permissions
+       ▼
+┌─────────────────────┐
+│ Backend API         │
+│                     │
+│ - Receives code     │
+│ - Exchanges for     │
+│   access token      │
+│ - Stores in DB      │
+└──────┬──────────────┘
+       │
+       │ 3. Redirects to deep link
+       ▼
+┌─────────────────────┐
+│ Mobile App          │
+│                     │
+│ - Receives callback │
+│ - Updates UI        │
+│ - Shows success     │
+└─────────────────────┘
 ```
 
-### 2. L'app ouvre le navigateur
+### Detailed Flow Steps
+
+#### 1. User Initiates OAuth
 
 ```dart
-Future<OAuthResult> signInWithProvider(OAuthProvider provider) async {
-  final authUrl = _getAuthUrl(provider); // Ex: http://10.68.254.55:8080/api/auth/google
-  final uri = Uri.parse(authUrl);
-  
-  await launchUrl(uri, mode: LaunchMode.externalApplication);
-  
-  return OAuthResult.pending();
+// User taps "Connect Discord"
+await oauthService.connectService('discord', userToken: token);
+```
+
+#### 2. App Opens OAuth URL
+
+```dart
+// OAuthService opens browser
+final url = 'https://api.mirrorarea.com/api/auth/discord?mobile=true&token=USER_JWT';
+await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+```
+
+#### 3. User Authenticates
+
+User logs in to Discord and grants permissions in the browser.
+
+#### 4. Backend Exchanges Code
+
+Backend receives authorization code and exchanges it for access token:
+
+```javascript
+// Backend route
+router.get('/api/auth/discord/callback', async (req, res) => {
+  const { code } = req.query;
+
+  // Exchange code for access token
+  const token = await exchangeCodeForToken(code);
+
+  // Store in database
+  await saveUserToken(userId, 'discord', token);
+
+  // Redirect to mobile app
+  res.redirect('autoarea://oauth/service/success?service=discord');
+});
+```
+
+#### 5. App Receives Deep Link
+
+```dart
+// DeepLinkService handles callback
+void _handleOAuthCallback(Uri uri) {
+  if (uri.path == '/service/success') {
+    final serviceName = uri.queryParameters['service'];
+    print('Service connected: $serviceName');
+    onServiceConnected?.call(serviceName);
+  }
 }
 ```
 
-### 3. Le navigateur redirige vers le backend
+---
 
-```
-User → Mobile App → Browser → Backend OAuth → Provider (Google/GitHub/etc.)
-```
+## Supported Services
 
-### 4. Après authentification
+### OAuth 2.0 Services
 
-Le provider redirige vers le callback du backend :
-```
-Provider → Backend Callback → JWT Token généré
-```
+Services that require user authentication via OAuth:
 
-### 5. ⚠️ Retour à l'app (À IMPLÉMENTER)
+#### Core OAuth Services
 
-**Actuellement**, le flux OAuth ouvre le navigateur mais **ne revient pas automatiquement** à l'app.
+| Service | Route | OAuth Provider |
+|---------|-------|----------------|
+| Discord | `/api/auth/discord` | Discord OAuth |
+| GitHub | `/api/auth/github` | GitHub OAuth |
+| GitLab | `/api/auth/gitlab` | GitLab OAuth |
+| Google | `/api/auth/google` | Google OAuth |
+| Dropbox | `/api/auth/dropbox` | Dropbox OAuth |
+| Trello | `/api/auth/trello` | Trello OAuth |
+| Twitch | `/api/auth/twitch` | Twitch OAuth |
 
-**Pour compléter l'implémentation**, vous devez configurer :
+#### Service-Specific Routes
 
-#### Option A : Deep Linking (Recommandé)
+| Service | Route | OAuth Provider |
+|---------|-------|----------------|
+| Gmail | `/api/gmail/connect` | Google OAuth (Gmail scope) |
+| Outlook | `/api/outlook/connect` | Microsoft OAuth |
+| Spotify | `/api/spotify/connect` | Spotify OAuth |
+| Strava | `/api/strava/connect` | Strava OAuth |
+| Reddit | `/api/reddit/connect` | Reddit OAuth |
+| Slack | `/api/slack/connect` | Slack OAuth |
+| Bitly | `/api/bitly/connect` | Bitly OAuth |
 
-1. **Configurer un scheme personnalisé** dans `AndroidManifest.xml` :
+### API Key Services
 
-```xml
-<intent-filter>
-    <action android:name="android.intent.action.VIEW" />
-    <category android:name="android.intent.category.DEFAULT" />
-    <category android:name="android.intent.category.BROWSABLE" />
-    <data
-        android:scheme="myapp"
-        android:host="oauth-callback" />
-</intent-filter>
-```
+Services that require manual API key configuration:
 
-2. **Modifier le backend** pour rediriger vers `myapp://oauth-callback?token=...`
+- **OpenAI**: API key in service config
+- **Telegram**: Bot token + chat ID
+- **Shodan**: API key
 
-3. **Écouter le deep link** dans Flutter avec `uni_links` ou `app_links`
+### No-Auth Services
 
-#### Option B : WebView intégrée
+Services that don't require authentication:
 
-Utiliser `webview_flutter` pour afficher l'OAuth dans l'app au lieu du navigateur externe.
+- **Timer**: Built-in trigger
+- **Console**: Built-in action
+- **RSS**: Public feeds
+- **Webhook**: HTTP requests
+- **Ntfy**: Public notifications
+- **Weather**: Public API
+- **Currency**: Public exchange rates
+- **Crypto**: Public cryptocurrency data
+- **Books**: Public book data
+- **AppleMusic**: Public search
 
 ---
 
-## 🛠️ Configuration du Backend
+## Implementation
 
-Les endpoints OAuth sont déjà configurés dans le backend :
+### OAuthService
 
-```typescript
-// backend/src/core/routes/auth.ts
-router.get('/google', authController.googleLogin);
-router.get('/google/callback', authController.googleCallback);
-
-router.get('/discord', authController.discordLogin);
-router.get('/discord/callback', authController.discordCallback);
-
-router.get('/github', authController.gitHubLogin);
-router.get('/github/callback', authController.gitHubCallback);
-
-router.get('/gitlab', authController.gitLabLogin);
-router.get('/gitlab/callback', authController.gitLabCallback);
-```
-
----
-
-## 🧪 Test
-
-### 1. Lancer le backend
-
-```bash
-docker compose --profile dev up -d
-```
-
-### 2. Vérifier l'URL de l'API
-
-Dans `lib/core/constants/api_constants.dart` :
-```dart
-static const String baseUrl = 'http://10.68.254.55:8080'; // Votre IP
-```
-
-### 3. Lancer l'app mobile
-
-```bash
-cd mobile
-flutter run
-```
-
-### 4. Tester OAuth
-
-1. Aller sur l'écran de login
-2. Cliquer sur un des boutons OAuth (Google, GitHub, GitLab, Discord)
-3. Le navigateur s'ouvre et redirige vers le provider
-4. ⚠️ Actuellement, après authentification, vous devez revenir manuellement à l'app
-
----
-
-## 📊 État actuel vs État final
-
-| Fonctionnalité | État Actuel | À Implémenter |
-|----------------|-------------|---------------|
-| Boutons OAuth | ✅ Créés et stylisés | - |
-| Ouverture navigateur | ✅ Fonctionne | - |
-| Redirection backend | ✅ Configuré | - |
-| Retour à l'app | ❌ Manuel | Deep linking |
-| Récupération token | ❌ Non géré | Callback handler |
-| Stockage token | ✅ Service prêt | Intégration finale |
-
----
-
-## 🚀 Prochaines étapes recommandées
-
-### 1. Configurer Deep Linking
-
-**Android** (`android/app/src/main/AndroidManifest.xml`) :
-```xml
-<intent-filter android:autoVerify="true">
-    <action android:name="android.intent.action.VIEW" />
-    <category android:name="android.intent.category.DEFAULT" />
-    <category android:name="android.intent.category.BROWSABLE" />
-    <data
-        android:scheme="https"
-        android:host="votre-domaine.com"
-        android:pathPrefix="/oauth-callback" />
-</intent-filter>
-```
-
-**iOS** (`ios/Runner/Info.plist`) :
-```xml
-<key>CFBundleURLTypes</key>
-<array>
-    <dict>
-        <key>CFBundleTypeRole</key>
-        <string>Editor</string>
-        <key>CFBundleURLSchemes</key>
-        <array>
-            <string>myapp</string>
-        </array>
-    </dict>
-</array>
-```
-
-### 2. Ajouter le package de deep linking
-
-```bash
-flutter pub add app_links
-# ou
-flutter pub add uni_links
-```
-
-### 3. Écouter les deep links
+**`lib/core/services/oauth_service.dart`:**
 
 ```dart
-// Dans main.dart ou AuthProvider
-import 'package:app_links/app_links.dart';
+class OAuthService {
+  static const String baseUrl = ApiConstants.baseUrl;
 
-class _MyAppState extends State<MyApp> {
+  /// Connect a service using OAuth
+  Future<OAuthResult> connectService(
+    String serviceName, {
+    String? userToken,
+  }) async {
+    final authUrl = _getServiceAuthUrl(serviceName);
+
+    // Build URL with parameters
+    var url = '$authUrl?mobile=true';
+    if (userToken != null) {
+      url += '&token=$userToken';
+    }
+
+    // Open in external browser
+    final uri = Uri.parse(url);
+    final launched = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!launched) {
+      return OAuthResult.error('Could not launch browser');
+    }
+
+    return OAuthResult.pending();
+  }
+
+  /// Get OAuth URL for service
+  String _getServiceAuthUrl(String service) {
+    // Services with dedicated routes
+    if (service == 'gmail') return '$baseUrl/api/gmail/connect';
+    if (service == 'outlook') return '$baseUrl/api/outlook/connect';
+    if (service == 'spotify') return '$baseUrl/api/spotify/connect';
+    if (service == 'strava') return '$baseUrl/api/strava/connect';
+    if (service == 'reddit') return '$baseUrl/api/reddit/connect';
+    if (service == 'slack') return '$baseUrl/api/slack/connect';
+    if (service == 'bitly') return '$baseUrl/api/bitly/connect';
+
+    // Generic auth route
+    return '$baseUrl/api/auth/$service';
+  }
+}
+
+class OAuthResult {
+  final bool isSuccess;
+  final String? error;
+
+  OAuthResult.pending() : isSuccess = false, error = null;
+  OAuthResult.error(this.error) : isSuccess = false;
+}
+```
+
+### DeepLinkService
+
+**`lib/core/services/deep_link_service.dart`:**
+
+```dart
+class DeepLinkService {
   final _appLinks = AppLinks();
+  StreamSubscription<Uri>? _linkSubscription;
 
-  @override
-  void initState() {
-    super.initState();
-    _initDeepLinks();
+  Function(String serviceName)? onServiceConnected;
+  Function(String error)? onOAuthError;
+  Function(String token, String? refreshToken)? onAuthSuccess;
+
+  AuthRepository? _authRepository;
+
+  void initialize(
+    AuthRepository authRepository, {
+    Function(String)? onServiceConnected,
+    Function(String)? onOAuthError,
+  }) {
+    _authRepository = authRepository;
+    this.onServiceConnected = onServiceConnected;
+    this.onOAuthError = onOAuthError;
   }
 
-  Future<void> _initDeepLinks() async {
-    _appLinks.uriLinkStream.listen((uri) {
-      if (uri.path == '/oauth-callback') {
-        final token = uri.queryParameters['token'];
-        // Sauvegarder le token et rediriger
+  void startListening() {
+    _linkSubscription = _appLinks.uriLinkStream.listen(
+      _handleDeepLink,
+      onError: (err) {
+        print('Deep link error: $err');
+      },
+    );
+  }
+
+  void stopListening() {
+    _linkSubscription?.cancel();
+  }
+
+  Future<void> checkInitialLink() async {
+    try {
+      final uri = await _appLinks.getInitialLink();
+      if (uri != null) {
+        _handleDeepLink(uri);
       }
-    });
+    } catch (e) {
+      print('Error checking initial link: $e');
+    }
+  }
+
+  void _handleDeepLink(Uri uri) {
+    print('Deep link received: $uri');
+
+    // Check for errors
+    if (uri.queryParameters.containsKey('error')) {
+      final error = uri.queryParameters['error']!;
+      onOAuthError?.call(error);
+      return;
+    }
+
+    // Authentication callback (has token)
+    if (uri.queryParameters.containsKey('token')) {
+      final token = uri.queryParameters['token']!;
+      final refreshToken = uri.queryParameters['refresh'];
+      _handleAuthSuccess(token, refreshToken);
+      return;
+    }
+
+    // Service connection callback
+    if (uri.path.contains('/service/success')) {
+      final serviceName = uri.queryParameters['service'];
+      if (serviceName != null) {
+        onServiceConnected?.call(serviceName);
+      }
+      return;
+    }
+
+    // Legacy format
+    if (uri.queryParameters.containsKey('success')) {
+      final serviceName = uri.queryParameters['success']!;
+      onServiceConnected?.call(serviceName);
+      return;
+    }
+  }
+
+  void _handleAuthSuccess(String token, String? refreshToken) {
+    _authRepository?.saveTokensFromOAuth(token, refreshToken);
+    onAuthSuccess?.call(token, refreshToken);
   }
 }
 ```
 
-### 4. Modifier le backend pour deep link
+---
 
-```typescript
-// backend/src/core/controllers/AuthController.ts
-res.redirect(`myapp://oauth-callback?token=${token}&refreshToken=${refreshToken}`);
+## Deep Link Configuration
+
+### Android Configuration
+
+**`android/app/src/main/AndroidManifest.xml`:**
+
+```xml
+<manifest>
+  <application>
+    <activity android:name=".MainActivity">
+      <!-- Regular intent filter -->
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN"/>
+        <category android:name="android.intent.category.LAUNCHER"/>
+      </intent-filter>
+
+      <!-- Deep link intent filter -->
+      <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+
+        <!-- OAuth deep links -->
+        <data
+          android:scheme="autoarea"
+          android:host="oauth" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>
+```
+
+### iOS Configuration
+
+**`ios/Runner/Info.plist`:**
+
+```xml
+<dict>
+  <!-- Existing keys... -->
+
+  <!-- URL Types for deep linking -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>CFBundleURLName</key>
+      <string>com.mirrorarea.app</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>autoarea</string>
+      </array>
+    </dict>
+  </array>
+</dict>
+```
+
+### Deep Link Patterns
+
+#### Authentication Success
+
+```
+autoarea://oauth/auth/success?token=JWT_TOKEN&refresh=REFRESH_TOKEN&provider=discord
+```
+
+#### Service Connection Success
+
+```
+autoarea://oauth/service/success?service=discord
+```
+
+#### Error Handling
+
+```
+autoarea://oauth/services?error=access_denied
 ```
 
 ---
 
-## 💡 Alternative : WebView intégrée
+## Testing OAuth Flows
 
-Si vous ne voulez pas gérer le deep linking, vous pouvez afficher l'OAuth dans une WebView :
+### Testing Locally
+
+#### 1. Start Backend
+
+```bash
+docker-compose up -d
+```
+
+#### 2. Configure OAuth Credentials
+
+Create OAuth apps for each service and add credentials to backend `.env`:
+
+```env
+# Discord
+DISCORD_CLIENT_ID=your_client_id
+DISCORD_CLIENT_SECRET=your_client_secret
+
+# GitHub
+GITHUB_CLIENT_ID=your_client_id
+GITHUB_CLIENT_SECRET=your_client_secret
+
+# Configure callback URLs
+FRONTEND_URL=http://localhost:8080
+MOBILE_REDIRECT_SCHEME=autoarea
+```
+
+#### 3. Test on Device
+
+**For physical device:**
+
+Update API URL with your computer's IP:
 
 ```dart
-import 'package:webview_flutter/webview_flutter.dart';
+static const String baseUrl = 'http://192.168.1.100:8080';
+```
 
-class OAuthWebView extends StatefulWidget {
-  final String url;
-  final Function(String token) onSuccess;
+**For emulator:**
 
-  // ...
-  
-  WebView(
-    initialUrl: widget.url,
-    javascriptMode: JavascriptMode.unrestricted,
-    navigationDelegate: (navigation) {
-      if (navigation.url.contains('/oauth-callback')) {
-        // Extraire le token de l'URL
-        // Appeler onSuccess
-        return NavigationDecision.prevent;
-      }
-      return NavigationDecision.navigate;
-    },
-  )
+```dart
+// Android emulator
+static const String baseUrl = 'http://10.0.2.2:8080';
+
+// iOS simulator
+static const String baseUrl = 'http://localhost:8080';
+```
+
+#### 4. Execute OAuth Flow
+
+1. Run mobile app
+2. Navigate to Services screen
+3. Tap "Connect" on a service
+4. Complete authentication in browser
+5. Verify app receives callback
+
+### Testing Deep Links Manually
+
+#### Android
+
+```bash
+# Test success callback
+adb shell am start -W -a android.intent.action.VIEW \
+  -d "autoarea://oauth/service/success?service=discord" \
+  com.mirrorarea.app
+
+# Test error callback
+adb shell am start -W -a android.intent.action.VIEW \
+  -d "autoarea://oauth/services?error=access_denied" \
+  com.mirrorarea.app
+```
+
+#### iOS
+
+```bash
+# Using xcrun simctl (simulator only)
+xcrun simctl openurl booted "autoarea://oauth/service/success?service=discord"
+
+# Using Xcode URL scheme testing
+# Edit scheme → Run → Arguments → Environment Variables
+# Add: -FIRDebugEnabled
+```
+
+### Debugging OAuth
+
+#### Enable Logging
+
+```dart
+// In OAuthService
+Future<OAuthResult> connectService(String serviceName, {String? userToken}) async {
+  final authUrl = _getServiceAuthUrl(serviceName);
+  final url = '$authUrl?mobile=true${userToken != null ? '&token=$userToken' : ''}';
+
+  print('🔐 OAuth: Opening URL: $url');
+
+  final launched = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+
+  print('🔐 OAuth: Browser launched: $launched');
+
+  return launched ? OAuthResult.pending() : OAuthResult.error('Could not launch browser');
+}
+
+// In DeepLinkService
+void _handleDeepLink(Uri uri) {
+  print('🔗 Deep Link: Received URI: $uri');
+  print('🔗 Deep Link: Path: ${uri.path}');
+  print('🔗 Deep Link: Query params: ${uri.queryParameters}');
+
+  // Rest of handling...
+}
+```
+
+#### Check Backend Logs
+
+```bash
+# Check backend OAuth logs
+docker-compose logs -f api | grep -i oauth
+```
+
+---
+
+## Troubleshooting
+
+### Issue: "Browser opens but no callback received"
+
+**Possible Causes:**
+1. Deep link not configured correctly
+2. Backend not redirecting to correct URL
+3. App not listening for deep links
+
+**Solution:**
+
+1. **Verify deep link configuration:**
+
+```bash
+# Android
+adb shell dumpsys package com.mirrorarea.app | grep -A 10 "autoarea"
+
+# Should show intent filter with autoarea scheme
+```
+
+2. **Check backend redirect URL:**
+
+```javascript
+// Backend should redirect to:
+res.redirect(`autoarea://oauth/service/success?service=${serviceName}`);
+```
+
+3. **Ensure DeepLinkService is initialized:**
+
+```dart
+// In main.dart or app initialization
+final deepLinkService = DeepLinkService();
+deepLinkService.initialize(authRepository, onServiceConnected: (service) {
+  print('Connected: $service');
+});
+deepLinkService.startListening();
+```
+
+### Issue: "OAuth flow works on iOS but not Android"
+
+**Cause:** Android emulator uses different localhost address
+
+**Solution:**
+
+```dart
+// For Android emulator
+static const String baseUrl = 'http://10.0.2.2:8080';
+
+// For iOS simulator
+static const String baseUrl = 'http://localhost:8080';
+```
+
+### Issue: "Access denied error"
+
+**Cause:** User denied permissions or OAuth credentials incorrect
+
+**Solution:**
+
+1. Check backend OAuth credentials are correct
+2. Verify callback URLs match in OAuth provider settings
+3. Ensure required scopes are requested
+
+### Issue: "Token not saved after OAuth"
+
+**Cause:** DeepLinkService not properly handling auth success
+
+**Solution:**
+
+```dart
+// Ensure auth repository method exists
+class AuthRepository {
+  Future<void> saveTokensFromOAuth(String token, String? refreshToken) async {
+    await _storageService.saveToken(token);
+    if (refreshToken != null) {
+      await _storageService.saveRefreshToken(refreshToken);
+    }
+    notifyListeners();
+  }
+}
+```
+
+### Issue: "Deep link opens app but wrong screen shown"
+
+**Cause:** Navigation not handling deep link context
+
+**Solution:**
+
+Implement proper routing in deep link handler:
+
+```dart
+void _handleDeepLink(Uri uri) {
+  // ... handle callback
+
+  // Navigate to appropriate screen
+  if (onServiceConnected != null) {
+    // Already on services screen - just refresh
+    onServiceConnected?.call(serviceName);
+  } else {
+    // Navigate to services screen
+    Navigator.of(context).pushNamed('/services');
+  }
 }
 ```
 
 ---
 
-## 📚 Documentation des providers
+## Best Practices
 
-- [Google OAuth](https://developers.google.com/identity/protocols/oauth2)
-- [GitHub OAuth](https://docs.github.com/en/developers/apps/building-oauth-apps)
-- [GitLab OAuth](https://docs.gitlab.com/ee/api/oauth2.html)
-- [Discord OAuth](https://discord.com/developers/docs/topics/oauth2)
+1. **Always use external browser** for OAuth (don't use WebView)
+2. **Validate redirect URIs** in backend
+3. **Handle errors gracefully** with user-friendly messages
+4. **Test on real devices** not just simulators
+5. **Log OAuth flows** for debugging
+6. **Secure token storage** using FlutterSecureStorage
+7. **Implement token refresh** for expired tokens
+8. **Handle network errors** during OAuth flow
 
 ---
 
-## ✅ Résumé
-
-**Ce qui fonctionne actuellement** :
-- ✅ 4 boutons OAuth stylisés et fonctionnels
-- ✅ Ouverture du navigateur pour OAuth
-- ✅ Backend configuré pour tous les providers
-- ✅ Design responsive et animations
-
-**Ce qui reste à faire** :
-- ⚠️ Deep linking pour revenir à l'app
-- ⚠️ Gestion du callback OAuth
-- ⚠️ Stockage du token reçu
-
-**Bon développement ! 🚀**
-
+**See also:**
+- [Area Integration Guide](AREA_INTEGRATION.md)
+- [Quick Start Guide](QUICK_START_AREA_MOBILE.md)
+- [Technical Documentation](TECHNICAL_DOCUMENTATION.md)
