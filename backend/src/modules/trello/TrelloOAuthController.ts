@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { OAuthManager } from '../../shared/auth/OAuthManager';
+import { JwtManager } from '../../shared/auth/JwtManager';
 import 'colors';
 
 /**
@@ -8,31 +9,43 @@ import 'colors';
  */
 export class TrelloOAuthController {
     private oauthManager: OAuthManager;
+    private jwtManager: JwtManager;
 
     constructor() {
         this.oauthManager = new OAuthManager();
+        this.jwtManager = new JwtManager();
     }
 
     /**
      * Initiate Trello OAuth flow
-     * GET /api/trello/authorize?userId=xxx
+     * GET /api/trello/connect?token=xxx&mobile=true
      */
     public authorize = async (req: Request, res: Response): Promise<void> => {
-        try { 
-            const { userId } = req.query;
+        try {
+            const token = req.query.token as string | undefined;
+            const isMobile = this.isMobileRequest(req);
 
-            if (!userId || typeof userId !== 'string') {
+            if (!token) {
                 res.status(400).json({
                     success: false,
-                    error: 'USER_ID_REQUIRED',
-                    message: 'userId query parameter is required'
+                    error: 'TOKEN_REQUIRED',
+                    message: 'token query parameter is required'
                 });
                 return;
             }
-
-            console.log(`[Trello] Initiating OAuth for user ${userId}`.cyan);
-            const authUrl = await this.oauthManager.getTrelloAuthUrl(userId);
-            
+            const decoded = this.jwtManager.verifyToken(token);
+            if (!decoded || !decoded.userId) {
+                res.status(401).json({
+                    success: false,
+                    error: 'INVALID_TOKEN',
+                    message: 'Invalid or expired token'
+                });
+                return;
+            }
+            console.log(`[Trello] Initiating OAuth for user ${decoded.userId}${isMobile ? ' (mobile)' : ''}`.cyan);
+            const stateData = { userId: decoded.userId, isMobile };
+            const state = Buffer.from(JSON.stringify(stateData)).toString('base64');
+            const authUrl = await this.oauthManager.getTrelloAuthUrl(state);
             console.log(`[Trello] Redirecting to: ${authUrl}`.gray);
             res.redirect(authUrl);
         } catch (error: any) {
@@ -52,40 +65,46 @@ export class TrelloOAuthController {
     public callback = async (req: Request, res: Response): Promise<void> => {
         console.log('[Trello OAuth Controller] 🎯 Callback route reached!'.bgGreen.white);
         console.log('[Trello OAuth Controller] Query params:', req.query);
-        
+
         try {
             const { oauth_token, oauth_verifier, error } = req.query;
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
 
-            // User denied authorization
             if (error) {
                 console.error(`[Trello] OAuth error:`.red, error);
-                res.redirect(`${frontendUrl}/integrations?service=trello&status=error&message=${error}`);
-                return;
+                return res.redirect(`${redirectUrl}/services?error=${error}`);
             }
-
             if (!oauth_token || !oauth_verifier) {
                 console.error(`[Trello] Missing oauth_token or oauth_verifier`.red);
-                res.status(400).json({
-                    success: false,
-                    error: 'INVALID_CALLBACK',
-                    message: 'Missing oauth_token or oauth_verifier parameter'
-                });
-                return;
+                return res.redirect(`${redirectUrl}/services?error=missing_params`);
             }
-
             console.log(`[Trello] Processing callback...`.cyan);
             await this.oauthManager.handleTrelloCallback(
                 oauth_token as string,
                 oauth_verifier as string
             );
-
             console.log(`[Trello] ✓ Connection successful`.green);
-            res.redirect(`${frontendUrl}/integrations?service=trello&status=success`);
+            res.redirect(`${redirectUrl}/services?success=trello`);
         } catch (error: any) {
             console.error(`[Trello] Callback failed:`.red, error.message);
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-            res.redirect(`${frontendUrl}/integrations?service=trello&status=error&message=${encodeURIComponent(error.message)}`);
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
+            res.redirect(`${redirectUrl}/services?error=trello_auth_failed`);
         }
     };
+
+    private isMobileRequest(req: Request): boolean {
+        const userAgent = req.headers['user-agent'] || '';
+        const isMobileUA = /Mobile|Android|iPhone|iPad|iPod|Windows Phone/i.test(userAgent);
+        const mobileParam = req.query.mobile === 'true';
+        return isMobileUA || mobileParam;
+    }
+
+    private getRedirectUrl(isMobile: boolean): string {
+        if (isMobile)
+            return 'autoarea://oauth';
+        else
+            return process.env.FRONTEND_URL || 'http://localhost:3000';
+    }
 }
