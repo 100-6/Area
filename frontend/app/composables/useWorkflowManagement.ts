@@ -92,7 +92,7 @@ export const useWorkflowManagement = (canvas: Ref<HTMLElement | undefined>, zoom
     if (position) {
       newPosition = position
     } else if (workflowBlocks.value.length === 0) {
-      newPosition = { x: 2500, y: 2500 }
+      newPosition = { x: 100, y: 100 }
     } else {
       const lastBlock = workflowBlocks.value[workflowBlocks.value.length - 1]
       newPosition = {

@@ -183,7 +183,7 @@ const iconBackground = computed(() => {
     case 'warning':
       return 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2);'
     case 'success':
-      return 'background: var(--color-secondary); border: 1px solid var(--color-secondary);'
+      return 'background: rgba(255, 255, 255, 0.1); border: 1px solid var(--color-primary);'
     default:
       return 'background: rgba(255, 255, 255, 0.1); border: 1px solid var(--color-primary);'
   }
@@ -196,7 +196,7 @@ const iconColor = computed(() => {
     case 'warning':
       return 'color: #d97706;'
     case 'success':
-      return 'color: white;'
+      return 'color: black;'
     default:
       return 'color: black;'
   }

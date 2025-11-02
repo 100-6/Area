@@ -11,6 +11,12 @@ const router = Router();
 const controller = new TwitchController();
 
 /**
+ * OAuth routes (public)
+ */
+router.get('/connect', controller.connect);
+router.get('/callback', controller.callback);
+
+/**
  * Protected routes (require auth + Twitch connection)
  */
 router.use(requireAuth);

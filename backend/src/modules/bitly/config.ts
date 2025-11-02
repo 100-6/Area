@@ -6,7 +6,7 @@ export default {
     name: 'bitly',
     displayName: 'Bitly',
     description: 'Automate link shortening workflows and react to Bitly analytics',
-    iconUrl: 'https://cdn.iconscout.com/icon/free/png-256/free-bitly-5542272-4618164.png',
+    iconUrl: 'https://images.icon-icons.com/836/PNG/512/Bitly_icon-icons.com_66736.png',
     color: '#ee6123',
     authType: 'oauth2',
     isActive: true,

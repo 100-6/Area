@@ -61,7 +61,7 @@ services:
     container_name: area_backend_dev
     restart: unless-stopped
     ports:
-      - "${BACKEND_PORT}:8080"
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
     environment:
       - NODE_ENV=${NODE_ENV}
       - DB_HOST=postgres_db
@@ -143,7 +143,7 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV}
       - NUXT_PUBLIC_API_URL=http://localhost:${BACKEND_PORT}
-      - BACKEND_URL=http://area_backend_dev:8080
+      - BACKEND_URL=http://area_backend_dev:${BACKEND_PORT}
       - PORT=${FRONTEND_PORT}
     volumes:
       - ./frontend:/app

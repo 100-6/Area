@@ -10,6 +10,9 @@ export const useCanvasManagement = () => {
   const panStart = ref({ x: 0, y: 0 })
   const zoom = ref(1)
 
+  // Stocker une référence à la fonction pour obtenir la première node
+  let getFirstNodePosition: (() => { x: number; y: number } | null) | undefined
+
   const MIN_ZOOM = 0.1
   const MAX_ZOOM = 3
   const ZOOM_STEP = 0.1
@@ -95,8 +98,38 @@ export const useCanvasManagement = () => {
   const zoomOut = () => setZoom(zoom.value - ZOOM_STEP)
 
   const resetCanvas = () => {
-    pan.value = { x: 0, y: 0 }
+    // Réinitialiser le zoom à 1 pour un comportement cohérent
     zoom.value = 1
+
+    // Si une fonction pour obtenir la position de la première node est fournie
+    if (getFirstNodePosition) {
+      const firstNodePos = getFirstNodePosition()
+
+      // Si une première node existe, centrer la caméra dessus
+      if (firstNodePos) {
+        // Le canvas a un décalage initial : le point (100, 100) du canvas
+        // correspond au centre du viewport quand pan = (0, 0)
+        // Pour centrer sur la première node, on calcule le décalage nécessaire
+        // par rapport à la position (100, 100)
+        const canvasCenterX = 100
+        const canvasCenterY = 100
+
+        // Calculer le décalage de la node par rapport au centre du canvas
+        const offsetX = firstNodePos.x - canvasCenterX
+        const offsetY = firstNodePos.y - canvasCenterY
+
+        // Appliquer ce décalage au pan (inversé car le pan déplace le canvas)
+        // Avec zoom = 1, pas besoin de multiplier par le zoom
+        pan.value = {
+          x: -offsetX,
+          y: -offsetY
+        }
+        return
+      }
+    }
+
+    // Comportement par défaut : centrer sur (0, 0)
+    pan.value = { x: 0, y: 0 }
   }
 
   const onWheel = (event: WheelEvent) => {
@@ -125,6 +158,13 @@ export const useCanvasManagement = () => {
     }
   }
 
+  /**
+   * Définir la fonction pour obtenir la position de la première node
+   */
+  const setFirstNodePositionGetter = (getter: () => { x: number; y: number } | null) => {
+    getFirstNodePosition = getter
+  }
+
   return {
     canvasContainer,
     canvas,
@@ -140,6 +180,7 @@ export const useCanvasManagement = () => {
     zoomOut,
     resetCanvas,
     onWheel,
-    setZoom
+    setZoom,
+    setFirstNodePositionGetter
   }
 }

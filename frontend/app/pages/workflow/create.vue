@@ -178,19 +178,6 @@
             stroke-dasharray="8,4"
           />
         </svg>
-
-        <!-- Mini add button when blocks exist -->
-        <UButton
-          v-if="workflowBlocks.length > 0"
-          class="floating-add-button"
-          variant="solid"
-          color="primary"
-          icon="i-heroicons-plus"
-          size="lg"
-          @click="openActionServiceModal"
-        >
-          Ajouter
-        </UButton>
       </div>
     </div>
 
@@ -335,7 +322,8 @@ const {
   zoomIn,
   zoomOut,
   resetCanvas,
-  onWheel
+  onWheel,
+  setFirstNodePositionGetter
 } = useCanvasManagement()
 
 const {
@@ -358,6 +346,14 @@ const {
   loadWorkflow,
   refreshConnections
 } = useWorkflowManagement(canvas, zoom)
+
+// Configurer la fonction pour obtenir la position de la première node
+setFirstNodePositionGetter(() => {
+  if (workflowBlocks.value.length === 0) {
+    return null
+  }
+  return workflowBlocks.value[0].position
+})
 
 const {
   showServiceModal,
@@ -809,8 +805,8 @@ useHead({
   height: 5000px;
   top: 50%;
   left: 50%;
-  margin-left: -2500px;
-  margin-top: -2500px;
+  margin-left: -100px;
+  margin-top: -100px;
 }
 
 .test-card-simple {
@@ -832,8 +828,8 @@ useHead({
 
 .add-action-button {
   position: absolute;
-  top: 2500px;
-  left: 2500px;
+  top: 100px;
+  left: 100px;
   transform: translate(-50%, -50%);
   width: 200px;
   height: 120px;
