@@ -136,6 +136,7 @@ export class WorkflowController {
         }
         const { areaId } = req.params;
         const { sourceNodeId, targetNodeId, condition } = req.body;
+        const skipTriggerStart = req.headers['x-skip-trigger-start'] === 'true';
 
         if (!sourceNodeId || !targetNodeId) {
             const error = new Error('MISSING_REQUIRED_FIELDS') as CustomError;
@@ -148,7 +149,7 @@ export class WorkflowController {
                 sourceNodeId,
                 targetNodeId,
                 condition
-            });
+            }, skipTriggerStart);
 
             res.status(201).json({
                 success: true,

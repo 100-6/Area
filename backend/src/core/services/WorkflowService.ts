@@ -169,7 +169,7 @@ export class WorkflowService {
         console.log(`[WorkflowService] Node deleted: ${nodeId}`.green);
     }
 
-    async createConnection(areaId: string, data: CreateConnectionDto): Promise<WorkflowConnection> {
+    async createConnection(areaId: string, data: CreateConnectionDto, skipTriggerStart: boolean = false): Promise<WorkflowConnection> {
         console.log(`[WorkflowService] Creating connection in area ${areaId}`.blue);
         const [sourceNode, targetNode] = await Promise.all([
             this.workflowModel.getNodeById(data.sourceNodeId),
@@ -197,11 +197,13 @@ export class WorkflowService {
         }
         const connection = await this.workflowModel.createConnection(areaId, data);
         console.log(`[WorkflowService] Connection created: ${connection.id}`.green);
-        
-        // Vérifier si l'AREA est active et si le nœud source est un trigger
-        // Si oui, démarrer le trigger automatiquement
-        await this.checkAndStartTrigger(areaId, sourceNode);
-        
+
+        if (!skipTriggerStart) {
+            await this.checkAndStartTrigger(areaId, sourceNode);
+        } else {
+            console.log(`[WorkflowService] Skipping trigger start for AREA ${areaId} (skipTriggerStart=true)`.yellow);
+        }
+
         return connection;
     }
 

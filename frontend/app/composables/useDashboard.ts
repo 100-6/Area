@@ -189,12 +189,27 @@ export const useDashboard = () => {
     const activeAreas = areasArray.filter(a => a.is_active).length
     const totalExecutions = areasArray.reduce((sum, a) => sum + (a.execution_count || 0), 0)
 
-    // Calculate success rate
+    // Calculate success rate based on last execution status
+    // Count areas with executions and their status
     const areasWithExecutions = areasArray.filter(a => (a.execution_count || 0) > 0)
+
+    // Count successful executions (status = 'success')
     const successfulAreas = areasWithExecutions.filter(a => a.last_execution_status === 'success')
-    const successRate = areasWithExecutions.length > 0
-      ? Math.round((successfulAreas.length / areasWithExecutions.length) * 100)
-      : 0
+
+    // Count failed executions (status = 'failed')
+    const failedAreas = areasWithExecutions.filter(a => a.last_execution_status === 'failed')
+
+    // Count pending executions (status = 'pending' or no status)
+    const pendingAreas = areasWithExecutions.filter(a =>
+      a.last_execution_status === 'pending' || !a.last_execution_status
+    )
+
+    // Calculate success rate: successful / (successful + failed)
+    // We exclude pending from the calculation
+    const totalCompleted = successfulAreas.length + failedAreas.length
+    const successRate = totalCompleted > 0
+      ? Math.round((successfulAreas.length / totalCompleted) * 100)
+      : 100 // 100% si aucune exécution complétée (pour éviter 0%)
 
     // Recent activity (last 7 days)
     const sevenDaysAgo = new Date()

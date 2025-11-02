@@ -41,34 +41,49 @@ export class WorkflowExecutor {
         console.log(`[WorkflowExecutor] Executing workflow for AREA ${areaId}`.cyan);
 
         try {
+            await Area.updateExecutionStatus(areaId, 'pending');
+
             const nodes = await this.workflowModel.getNodesByArea(areaId);
             const triggerNode = nodes.find(n => n.nodeType === 'trigger');
 
-            if (!triggerNode) return;
+            if (!triggerNode) {
+                await Area.updateExecutionStatus(areaId, 'failed');
+                console.error(`[WorkflowExecutor] No trigger node found for AREA ${areaId}`.red);
+                return;
+            }
 
             const connections = await this.workflowModel.getConnectionsByArea(areaId);
 
-            // ✨ Initialiser outputsMap avec les données du trigger
             const initialOutputs: Record<string, any> = {};
             if (triggerData.data) {
                 initialOutputs[triggerNode.id] = triggerData.data;
                 console.log(`[WorkflowExecutor] Stored trigger outputs from node ${triggerNode.id}`.blue);
             }
 
-            // Exécuter toutes les actions connectées au trigger
-            await this.executeConnectedActions(triggerNode.id, nodes, connections, triggerData, new Set(), initialOutputs);
+            const executionSuccess = await this.executeConnectedActions(
+                triggerNode.id,
+                nodes,
+                connections,
+                triggerData,
+                new Set(),
+                initialOutputs
+            );
 
-            // Mettre à jour last_triggered_at et execution_count
             await Area.incrementExecutionCount(areaId);
-            console.log(`[WorkflowExecutor] Updated execution count for AREA ${areaId}`.green);
+
+            await Area.updateExecutionStatus(areaId, executionSuccess ? 'success' : 'failed');
+
+            console.log(`[WorkflowExecutor] Workflow ${executionSuccess ? 'succeeded' : 'failed'} for AREA ${areaId}`.green);
 
         } catch (error) {
             console.error('[WorkflowExecutor] Error:'.red, error);
+            await Area.updateExecutionStatus(areaId, 'failed');
         }
     }
 
     /**
      * Exécute récursivement toutes les actions connectées à un nœud
+     * @returns true si toutes les actions ont réussi, false sinon
      */
     private async executeConnectedActions(
         sourceNodeId: string,
@@ -77,45 +92,59 @@ export class WorkflowExecutor {
         triggerData: any,
         executedNodes: Set<string> = new Set(),
         outputsMap: Record<string, any> = {}
-    ): Promise<void> {
+    ): Promise<boolean> {
         // Éviter les boucles infinies
         if (executedNodes.has(sourceNodeId)) {
             console.log(`[WorkflowExecutor] Node ${sourceNodeId} already executed, skipping to prevent loop`.yellow);
-            return;
+            return true;
         }
-        
+
         executedNodes.add(sourceNodeId);
-        
+
         // Trouver tous les nœuds connectés à ce nœud source
         const connectedNodeIds = connections
             .filter(c => c.sourceNodeId === sourceNodeId)
             .map(c => c.targetNodeId);
-        
+
         console.log(`[WorkflowExecutor] Found ${connectedNodeIds.length} connected nodes from ${sourceNodeId}`.blue);
-        
+
+        let allSucceeded = true;
+
         // Exécuter chaque action connectée
         for (const nodeId of connectedNodeIds) {
             const actionNode = nodes.find(n => n.id === nodeId);
-            
+
             if (!actionNode) {
                 console.log(`[WorkflowExecutor] Node ${nodeId} not found`.yellow);
+                allSucceeded = false;
                 continue;
             }
-            
+
             if (actionNode.nodeType === 'action') {
                 console.log(`[WorkflowExecutor] Executing action node ${nodeId}`.cyan);
                 const result = await this.executeAction(actionNode, triggerData, outputsMap);
-                
+
+                // Vérifier si l'action a réussi
+                if (!result || !result.success) {
+                    console.error(`[WorkflowExecutor] Action node ${nodeId} failed`.red);
+                    allSucceeded = false;
+                }
+
                 // Stocker l'output de cette action
                 if (result && result.success && result.data) {
                     outputsMap[nodeId] = result.data;
                     console.log(`[WorkflowExecutor] Stored outputs from node ${nodeId}`.blue);
                 }
-                
+
                 // Continuer l'exécution avec les actions connectées à celle-ci
-                await this.executeConnectedActions(nodeId, nodes, connections, triggerData, executedNodes, outputsMap);
+                const childrenSucceeded = await this.executeConnectedActions(nodeId, nodes, connections, triggerData, executedNodes, outputsMap);
+                if (!childrenSucceeded) {
+                    allSucceeded = false;
+                }
             }
         }
+
+        return allSucceeded;
     }
 
     private async executeAction(actionNode: any, triggerData: any, outputsMap: Record<string, any> = {}): Promise<any> {

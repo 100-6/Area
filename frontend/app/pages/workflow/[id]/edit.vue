@@ -199,18 +199,6 @@
             :position="nextCardPosition"
             @add-service="openActionServiceModal"
           />
-
-          <UButton
-            v-if="workflowBlocks.length > 0"
-            class="floating-add-button"
-            variant="solid"
-            color="primary"
-            icon="i-heroicons-plus"
-            size="lg"
-            @click="openActionServiceModal"
-          >
-            Ajouter
-          </UButton>
         </div>
       </div>
 
@@ -957,14 +945,14 @@ useHead({
   height: 5000px;
   top: 50%;
   left: 50%;
-  margin-left: -2500px;
-  margin-top: -2500px;
+  margin-left: -100px;
+  margin-top: -100px;
 }
 
 .add-action-button {
   position: absolute;
-  top: 2500px;
-  left: 2500px;
+  top: 100px;
+  left: 100px;
   transform: translate(-50%, -50%);
   width: 200px;
   height: 120px;
