@@ -8,7 +8,7 @@
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Vue.js](https://img.shields.io/badge/Vue.js-35495E?style=for-the-badge&logo=vue.js&logoColor=4FC08D)](https://vuejs.org/)
+[![Nuxt](https://img.shields.io/badge/Nuxt-00DC82?style=for-the-badge&logo=nuxt.js&logoColor=white)](https://nuxt.com/)
 [![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
@@ -209,12 +209,12 @@ Each module:
 - **Logging**: Winston + Morgan
 
 ### Frontend Web
-- **Framework**: Nuxt 4 (Vue 3)
+- **Framework**: Nuxt 4 (basé sur Vue 3)
 - **UI Library**: Nuxt UI (TailwindCSS based)
 - **State Management**: Composition API (useState)
 - **Icons**: Heroicons, Lucide, Logos
 - **HTTP Client**: Nuxt $fetch (auto-imported)
-- **Router**: Vue Router 4 (file-based routing)
+- **Router**: Nuxt Router (file-based routing)
 
 ### Mobile
 - **Framework**: Flutter 3.7+
@@ -865,7 +865,7 @@ sequenceDiagram
 graph TB
     subgraph "Web Client (Nuxt.js)"
         Pages[Pages<br/>file-based routing]
-        Components[Components<br/>Vue 3 + Nuxt UI]
+        Components[Components<br/>Nuxt UI]
         Composables[Composables<br/>useAuth, useWorkflowApi]
         Pages --> Components
         Components --> Composables
@@ -924,11 +924,11 @@ Mirror-Area/
 │   ├── docs/                  # Detailed API documentation
 │   ├── Dockerfile
 │   └── package.json
-├── frontend/                   # Web application (Nuxt.js/Vue 3)
+├── frontend/                   # Web application (Nuxt.js)
 │   ├── app/
 │   │   ├── pages/             # Pages (automatic routing)
-│   │   ├── components/        # Vue components
-│   │   ├── composables/       # Vue hooks
+│   │   ├── components/        # Nuxt components
+│   │   ├── composables/       # Nuxt composables
 │   │   └── assets/            # Styles, images
 │   ├── nuxt.config.ts
 │   ├── Dockerfile
