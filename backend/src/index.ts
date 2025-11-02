@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
 import 'colors';
 
 import { errorHandler, notFoundHandler } from './core/middleware/error';
@@ -26,6 +27,19 @@ app.use(cors(corsOptions));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Swagger documentation
+try {
+    const swaggerDocument = require('./swagger-output.json');
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+        explorer: true,
+        customCss: '.swagger-ui .topbar { display: none }',
+        customSiteTitle: 'AREA API Documentation'
+    }));
+    console.log(' Swagger documentation available at /api-docs'.cyan);
+} catch (error) {
+    console.log(' Swagger documentation not available. Run npm run swagger to generate it.'.yellow);
+}
 
 app.use('/', routes);
 
