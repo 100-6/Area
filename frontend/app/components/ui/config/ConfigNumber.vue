@@ -10,7 +10,7 @@
       type="number"
       :name="props.parameter.name"
       :model-value="value?.toString() || ''"
-      :placeholder="props.parameter.placeholder || '0'"
+      :placeholder="props.parameter.placeholder?.toString() || '0'"
       :disabled="disabled"
       :min="props.parameter.validation?.min"
       :max="props.parameter.validation?.max"
