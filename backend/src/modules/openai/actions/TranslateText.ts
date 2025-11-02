@@ -108,7 +108,16 @@ export class TranslateText extends BaseAction {
             const result = await this.apiService.translateText(apiKey, text, config.targetLanguage, config.sourceLanguage || 'auto', config.formalTone || false);
             const executionTime = Date.now() - startTime;
             console.log(`[TranslateText] ✓ Translated from ${result.detectedLanguage} to ${result.targetLanguage}`.green);
-            return {success: true, data: result, executionTime};
+            console.log(`[TranslateText] Translation: "${result.translatedText.substring(0, 100)}..."`.green);
+            return {
+                success: true,
+                data: {
+                    translatedText: result.translatedText,
+                    detectedLanguage: result.detectedLanguage,
+                    targetLanguage: result.targetLanguage
+                },
+                executionTime
+            };
         } catch (error) {
             const executionTime = Date.now() - startTime;
             console.error(`[TranslateText] ❌ Failed:`.red, error);

@@ -99,7 +99,16 @@ export class ExtractKeywords extends BaseAction {
             const result = await this.apiService.extractKeywords(apiKey, text, config.maxKeywords || 10);
             const executionTime = Date.now() - startTime;
             console.log(`[ExtractKeywords] ✓ Extracted ${result.keywordCount} keywords`.green);
-            return {success: true, data: result, executionTime};
+            console.log(`[ExtractKeywords] Keywords: ${result.keywords.join(', ')}`.green);
+            return {
+                success: true,
+                data: {
+                    keywords: result.keywords,
+                    topics: result.topics,
+                    keywordCount: result.keywordCount
+                },
+                executionTime
+            };
         } catch (error) {
             const executionTime = Date.now() - startTime;
             console.error(`[ExtractKeywords] ❌ Failed:`.red, error);
