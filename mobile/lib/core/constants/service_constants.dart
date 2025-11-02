@@ -38,7 +38,7 @@ class ServiceConstants {
       case 'trello':
         return 'https://a.trello.services/prgb/dist/images/apple-touch-icon-152x152.4a0bb8a24ff2b2b8.png';
       case 'twitch':
-        return 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIZIRMX5-Or4ggVfjID7HhXrLzrdeOJ3kkUQ&s';
+        return 'https://static.twitchcdn.net/assets/favicon-32-e29e246c157142c94346.png';
       case 'ntfy':
         return 'https://assets.streamlinehq.com/image/private/w_300,h_300,ar_1/f_auto/v1/icons/logos/ntfy-atckcjo7xgwkpk7pyxqer.png/ntfy-dcq5om2vab62rm4qrck56n.png?_a=DATAg1AAZAA0';
       default:
