@@ -103,8 +103,18 @@ export class SummarizeText extends BaseAction {
             console.log(`[SummarizeText] Summarizing ${text.length} characters...`.cyan);
             const result = await this.apiService.summarizeText(apiKey, text, config.length || 'medium', config.bulletPoints || false);
             const executionTime = Date.now() - startTime;
-            console.log(`[SummarizeText] ✓ Summary created (${result.compressionRatio * 100}% compression)`.green);
-            return {success: true, data: result, executionTime};
+            console.log(`[SummarizeText] ✓ Summary created (${(result.compressionRatio * 100).toFixed(1)}% compression)`.green);
+            console.log(`[SummarizeText] Original: ${result.originalLength} chars → Summary: ${result.summaryLength} chars`.green);
+            return {
+                success: true,
+                data: {
+                    summary: result.summary,
+                    originalLength: result.originalLength,
+                    summaryLength: result.summaryLength,
+                    compressionRatio: result.compressionRatio
+                },
+                executionTime
+            };
         } catch (error) {
             const executionTime = Date.now() - startTime;
             console.error(`[SummarizeText] ❌ Failed:`.red, error);
