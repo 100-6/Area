@@ -234,6 +234,33 @@ export const useAuth = () => {
     }
   }
 
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+    if (!authToken.value) {
+      throw new Error('Non authentifié')
+    }
+
+    try {
+      const response = await $fetch<{ success: boolean, message: string }>('/api/users/changePassword', {
+        method: 'POST',
+        body: {
+          currentPassword,
+          newPassword
+        },
+        baseURL: backendUrl,
+        headers: {
+          'Authorization': `Bearer ${authToken.value}`
+        }
+      })
+
+      if (!response.success) {
+        throw new Error(response.message || 'Échec du changement de mot de passe')
+      }
+    } catch (error: any) {
+      console.error('Change password error:', error)
+      throw new Error(getErrorMessage(error))
+    }
+  }
+
   return {
     user: readonly(user),
     isLoggedIn,
@@ -247,6 +274,7 @@ export const useAuth = () => {
     linkProvider,
     initAuth,
     clearAuth,
-    updateProfile
+    updateProfile,
+    changePassword
   }
 }

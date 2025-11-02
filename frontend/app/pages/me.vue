@@ -372,26 +372,114 @@
               </h3>
 
               <InfoCard
+                v-if="!isChangingPassword"
                 title="Mot de passe"
+                subtitle="Dernière modification récente"
                 icon="i-heroicons-key"
                 icon-size="lg"
               >
-                <template #subtitle>
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                    <UIcon name="i-heroicons-exclamation-triangle" class="w-3 h-3 mr-1" />
-                    Ancienneté: 30+ jours
-                  </span>
-                </template>
                 <template #header-actions>
-                  <div class="flex items-center space-x-3">
-                    <span class="text-xs bg-gray-200 px-3 py-1 rounded-full font-medium">Bientôt disponible</span>
-                    <UButton variant="outline" disabled size="sm">
-                      <UIcon name="i-heroicons-pencil-square" class="w-4 h-4 mr-2" />
-                      Modifier
-                    </UButton>
-                  </div>
+                  <UButton
+                    variant="outline"
+                    size="sm"
+                    @click="isChangingPassword = true"
+                    style="background: var(--color-secondary); color: var(--text-white); border: none;"
+                  >
+                    <UIcon name="i-heroicons-pencil-square" class="w-4 h-4 mr-2" />
+                    Modifier
+                  </UButton>
                 </template>
               </InfoCard>
+
+              <!-- Formulaire de changement de mot de passe -->
+              <div v-else class="password-change-form bg-gradient-to-r from-green-50 to-white rounded-xl border-2 border-green-200 p-6">
+                <div class="flex items-center justify-between mb-6">
+                  <h4 class="text-lg font-bold text-gray-900 flex items-center">
+                    <UIcon name="i-heroicons-key" class="w-5 h-5 mr-2" style="color: #166534;" />
+                    Modifier le mot de passe
+                  </h4>
+                  <UButton
+                    variant="ghost"
+                    size="sm"
+                    @click="cancelPasswordChange"
+                    :disabled="isPasswordSaving"
+                  >
+                    <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+                  </UButton>
+                </div>
+
+                <div class="space-y-5">
+                  <div class="password-field-wrapper">
+                    <label class="text-sm font-semibold text-gray-700 block mb-3">Mot de passe actuel</label>
+                    <UInput
+                      v-model="passwordForm.currentPassword"
+                      type="password"
+                      placeholder="Entrez votre mot de passe actuel"
+                      size="md"
+                      :disabled="isPasswordSaving"
+                      class="password-input"
+                    />
+                  </div>
+
+                  <div class="password-field-wrapper">
+                    <label class="text-sm font-semibold text-gray-700 block mb-3">Nouveau mot de passe</label>
+                    <UInput
+                      v-model="passwordForm.newPassword"
+                      type="password"
+                      placeholder="Entrez un nouveau mot de passe (min. 8 caractères)"
+                      size="md"
+                      :disabled="isPasswordSaving"
+                      class="password-input"
+                    />
+                  </div>
+
+                  <div class="password-field-wrapper">
+                    <label class="text-sm font-semibold text-gray-700 block mb-3">Confirmer le nouveau mot de passe</label>
+                    <UInput
+                      v-model="passwordForm.confirmPassword"
+                      type="password"
+                      placeholder="Confirmez votre nouveau mot de passe"
+                      size="md"
+                      :disabled="isPasswordSaving"
+                      class="password-input"
+                    />
+                  </div>
+
+                  <div class="p-3 bg-green-50 border-2 border-green-200 rounded-lg">
+                    <div class="flex items-start space-x-2">
+                      <UIcon name="i-heroicons-information-circle" class="w-5 h-5 text-green-700 mt-0.5" />
+                      <div class="text-sm text-green-900">
+                        <p class="font-semibold mb-1">Conseils pour un mot de passe sécurisé :</p>
+                        <ul class="list-disc list-inside space-y-0.5 text-green-800">
+                          <li>Utilisez au moins 8 caractères</li>
+                          <li>Combinez lettres majuscules et minuscules</li>
+                          <li>Ajoutez des chiffres et des symboles</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="flex gap-3 pt-2">
+                    <UButton
+                      @click="handlePasswordChange"
+                      :loading="isPasswordSaving"
+                      size="lg"
+                      style="background: var(--color-secondary); border-color: var(--color-secondary);"
+                    >
+                      <UIcon name="i-heroicons-check" class="w-4 h-4 mr-2" />
+                      Enregistrer
+                    </UButton>
+                    <UButton
+                      variant="outline"
+                      @click="cancelPasswordChange"
+                      size="lg"
+                      :disabled="isPasswordSaving"
+                    >
+                      Annuler
+                    </UButton>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Zone de danger -->
@@ -469,12 +557,20 @@ definePageMeta({
 // Import the InfoCard component explicitly to ensure it's available
 import InfoCard from '~/components/ui/InfoCard.vue'
 
-const { user, logout, updateProfile, linkProvider } = useAuth()
+const { user, logout, updateProfile, linkProvider, changePassword } = useAuth()
 const { providers, isLoading: isLoadingProviders, error: providersError, fetchProviders } = useAuthProviders()
 
 const isEditing = ref(false)
 const isSaving = ref(false)
 const activeTab = ref('overview')
+const isChangingPassword = ref(false)
+const isPasswordSaving = ref(false)
+const passwordForm = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+const toast = useToast()
 
 // All OAuth providers from backend are now supported dynamically
 const isSupportedProvider = (provider: string): boolean => {
@@ -549,6 +645,82 @@ const cancelEdit = () => {
 
 const handleLogout = async () => {
   await logout()
+}
+
+const handlePasswordChange = async () => {
+  // Validation
+  if (!passwordForm.value.currentPassword || !passwordForm.value.newPassword || !passwordForm.value.confirmPassword) {
+    toast.add({
+      title: 'Erreur',
+      description: 'Veuillez remplir tous les champs',
+      color: 'red',
+      timeout: 3000,
+      icon: 'i-heroicons-exclamation-circle'
+    })
+    return
+  }
+
+  if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+    toast.add({
+      title: 'Erreur',
+      description: 'Les mots de passe ne correspondent pas',
+      color: 'red',
+      timeout: 3000,
+      icon: 'i-heroicons-exclamation-circle'
+    })
+    return
+  }
+
+  if (passwordForm.value.newPassword.length < 8) {
+    toast.add({
+      title: 'Erreur',
+      description: 'Le mot de passe doit contenir au moins 8 caractères',
+      color: 'red',
+      timeout: 3000,
+      icon: 'i-heroicons-exclamation-circle'
+    })
+    return
+  }
+
+  isPasswordSaving.value = true
+  try {
+    await changePassword(passwordForm.value.currentPassword, passwordForm.value.newPassword)
+
+    toast.add({
+      title: 'Succès',
+      description: 'Votre mot de passe a été modifié avec succès',
+      color: 'green',
+      timeout: 3000,
+      icon: 'i-heroicons-check-circle'
+    })
+
+    // Reset form and close
+    passwordForm.value = {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    }
+    isChangingPassword.value = false
+  } catch (error: any) {
+    toast.add({
+      title: 'Erreur',
+      description: error.message || 'Impossible de modifier le mot de passe',
+      color: 'red',
+      timeout: 5000,
+      icon: 'i-heroicons-exclamation-circle'
+    })
+  } finally {
+    isPasswordSaving.value = false
+  }
+}
+
+const cancelPasswordChange = () => {
+  passwordForm.value = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  }
+  isChangingPassword.value = false
 }
 
 const handleProviderLink = (provider: string) => {
@@ -642,5 +814,65 @@ useHead({
 :deep(label) {
   color: var(--text-primary);
   font-weight: 500;
+}
+
+/* Styles pour le formulaire de changement de mot de passe */
+.password-change-form {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+  box-shadow: 0 4px 6px -1px rgba(22, 101, 52, 0.1), 0 2px 4px -1px rgba(22, 101, 52, 0.06);
+  transition: all 0.3s ease;
+}
+
+.password-field-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.password-field-wrapper label {
+  margin-bottom: 0.75rem;
+}
+
+.password-change-form:hover {
+  box-shadow: 0 10px 15px -3px rgba(22, 101, 52, 0.1), 0 4px 6px -2px rgba(22, 101, 52, 0.05);
+}
+
+/* Style pour les champs de mot de passe */
+.password-input :deep(input[type="password"]) {
+  background: white !important;
+  border: 2px solid #d1fae5 !important;
+  color: #1f2937 !important;
+  font-size: 0.875rem !important;
+  padding: 0.5rem 0.875rem !important;
+  height: 2.5rem !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.2s ease !important;
+  font-family: monospace !important;
+  letter-spacing: 0.05em !important;
+}
+
+.password-input :deep(input[type="password"]:focus) {
+  border-color: #166534 !important;
+  box-shadow: 0 0 0 3px rgba(22, 101, 52, 0.1) !important;
+  outline: none !important;
+  background: #f0fdf4 !important;
+}
+
+.password-input :deep(input[type="password"]:hover:not(:disabled)) {
+  border-color: #10b981 !important;
+  background: #f0fdf4 !important;
+}
+
+.password-input :deep(input[type="password"]:disabled) {
+  background: #f9fafb !important;
+  border-color: #e5e7eb !important;
+  cursor: not-allowed !important;
+  opacity: 0.6 !important;
+}
+
+.password-input :deep(input[type="password"]::placeholder) {
+  color: #9ca3af !important;
+  font-family: var(--font-family-sans) !important;
+  letter-spacing: normal !important;
+  opacity: 0.7 !important;
 }
 </style>
