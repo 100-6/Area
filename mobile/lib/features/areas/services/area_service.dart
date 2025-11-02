@@ -102,6 +102,17 @@ class AreaService {
     );
   }
 
+  /// Supprimer un nœud de workflow
+  Future<void> deleteWorkflowNode({
+    required String nodeId,
+    required String token,
+  }) async {
+    await _apiService.delete(
+      '/api/workflows/nodes/$nodeId',
+      headers: {'Authorization': 'Bearer $token'},
+    );
+  }
+
   /// Supprimer une AREA
   Future<void> deleteArea({
     required String areaId,

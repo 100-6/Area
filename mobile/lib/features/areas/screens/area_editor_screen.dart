@@ -213,12 +213,78 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
         debugPrint('✅ All $connectionIndex connections created successfully');
       } else {
         // Mettre à jour l'AREA existante
+        areaId = widget.areaId!;
+
+        // Mettre à jour le nom et la description
         await _areaService.updateArea(
-          areaId: widget.areaId!,
+          areaId: areaId,
           name: _nameController.text,
           description: _descriptionController.text,
           token: token,
         );
+
+        // Créer les nouveaux nodes (ceux avec des IDs temporaires)
+        debugPrint('💾 Checking for new nodes to create in existing Area...');
+
+        // Identifier les nouveaux action nodes (ceux qui commencent par 'temp_')
+        final newActionNodes = _actionNodes.where((node) => node.id.startsWith('temp_')).toList();
+
+        if (newActionNodes.isNotEmpty) {
+          debugPrint('💾 Found ${newActionNodes.length} new action(s) to create');
+
+          // Récupérer les nodes existants pour trouver le dernier
+          final existingNodes = await _areaService.getWorkflowNodes(
+            areaId: areaId,
+            token: token,
+          );
+
+          // Trouver le dernier node de la chaîne
+          String? lastNodeId;
+          if (existingNodes.isNotEmpty) {
+            // Le dernier node est celui qui n'est pas une source dans les connexions
+            final allNodes = existingNodes;
+            lastNodeId = allNodes.last.id;
+          }
+
+          // Créer chaque nouveau node et le connecter
+          for (int i = 0; i < newActionNodes.length; i++) {
+            final newNode = newActionNodes[i];
+            debugPrint('💾 Creating new action ${i + 1}/${newActionNodes.length}: ${newNode.serviceId}/${newNode.reactionId}');
+
+            final createdAction = await _areaService.createWorkflowNode(
+              areaId: areaId,
+              nodeType: 'action',
+              serviceId: newNode.serviceId,
+              reactionId: newNode.reactionId,
+              config: newNode.config,
+              positionX: newNode.positionX,
+              positionY: newNode.positionY,
+              label: newNode.label,
+              token: token,
+            );
+
+            debugPrint('✅ New action node created: ${createdAction.id}');
+
+            // Créer la connexion avec le node précédent
+            if (lastNodeId != null) {
+              debugPrint('🔗 Connecting $lastNodeId → ${createdAction.id}');
+              await _areaService.createWorkflowConnection(
+                areaId: areaId,
+                sourceNodeId: lastNodeId,
+                targetNodeId: createdAction.id,
+                token: token,
+              );
+              debugPrint('✅ Connection created');
+            }
+
+            // Le node créé devient le dernier pour la prochaine itération
+            lastNodeId = createdAction.id;
+          }
+
+          debugPrint('✅ All new nodes and connections created successfully');
+        } else {
+          debugPrint('ℹ️ No new nodes to create');
+        }
       }
 
       if (mounted) {
@@ -1276,10 +1342,43 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
                   child: IconButton(
                     icon: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
                     padding: EdgeInsets.zero,
-                    onPressed: () {
-                      setState(() {
-                        _actionNodes.remove(node);
-                      });
+                    onPressed: () async {
+                      // Si c'est une Area existante et que le node a un ID réel (pas temporaire)
+                      if (widget.areaId != null && !node.id.startsWith('temp_')) {
+                        try {
+                          final authRepo = context.read<AuthRepository>();
+                          final token = await authRepo.getToken();
+
+                          if (token != null) {
+                            debugPrint('🗑️ Deleting node from backend: ${node.id}');
+                            await _areaService.deleteWorkflowNode(
+                              nodeId: node.id,
+                              token: token,
+                            );
+                            debugPrint('✅ Node deleted successfully from backend');
+                          }
+                        } catch (e) {
+                          debugPrint('❌ Error deleting node from backend: $e');
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Erreur lors de la suppression: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                          return; // Ne pas supprimer localement si l'API a échoué
+                        }
+                      } else {
+                        debugPrint('🗑️ Removing temporary node locally: ${node.id}');
+                      }
+
+                      // Supprimer le node de la liste locale
+                      if (mounted) {
+                        setState(() {
+                          _actionNodes.remove(node);
+                        });
+                      }
                     },
                   ),
                 ),
