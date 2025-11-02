@@ -140,6 +140,9 @@ export const useAuth = () => {
       spotify: '/api/spotify/connect',
       gmail: '/api/gmail/connect',
       outlook: '/api/outlook/connect',
+      trello: '/api/trello/connect',
+      slack: '/api/slack/connect',
+      twitch: '/api/twitch/connect'
     }
 
     return specialRoutes[provider] || `/api/auth/${provider}`

@@ -562,7 +562,6 @@ const { providers, isLoading: isLoadingProviders, error: providersError, fetchPr
 
 const isEditing = ref(false)
 const isSaving = ref(false)
-const activeTab = ref('overview')
 const isChangingPassword = ref(false)
 const isPasswordSaving = ref(false)
 const passwordForm = ref({
@@ -601,6 +600,8 @@ const tabs = [
     icon: 'i-heroicons-shield-check'
   }
 ]
+
+const activeTab = ref('overview')
 
 const editForm = ref({
   firstName: '',
