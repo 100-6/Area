@@ -122,6 +122,7 @@ jobs:
           tags: ${{ steps.meta.outputs.frontend_tags }}
           build-args: |
             NUXT_PUBLIC_API_URL=https://auto.eliasdrissi.dev
+            BACKEND_URL=http://area-backend:8080
           labels: |
             org.opencontainers.image.source=${{ github.repositoryUrl }}
             org.opencontainers.image.revision=${{ github.sha }}

@@ -1082,7 +1082,7 @@ The system is designed to scale horizontally:
 This project is an academic project completed as part of the EPITECH curriculum.
 
 **Authors:** Mirror-Area Team
-**Year:** 2024-2025
+**Year:** 2025-2026
 **Module:** G-DEV-500 - AREA
 
 ---

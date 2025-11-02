@@ -96,7 +96,18 @@ export class AnalyzeSentiment extends BaseAction {
             const result = await this.apiService.analyzeSentiment(apiKey, text, config.includeExplanation !== false);
             const executionTime = Date.now() - startTime;
             console.log(`[AnalyzeSentiment] ✓ Sentiment: ${result.sentiment} (${result.score})`.green);
-            return {success: true, data: result, executionTime};
+            if (result.explanation) {
+                console.log(`[AnalyzeSentiment] Explanation: ${result.explanation}`.green);
+            }
+            return {
+                success: true,
+                data: {
+                    sentiment: result.sentiment,
+                    score: result.score,
+                    explanation: result.explanation
+                },
+                executionTime
+            };
         } catch (error) {
             const executionTime = Date.now() - startTime;
             console.error(`[AnalyzeSentiment] ❌ Failed:`.red, error);

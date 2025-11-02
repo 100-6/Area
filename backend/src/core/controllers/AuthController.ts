@@ -865,6 +865,80 @@ export class AuthController {
         }
     };
 
+    /**
+     * Initiate Notion OAuth
+     * GET /api/auth/notion
+     */
+    public notionLogin = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const token = req.query.token as string | undefined;
+            const isMobile = this.isMobileRequest(req);
+            let state: string | undefined;
+
+            if (token || isMobile) {
+                const stateData = { token, isMobile };
+                state = Buffer.from(JSON.stringify(stateData)).toString('base64');
+            }
+            const authUrl = this.authService.getNotionAuthUrl(state);
+            res.redirect(authUrl);
+        } catch (error) {
+            console.error('Notion OAuth redirect error:'.red, error);
+            if (error instanceof Error && error.message === 'NOTION_OAUTH_NOT_CONFIGURED')
+                res.status(500).json({ error: 'Notion OAuth not configured' });
+            else
+                res.status(500).json({ error: 'Failed to initiate Notion OAuth' });
+        }
+    };
+
+    /**
+     * Handle Notion OAuth callback
+     * GET /api/auth/notion/callback
+     */
+    public notionCallback = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { code, state } = req.query;
+            let stateData: { token?: string; isMobile?: boolean } = {};
+
+            if (state && typeof state === 'string') {
+                try {
+                    stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+                } catch (e) {
+                    console.warn('Failed to parse state:', e);
+                }
+            }
+            const isMobile = stateData.isMobile || this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
+
+            if (!code || typeof code !== 'string') {
+                console.error('OAuth callback error: Missing or invalid code');
+                return res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent('Missing authorization code')}&provider=notion`);
+            }
+            const result = await this.authService.handleNotionCallback(code, stateData.token);
+
+            res.redirect(`${redirectUrl}/auth/success?token=${encodeURIComponent(result.token)}&provider=notion`);
+        } catch (error) {
+            console.error('Notion OAuth callback error:'.red, error);
+            const isMobile = this.isMobileRequest(req);
+            const redirectUrl = this.getRedirectUrl(isMobile);
+
+            let errorMessage = 'Authentication failed';
+            if (error instanceof Error) {
+                switch (error.message) {
+                    case 'INVALID_OAUTH_USER_DATA':
+                        errorMessage = 'Invalid user data received from Notion';
+                        break;
+                    case 'ACCOUNT_INACTIVE':
+                        errorMessage = 'Account is inactive';
+                        break;
+                    case 'OAUTH_CALLBACK_FAILED':
+                        errorMessage = 'Notion authentication failed';
+                        break;
+                }
+            }
+            res.redirect(`${redirectUrl}/auth/error?message=${encodeURIComponent(errorMessage)}&provider=notion`);
+        }
+    };
+
     /*                                   ^                                    */
     /*                                   |                                    */
     /* =============================   OAuth    ============================= */
