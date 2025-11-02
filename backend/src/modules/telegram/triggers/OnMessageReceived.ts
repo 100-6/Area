@@ -35,7 +35,7 @@ export class OnMessageReceived extends BaseTrigger {
                 chatId: {
                     type: 'string',
                     title: 'Chat ID',
-                    description: 'The Telegram chat ID to monitor',
+                    description: 'The Telegram chat ID to monitor. To get your chat ID, send /myid to @autoepitechbot on Telegram',
                     pattern: '^-?[0-9]+$'
                 },
                 keyword: {

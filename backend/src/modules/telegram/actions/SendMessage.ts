@@ -30,7 +30,7 @@ export class SendMessage extends BaseAction {
                 chatId: {
                     type: 'string',
                     title: 'Chat ID',
-                    description: 'The Telegram chat ID where to send the message',
+                    description: 'The Telegram chat ID where to send the message. To get your chat ID, send /myid to @autoepitechbot on Telegram',
                     pattern: '^(-?[0-9]+|\\{\\{.+\\}\\})$'
                 },
                 text: {
