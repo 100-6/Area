@@ -1,465 +1,726 @@
+# Schema System Documentation
 
+**Version:** 1.0.0
+**Last Updated:** 2025-01-02
 
+---
 
-## 📦 Architecture
+## Table of Contents
 
-### Fichiers créés
+1. [Overview](#overview)
+2. [Schema Architecture](#schema-architecture)
+3. [Backend Schema Format](#backend-schema-format)
+4. [Mobile Schema Format](#mobile-schema-format)
+5. [Schema Conversion](#schema-conversion)
+6. [Variable System](#variable-system)
+7. [Configuration Flow](#configuration-flow)
+8. [Examples](#examples)
+9. [Best Practices](#best-practices)
+
+---
+
+## Overview
+
+The Schema System manages the conversion between backend configuration schemas and mobile-friendly UI schemas. It enables dynamic form generation for configuring triggers and actions in workflow nodes.
+
+### Key Responsibilities
+
+1. **Schema Conversion**: Translate backend schemas to mobile format
+2. **Variable Resolution**: Handle dynamic variables from previous nodes
+3. **Form Generation**: Create UI inputs from schema definitions
+4. **Validation**: Ensure configuration meets requirements
+5. **Data Transformation**: Convert user inputs to backend format
+
+### Components
+
+- **Backend Schema**: JSON schema from API defining configuration structure
+- **Mobile Schema**: Simplified schema for mobile UI generation
+- **SchemaConverter**: Service converting between formats
+- **NodeConfigHelper**: Utility for opening configuration screens
+- **Variable System**: Handles interpolation of previous node outputs
+
+---
+
+## Schema Architecture
+
+### Data Flow
 
 ```
-mobile/lib/features/areas/
-├── models/
-│   ├── config_schema.dart          # Modèles de schéma
-│   └── service_info.dart           # Modifié pour inclure configSchema
-├── services/
-│   └── service_resource_provider.dart  # Gestion des ressources externes
-├── widgets/
-│   └── dynamic_config_form.dart    # Widget générique de formulaire
-├── screens/
-│   └── node_config_screen_v2.dart  # Nouvelle version du screen
-└── utils/
-    └── node_config_helper.dart     # Helper pour migration progressive
+┌──────────────────┐
+│  Backend API     │
+│  Returns schema  │
+└────────┬─────────┘
+         │
+         │ JSON Schema
+         ▼
+┌──────────────────────┐
+│  SchemaConverter     │
+│  Converts to mobile  │
+└────────┬─────────────┘
+         │
+         │ Mobile Schema
+         ▼
+┌──────────────────────┐
+│  UI Form Generator   │
+│  Creates input fields│
+└────────┬─────────────┘
+         │
+         │ User fills form
+         ▼
+┌──────────────────────┐
+│  SchemaConverter     │
+│  Converts to backend │
+└────────┬─────────────┘
+         │
+         │ Backend Config
+         ▼
+┌──────────────────┐
+│  Save to API     │
+└──────────────────┘
 ```
 
-### Schéma JSON Backend (`about.json`)
+---
+
+## Backend Schema Format
+
+### Structure
+
+Backend schemas define the expected configuration structure for each trigger or action.
 
 ```json
 {
-  "server": {
-    "services": [
-      {
-        "name": "discord",
-        "actions": [
-          {
-            "name": "on_message_created",
-            "description": "When a message is created",
-            "configSchema": {
-              "fields": [
-                {
-                  "key": "guildId",
-                  "type": "discord_guild",
-                  "label": "Discord Server",
-                  "required": true
-                },
-                {
-                  "key": "channelId",
-                  "type": "discord_channel",
-                  "label": "Channel",
-                  "required": true,
-                  "dependsOn": "guildId"
-                }
-              ],
-              "outputSchema": {
-                "author.id": "string",
-                "author.username": "string",
-                "content": "string"
-              }
-            }
-          }
-        ]
+  "type": "object",
+  "properties": {
+    "channel_id": {
+      "type": "string",
+      "description": "Discord channel ID",
+      "required": true,
+      "format": "text"
+    },
+    "message": {
+      "type": "string",
+      "description": "Message to send",
+      "required": true,
+      "format": "textarea"
+    },
+    "mention_role": {
+      "type": "boolean",
+      "description": "Mention @everyone",
+      "required": false,
+      "default": false
+    },
+    "priority": {
+      "type": "string",
+      "description": "Message priority",
+      "enum": ["low", "normal", "high"],
+      "default": "normal"
+    }
+  },
+  "required": ["channel_id", "message"]
+}
+```
+
+### Field Types
+
+| Type | Description | UI Element |
+|------|-------------|------------|
+| `string` | Text input | TextField |
+| `string` (textarea) | Multi-line text | TextField (multiline) |
+| `boolean` | True/false | Switch |
+| `number` | Numeric value | TextField (numeric) |
+| `integer` | Integer value | TextField (numeric) |
+| `enum` | Select from options | Dropdown |
+| `array` | List of values | Multiple inputs |
+| `object` | Nested object | Nested form |
+
+### Field Properties
+
+- **type**: Data type (string, number, boolean, etc.)
+- **description**: Human-readable label
+- **required**: Whether field is mandatory
+- **default**: Default value
+- **enum**: List of allowed values (for dropdowns)
+- **format**: Special formatting (text, textarea, url, email, etc.)
+- **pattern**: Regex validation pattern
+- **minimum/maximum**: Numeric constraints
+- **minLength/maxLength**: String length constraints
+
+---
+
+## Mobile Schema Format
+
+### Structure
+
+Mobile schemas are simplified for easier UI generation.
+
+```dart
+class MobileSchemaField {
+  final String key;              // Field identifier
+  final String label;            // Display label
+  final String type;             // Field type
+  final bool required;           // Is required?
+  final dynamic defaultValue;    // Default value
+  final List<String>? options;   // For dropdowns
+  final String? placeholder;     // Placeholder text
+  final Map<String, dynamic>? validation;  // Validation rules
+}
+```
+
+### Example
+
+```dart
+[
+  MobileSchemaField(
+    key: 'channel_id',
+    label: 'Discord channel ID',
+    type: 'text',
+    required: true,
+  ),
+  MobileSchemaField(
+    key: 'message',
+    label: 'Message to send',
+    type: 'textarea',
+    required: true,
+    placeholder: 'Enter your message...',
+  ),
+  MobileSchemaField(
+    key: 'mention_role',
+    label: 'Mention @everyone',
+    type: 'boolean',
+    required: false,
+    defaultValue: false,
+  ),
+  MobileSchemaField(
+    key: 'priority',
+    label: 'Message priority',
+    type: 'select',
+    required: false,
+    options: ['low', 'normal', 'high'],
+    defaultValue: 'normal',
+  ),
+]
+```
+
+---
+
+## Schema Conversion
+
+### Backend to Mobile
+
+**`lib/features/areas/services/schema_converter.dart`:**
+
+```dart
+class SchemaConverter {
+  /// Convert backend schema to mobile schema
+  static List<MobileSchemaField> convertToMobileSchema(
+    Map<String, dynamic> backendSchema,
+  ) {
+    final List<MobileSchemaField> fields = [];
+
+    // Extract properties from backend schema
+    final properties = backendSchema['properties'] as Map<String, dynamic>?;
+    final required = backendSchema['required'] as List<dynamic>? ?? [];
+
+    if (properties == null) return fields;
+
+    // Convert each property to mobile field
+    properties.forEach((key, value) {
+      final fieldSchema = value as Map<String, dynamic>;
+
+      fields.add(MobileSchemaField(
+        key: key,
+        label: fieldSchema['description'] ?? key,
+        type: _convertType(fieldSchema),
+        required: required.contains(key),
+        defaultValue: fieldSchema['default'],
+        options: _extractOptions(fieldSchema),
+        placeholder: _generatePlaceholder(fieldSchema),
+        validation: _extractValidation(fieldSchema),
+      ));
+    });
+
+    return fields;
+  }
+
+  /// Convert backend type to mobile type
+  static String _convertType(Map<String, dynamic> schema) {
+    final type = schema['type'] as String?;
+    final format = schema['format'] as String?;
+
+    if (schema.containsKey('enum')) return 'select';
+    if (type == 'boolean') return 'boolean';
+    if (type == 'number' || type == 'integer') return 'number';
+    if (format == 'textarea') return 'textarea';
+    if (format == 'email') return 'email';
+    if (format == 'url') return 'url';
+
+    return 'text';
+  }
+
+  /// Extract enum options
+  static List<String>? _extractOptions(Map<String, dynamic> schema) {
+    final enumValues = schema['enum'] as List<dynamic>?;
+    return enumValues?.map((e) => e.toString()).toList();
+  }
+
+  /// Generate placeholder text
+  static String? _generatePlaceholder(Map<String, dynamic> schema) {
+    final type = schema['type'] as String?;
+
+    if (type == 'string') return 'Enter ${schema['description'] ?? 'value'}';
+    if (type == 'number') return 'Enter number';
+    if (type == 'integer') return 'Enter integer';
+
+    return null;
+  }
+
+  /// Extract validation rules
+  static Map<String, dynamic>? _extractValidation(Map<String, dynamic> schema) {
+    final validation = <String, dynamic>{};
+
+    if (schema['pattern'] != null) {
+      validation['pattern'] = schema['pattern'];
+    }
+    if (schema['minLength'] != null) {
+      validation['minLength'] = schema['minLength'];
+    }
+    if (schema['maxLength'] != null) {
+      validation['maxLength'] = schema['maxLength'];
+    }
+    if (schema['minimum'] != null) {
+      validation['minimum'] = schema['minimum'];
+    }
+    if (schema['maximum'] != null) {
+      validation['maximum'] = schema['maximum'];
+    }
+
+    return validation.isEmpty ? null : validation;
+  }
+}
+```
+
+### Mobile to Backend
+
+```dart
+class SchemaConverter {
+  /// Convert mobile config to backend format
+  static Map<String, dynamic> convertMobileConfigToBackend(
+    Map<String, dynamic> mobileConfig,
+    String serviceName,
+  ) {
+    final backendConfig = <String, dynamic>{};
+
+    mobileConfig.forEach((key, value) {
+      // Handle variable interpolation
+      if (value is String && value.contains('{{')) {
+        backendConfig[key] = value;  // Keep variables as-is
       }
-    ]
+      // Handle boolean conversion
+      else if (value is bool) {
+        backendConfig[key] = value;
+      }
+      // Handle number conversion
+      else if (value is num) {
+        backendConfig[key] = value;
+      }
+      // Handle string conversion
+      else {
+        backendConfig[key] = value.toString();
+      }
+    });
+
+    return backendConfig;
   }
 }
 ```
 
 ---
 
-## 🔧 Types de Champs Supportés
+## Variable System
 
-### Champs de base
+### Variable Interpolation
 
-| Type       | Description                | Options                              |
-|------------|----------------------------|--------------------------------------|
-| `text`     | Texte simple               | `hint`, `required`, `maxLength`      |
-| `textarea` | Texte multiligne           | `hint`, `required`, `maxLength`      |
-| `number`   | Nombre                     | `min`, `max`, `required`             |
-| `time`     | Heure (HH:mm)              | `hint`, `required`                   |
-| `boolean`  | Switch on/off              | `default`, `hint`                    |
-| `dropdown` | Sélection liste            | `options[]`, `default`, `required`   |
-| `email`    | Email (validation auto)    | `hint`, `required`                   |
-| `url`      | URL (validation auto)      | `hint`, `required`                   |
+Variables allow actions to use data from previous nodes (trigger or earlier actions).
 
-### Champs avec ressources externes
+### Variable Format
 
-| Type              | Description           | Dépendances      |
-|-------------------|-----------------------|------------------|
-| `discord_guild`   | Serveur Discord       | -                |
-| `discord_channel` | Channel Discord       | `discord_guild`  |
-| `discord_role`    | Rôle Discord          | `discord_guild`  |
-| `github_repo`     | Repository GitHub     | -                |
-| `gitlab_project`  | Projet GitLab         | -                |
-
----
-
-## 📝 Exemples de Schémas
-
-### Exemple 1 : Timer simple
-
-```json
-{
-  "name": "every_x_minutes",
-  "description": "Every X minutes",
-  "configSchema": {
-    "fields": [
-      {
-        "key": "interval",
-        "type": "number",
-        "label": "Interval (minutes)",
-        "hint": "Enter interval in minutes (1-1440)",
-        "required": true,
-        "min": 1,
-        "max": 1440
-      }
-    ]
-  }
-}
+```
+{{node_type.variable_name}}
 ```
 
-### Exemple 2 : Discord avec dépendances
+**Examples:**
 
-```json
-{
-  "name": "send_message",
-  "description": "Send a message",
-  "configSchema": {
-    "fields": [
-      {
-        "key": "guildId",
-        "type": "discord_guild",
-        "label": "Discord Server",
-        "required": true
-      },
-      {
-        "key": "channelId",
-        "type": "discord_channel",
-        "label": "Channel",
-        "required": true,
-        "dependsOn": "guildId"
-      },
-      {
-        "key": "content",
-        "type": "textarea",
-        "label": "Message Content",
-        "hint": "Supports variables like {{author.username}}",
-        "required": true,
-        "maxLength": 2000
-      }
-    ]
-  }
-}
+```dart
+// Use trigger output
+'{{trigger.message_content}}'
+'{{trigger.user_name}}'
+'{{trigger.timestamp}}'
+
+// Use previous action output
+'{{action_1.issue_url}}'
+'{{action_1.issue_number}}'
+'{{action_2.response_body}}'
 ```
 
-### Exemple 3 : Dropdown avec options
+### Variable Schema
 
-```json
-{
-  "name": "log",
-  "description": "Log a message",
-  "configSchema": {
-    "fields": [
-      {
-        "key": "message",
-        "type": "text",
-        "label": "Message",
-        "required": true
-      },
-      {
-        "key": "level",
-        "type": "dropdown",
-        "label": "Log Level",
-        "options": ["info", "warn", "error", "success"],
-        "default": "info"
-      }
-    ]
-  }
-}
+Previous nodes provide output schemas defining available variables:
+
+```dart
+Map<String, dynamic> triggerOutputSchema = {
+  'type': 'object',
+  'properties': {
+    'message_content': {
+      'type': 'string',
+      'description': 'The message content',
+    },
+    'user_name': {
+      'type': 'string',
+      'description': 'The user who sent the message',
+    },
+    'timestamp': {
+      'type': 'string',
+      'description': 'Message timestamp',
+    },
+  },
+};
 ```
 
----
+### Variable Resolution UI
 
-## 🚀 Ajouter un Nouveau Trigger/Action
+The configuration screen displays available variables:
 
-### Étape 1 : Backend - Ajouter dans `about.json`
+```dart
+// Display available variables
+Widget _buildVariablesList(Map<String, dynamic> outputSchema) {
+  final properties = outputSchema['properties'] as Map<String, dynamic>? ?? {};
 
-```json
-{
-  "name": "on_new_event",
-  "description": "When a new event occurs",
-  "configSchema": {
-    "fields": [
-      {
-        "key": "eventType",
-        "type": "dropdown",
-        "label": "Event Type",
-        "options": ["meeting", "deadline", "reminder"],
-        "required": true
-      }
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('Available Variables:', style: TextStyle(fontWeight: FontWeight.bold)),
+      ...properties.entries.map((entry) {
+        return ListTile(
+          title: Text('{{trigger.${entry.key}}}'),
+          subtitle: Text(entry.value['description'] ?? ''),
+          trailing: IconButton(
+            icon: Icon(Icons.copy),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: '{{trigger.${entry.key}}}'));
+            },
+          ),
+        );
+      }),
     ],
-    "outputSchema": {
-      "event.id": "string",
-      "event.title": "string",
-      "event.date": "string"
-    }
-  }
+  );
 }
 ```
-
-### Étape 2 : Backend - Implémenter la logique
-
-```typescript
-// Aucun changement côté mobile nécessaire !
-// Le formulaire est généré automatiquement
-```
-
-### Étape 3 : C'est tout ! 🎉
-
-Le mobile génère automatiquement :
-- Le formulaire avec validation
-- L'affichage dans l'éditeur
-- Le résumé de configuration
 
 ---
 
-## 🔌 Ajouter un Nouveau Type de Ressource
+## Configuration Flow
 
-### Exemple : Ajouter GitHub Repos
+### Complete Configuration Flow
 
-**1. Créer le provider** (`service_resource_provider.dart`)
+#### 1. Fetch Schema from Backend
 
 ```dart
-class GitHubRepoProvider implements ResourceProvider {
-  @override
-  Future<List<ResourceItem>> fetchResources({
-    required String token,
-    Map<String, dynamic>? params,
-  }) async {
-    // Appeler l'API GitHub
-    final response = await apiService.get(
-      '/api/github/repos',
-      headers: {'Authorization': 'Bearer $token'},
-    );
+Future<Map<String, dynamic>> getSchema({
+  required String serviceName,
+  required String actionName,
+  required String type,  // 'trigger' or 'action'
+}) async {
+  final response = await apiService.get(
+    '/api/modules/$serviceName/$type/$actionName/schema',
+    headers: {'Authorization': 'Bearer $token'},
+  );
 
-    return (response['repos'] as List).map((repo) {
-      return ResourceItem(
-        id: repo['id'].toString(),
-        name: repo['full_name'],
-        metadata: {'stars': repo['stargazers_count']},
-      );
-    }).toList();
-  }
+  return response;
 }
 ```
 
-**2. Enregistrer le provider**
+#### 2. Convert to Mobile Schema
 
 ```dart
-ServiceResourceProvider.registerProvider(
-  'github_repos',
-  GitHubRepoProvider(),
+final backendSchema = await getSchema(
+  serviceName: 'discord',
+  actionName: 'send_message',
+  type: 'action',
 );
+
+final mobileSchema = SchemaConverter.convertToMobileSchema(backendSchema);
 ```
 
-**3. Ajouter le type dans `ConfigFieldType`**
+#### 3. Get Previous Node Outputs
 
 ```dart
-class ConfigFieldType {
-  static const String githubRepo = 'github_repo';
+Map<String, dynamic> getPreviousNodeOutputs(WorkflowNode currentNode) {
+  final previousNodes = _getNodesBeforeCurrent(currentNode);
 
-  static String? getResourceType(String type) {
-    switch (type) {
-      case githubRepo:
-        return 'github_repos';
-      // ...
-    }
+  final outputs = <String, dynamic>{};
+
+  for (final node in previousNodes) {
+    final nodeKey = node.nodeType == 'trigger' ? 'trigger' : 'action_${node.id}';
+    outputs[nodeKey] = node.outputSchema ?? {};
   }
+
+  return outputs;
 }
 ```
 
-**4. Utiliser dans `about.json`**
-
-```json
-{
-  "key": "repositoryId",
-  "type": "github_repo",
-  "label": "Repository",
-  "required": true
-}
-```
-
----
-
-## 🔄 Migration Progressive
-
-Le système supporte les deux modes :
-
-### Utiliser NodeConfigHelper
+#### 4. Open Configuration Screen
 
 ```dart
-// Détecte automatiquement si un schéma existe
 final config = await NodeConfigHelper.openConfigScreen(
   context: context,
-  nodeType: 'trigger',
+  nodeType: 'action',
   serviceName: 'discord',
-  actionName: 'on_message_created',
-  description: 'When a message is created',
-  serviceAction: serviceAction, // Contient configSchema si disponible
-  existingConfig: existingConfig,
+  actionName: 'send_message',
+  serviceReaction: reactionMetadata,
+  previousNodeOutputSchema: previousOutputs,
+  currentConfig: existingConfig,
 );
 ```
 
-### Comportement
+#### 5. User Fills Form
 
-- **Si `configSchema` existe** → Utilise `NodeConfigScreenV2` (nouveau)
-- **Sinon** → Utilise `NodeConfigScreen` (ancien, fallback)
+User enters configuration values, using variables from previous nodes if needed.
 
----
+#### 6. Validate Input
 
-## 📊 outputSchema
-
-Le `outputSchema` définit les variables disponibles pour les actions suivantes :
-
-```json
-{
-  "outputSchema": {
-    "author.id": "string",
-    "author.username": "string",
-    "content": "string",
-    "channel.id": "string"
-  }
-}
-```
-
-Ces variables peuvent être utilisées dans les actions avec `{{variable}}` :
-- `"Message from {{author.username}}: {{content}}"`
-- `"User ID: {{author.id}}"`
-
----
-
-## 🛠️ Validation des Champs
-
-### Validation automatique selon le type
-
-```json
-{
-  "type": "number",
-  "min": 1,
-  "max": 100,
-  "required": true
-}
-// ✅ Valide automatiquement : requis, nombre, entre 1-100
-```
-
-```json
-{
-  "type": "time",
-  "required": true
-}
-// ✅ Valide automatiquement : format HH:mm
-```
-
-```json
-{
-  "type": "email",
-  "required": true
-}
-// ✅ Valide automatiquement : format email
-```
-
-### Validation personnalisée
-
-```json
-{
-  "key": "username",
-  "type": "text",
-  "required": true,
-  "validation": {
-    "pattern": "^[a-zA-Z0-9_]{3,20}$",
-    "message": "Username must be 3-20 alphanumeric characters"
-  }
-}
-```
-
----
-
-## 🧪 Testing
-
-### Tester un nouveau schéma
-
-1. Modifier `about.json` backend
-2. Redémarrer l'app mobile
-3. Créer une nouvelle Area
-4. Sélectionner le service/trigger
-5. Vérifier que le formulaire s'affiche correctement
-
-### Debug
-
-Le widget `DynamicConfigForm` affiche des logs :
 ```dart
-debugPrint('Error loading resources for ${field.key}: $e');
+bool validateConfig(Map<String, dynamic> config, List<MobileSchemaField> schema) {
+  for (final field in schema) {
+    if (field.required && !config.containsKey(field.key)) {
+      return false;
+    }
+
+    // Additional validation based on field type
+    if (field.validation != null) {
+      // Validate pattern, min/max length, etc.
+    }
+  }
+
+  return true;
+}
+```
+
+#### 7. Convert to Backend Format
+
+```dart
+final backendConfig = SchemaConverter.convertMobileConfigToBackend(
+  userConfig,
+  'discord',
+);
+```
+
+#### 8. Save to Backend
+
+```dart
+await areaService.updateWorkflowNode(
+  nodeId: node.id,
+  config: backendConfig,
+  token: token,
+);
 ```
 
 ---
 
-## 📚 Références
+## Examples
 
-### Fichiers clés
+### Example 1: Discord Send Message
 
-- [config_schema.dart](mobile/lib/features/areas/models/config_schema.dart) - Modèles
-- [dynamic_config_form.dart](mobile/lib/features/areas/widgets/dynamic_config_form.dart) - Widget
-- [service_resource_provider.dart](mobile/lib/features/areas/services/service_resource_provider.dart) - Resources
-- [example_about_schema.json](mobile/example_about_schema.json) - Exemple complet
+**Backend Schema:**
 
-### Prochaines étapes
+```json
+{
+  "type": "object",
+  "properties": {
+    "channel_id": {
+      "type": "string",
+      "description": "Channel ID",
+      "required": true
+    },
+    "message": {
+      "type": "string",
+      "description": "Message content",
+      "format": "textarea",
+      "required": true
+    }
+  }
+}
+```
 
-1. ✅ Système de schéma créé
-2. ✅ Widget dynamique créé
-3. ✅ Resource providers créés
-4. 🔄 Migrer progressivement les triggers/actions existants
-5. 🔜 Ajouter validation personnalisée avancée
-6. 🔜 Ajouter support de champs conditionnels
-7. 🔜 Ajouter preview des variables dans textarea
+**Mobile Schema:**
+
+```dart
+[
+  MobileSchemaField(
+    key: 'channel_id',
+    label: 'Channel ID',
+    type: 'text',
+    required: true,
+  ),
+  MobileSchemaField(
+    key: 'message',
+    label: 'Message content',
+    type: 'textarea',
+    required: true,
+  ),
+]
+```
+
+**User Configuration:**
+
+```dart
+{
+  'channel_id': '123456789',
+  'message': 'New issue created: {{action_1.issue_url}}',
+}
+```
+
+### Example 2: GitHub Create Issue with Variables
+
+**Backend Schema:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "repository": {
+      "type": "string",
+      "description": "Repository (owner/repo)",
+      "required": true
+    },
+    "title": {
+      "type": "string",
+      "description": "Issue title",
+      "required": true
+    },
+    "body": {
+      "type": "string",
+      "description": "Issue body",
+      "format": "textarea",
+      "required": false
+    },
+    "labels": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Issue labels"
+    }
+  }
+}
+```
+
+**Previous Node Output (Trigger):**
+
+```dart
+{
+  'trigger': {
+    'properties': {
+      'message_content': {'type': 'string', 'description': 'Message text'},
+      'author': {'type': 'string', 'description': 'Message author'},
+      'channel': {'type': 'string', 'description': 'Channel name'},
+    }
+  }
+}
+```
+
+**User Configuration with Variables:**
+
+```dart
+{
+  'repository': 'owner/repo',
+  'title': 'Issue from {{trigger.channel}}',
+  'body': 'Reported by {{trigger.author}}:\n\n{{trigger.message_content}}',
+  'labels': ['from-discord', 'needs-triage'],
+}
+```
+
+### Example 3: Enum Field
+
+**Backend Schema:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "priority": {
+      "type": "string",
+      "description": "Issue priority",
+      "enum": ["low", "medium", "high", "critical"],
+      "default": "medium"
+    }
+  }
+}
+```
+
+**Mobile Schema:**
+
+```dart
+MobileSchemaField(
+  key: 'priority',
+  label: 'Issue priority',
+  type: 'select',
+  options: ['low', 'medium', 'high', 'critical'],
+  defaultValue: 'medium',
+)
+```
+
+**UI Rendering:**
+
+```dart
+DropdownButtonFormField<String>(
+  value: config['priority'] ?? 'medium',
+  items: ['low', 'medium', 'high', 'critical']
+      .map((option) => DropdownMenuItem(
+            value: option,
+            child: Text(option),
+          ))
+      .toList(),
+  onChanged: (value) {
+    setState(() => config['priority'] = value);
+  },
+)
+```
 
 ---
 
-## 💡 Bonnes Pratiques
+## Best Practices
 
-### Backend
+### Schema Design
 
-1. **Toujours fournir `hint`** pour guider l'utilisateur
-2. **Utiliser `outputSchema`** pour documenter les variables disponibles
-3. **Nommer les clés en camelCase** : `channelId`, pas `channel_id`
-4. **Grouper les champs logiques** dans l'ordre de saisie
+1. **Keep schemas simple** - Only required fields
+2. **Provide clear descriptions** - Help users understand fields
+3. **Use appropriate types** - Match UI element to data type
+4. **Set sensible defaults** - Reduce user input required
+5. **Validate on backend** - Don't trust mobile validation alone
 
-### Mobile
+### Variable Usage
 
-1. **Réutiliser les providers** existants quand possible
-2. **Cacher les ressources** pour éviter les appels répétés
-3. **Gérer les erreurs** de chargement de ressources
-4. **Tester sur vrais appareils** avec connexion lente
+1. **Show available variables** prominently in UI
+2. **Provide copy button** for easy variable insertion
+3. **Validate variable syntax** before saving
+4. **Test with real data** to ensure variables resolve correctly
+5. **Handle missing variables** gracefully in backend
+
+### Error Handling
+
+1. **Validate before saving** - Check required fields
+2. **Show clear error messages** - Tell users what's wrong
+3. **Highlight invalid fields** - Visual feedback
+4. **Handle backend validation errors** - Display server-side errors
+5. **Provide examples** - Show correct format
+
+### Performance
+
+1. **Cache schemas** - Don't fetch repeatedly
+2. **Lazy load schemas** - Only when needed
+3. **Debounce validation** - Don't validate on every keystroke
+4. **Optimize conversions** - Cache converted schemas
 
 ---
 
-## ❓ FAQ
-
-**Q: Puis-je ajouter un trigger sans modifier le code mobile ?**
-A: Oui ! Modifiez seulement `about.json` backend avec le schéma.
-
-**Q: Comment ajouter un nouveau type de champ ?**
-A: Ajoutez-le dans `ConfigFieldType` et gérez-le dans `DynamicConfigForm._buildField()`.
-
-**Q: Les anciens triggers fonctionnent-ils encore ?**
-A: Oui, le système détecte automatiquement l'absence de schéma et utilise l'ancien système.
-
-**Q: Comment tester un schéma avant de le déployer ?**
-A: Utilisez `example_about_schema.json` comme référence et testez localement.
-
----
-
-## 🎉 Conclusion
-
-Ce système rend l'ajout de nouveaux triggers/actions **10x plus rapide** :
-
-**Avant** : 4 fichiers à modifier, 200+ lignes de code
-**Maintenant** : 1 fichier JSON, 20 lignes
-
-Profitez de cette modularité pour ajouter rapidement de nouveaux services ! 🚀
+**See also:**
+- [Area Integration Guide](AREA_INTEGRATION.md)
+- [Technical Documentation](TECHNICAL_DOCUMENTATION.md)

@@ -21,7 +21,7 @@ export default {
         {
             name: 'webhook_received',
             displayName: 'Webhook Received',
-            description: 'Triggers when data is received on your webhook endpoint',
+            description: 'Se déclenche quand des données sont reçues sur /api/webhook/{nom-choisi}. Créez votre endpoint personnalisé.',
             triggerType: 'webhook',
             configSchema: {
                 type: 'object',
@@ -30,7 +30,7 @@ export default {
                     webhookName: {
                         type: 'string',
                         title: 'Webhook Name',
-                        description: 'Choose a unique name for your webhook endpoint (alphanumeric, dash, underscore only)',
+                        description: 'Nom unique pour votre endpoint. Sera accessible via POST /api/webhook/{ce-nom} (minuscules, chiffres, tirets et underscores uniquement)',
                         pattern: '^[a-z0-9-_]+$',
                         minLength: 3,
                         maxLength: 50,
