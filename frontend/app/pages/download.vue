@@ -14,38 +14,36 @@
               directement depuis votre smartphone Android. Simple, puissant et toujours dans votre poche.
             </p>
             <div class="hero-buttons">
-              <UButton
-                size="xl"
-                class="download-btn tertiary-btn"
-                style="background-color: #166534 !important; background: #166534 !important; color: #FFFFFF !important; border-color: #166534 !important;"
-                @click="handleDownload"
+              <UiGlareHover
+                width="auto"
+                height="auto"
+                :background="`var(--color-tertiary)`"
+                :border-color="`var(--color-accent)`"
+                border-radius="12px"
+                glare-color="#ffffff"
+                :glare-opacity="0.6"
+                :glare-size="200"
+                :transition-duration="5000"
+                :play-once="false"
               >
-                <template #leading>
+                <button class="hero-download-button" type="button" @click="handleDownload">
                   <GooglePlayIcon :size="20" />
-                </template>
-                Télécharger sur Google Play
-              </UButton>
-              <UButton
-                size="xl"
-                variant="outline"
-                icon="i-heroicons-play"
-                class="demo-btn"
-              >
-                Voir la démo
-              </UButton>
+                  Télécharger gratuitement
+                </button>
+              </UiGlareHover>
             </div>
             <div class="hero-stats">
               <div class="stat">
-                <span class="stat-number">10K+</span>
-                <span class="stat-label">Téléchargements</span>
+                <UIcon name="i-heroicons-sparkles" class="w-5 h-5" style="color: var(--color-secondary);" />
+                <span class="stat-text">Version beta disponible</span>
               </div>
               <div class="stat">
-                <span class="stat-number">4.8</span>
-                <span class="stat-label">Note sur Play Store</span>
+                <UIcon name="i-heroicons-wrench-screwdriver" class="w-5 h-5" style="color: var(--color-secondary);" />
+                <span class="stat-text">Améliorations en cours</span>
               </div>
               <div class="stat">
-                <span class="stat-number">500+</span>
-                <span class="stat-label">Services connectés</span>
+                <UIcon name="i-heroicons-puzzle-piece" class="w-5 h-5" style="color: var(--color-secondary);" />
+                <span class="stat-text">20 services compatibles</span>
               </div>
             </div>
           </div>
@@ -183,7 +181,7 @@
         <div class="cta-content">
           <h2 class="cta-title">Prêt à automatiser votre quotidien ?</h2>
           <p class="cta-description">
-            Rejoignez des milliers d'utilisateurs qui ont déjà simplifié leur vie avec AREA Mobile
+            Rejoignez la communauté d'utilisateurs qui simplifient leur vie avec AREA Mobile
           </p>
           <div class="cta-buttons">
             <UButton
@@ -201,7 +199,7 @@
           <div class="download-info">
             <p class="download-text">
               <UIcon name="i-heroicons-check-circle" class="check-icon" />
-              Gratuit • Compatible Android 7.0+ • 25 MB
+              Gratuit • Compatible Android 7.0+ • 95 MB
             </p>
           </div>
         </div>
@@ -224,7 +222,7 @@
 
           <div class="faq-item">
             <h3>Quels services sont supportés ?</h3>
-            <p>Plus de 500 services sont supportés : Gmail, Slack, Discord, Twitter, et bien d'autres.</p>
+            <p>Une vingtaine de services sont déjà disponibles : Gmail, Slack, Discord, Trello… et d'autres arrivent bientôt.</p>
           </div>
 
           <div class="faq-item">
@@ -341,6 +339,13 @@ useHead({
   min-height: 600px;
 }
 
+.hero-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
 .hero-title {
   font-size: 3.5rem;
   font-weight: 800;
@@ -369,70 +374,44 @@ useHead({
   margin-bottom: 2rem;
 }
 
+
 .hero-buttons {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 3rem;
-  min-height: 72px;
+  justify-content: center;
+  margin-bottom: 2.5rem;
+}
+
+.hero-download-button {
+  display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 2.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: transparent;
+  border: none;
+  cursor: pointer;
 }
 
-.download-btn, .demo-btn {
-  padding: 1rem 2rem !important;
-  font-size: 1.1rem !important;
-  min-width: 200px !important;
-  min-height: 56px !important;
-  transition: none !important;
-  white-space: nowrap !important;
-}
-
-.tertiary-btn {
-  background-color: var(--color-tertiary) !important;
-  background: var(--color-tertiary) !important;
-  color: var(--text-white) !important;
-  border: none !important;
-  border-color: var(--color-tertiary) !important;
-}
-
-.tertiary-btn:hover {
-  background-color: var(--color-tertiary-hover) !important;
-  background: var(--color-tertiary-hover) !important;
-}
-
-/* Force les styles Nuxt UI */
-
-/* Styles spécifiques pour UButton */
-.tertiary-btn :deep(*) {
-  background-color: #166534 !important;
-  background: #166534 !important;
-  color: #FFFFFF !important;
-  border-color: #166534 !important;
-}
-
-.tertiary-btn:hover :deep(*) {
-  background-color: #115E2D !important;
-  background: #115E2D !important;
-}
 
 .hero-stats {
   display: flex;
-  gap: 2rem;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 2rem;
 }
 
 .stat {
-  text-align: center;
-}
-
-.stat-number {
-  display: block;
-  font-size: 2rem;
-  font-weight: 700;
-  color: #059669;
-}
-
-.stat-label {
-  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   color: var(--text-secondary);
+}
+
+.stat-text {
+  font-size: 0.9rem;
 }
 
 /* Phone Mockup */

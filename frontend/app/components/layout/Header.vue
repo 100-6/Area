@@ -31,12 +31,6 @@
             to="/download"
             :is-active="route.path === '/download'"
           />
-          <UiNavButton
-            label="Documentation"
-            icon="i-heroicons-document-text"
-            to="/docs"
-            :is-active="route.path === '/docs'"
-          />
         </nav>
 
         <!-- Desktop CTA -->
@@ -148,15 +142,6 @@
           >
             <UIcon name="i-heroicons-arrow-down-tray" class="w-5 h-5 mr-3" />
             <span>Téléchargement</span>
-          </NuxtLink>
-          <NuxtLink
-            to="/docs"
-            class="nav-item-mobile group flex items-center px-3 py-3 rounded-lg transition-all duration-200"
-            :class="{ 'nav-active-mobile': $route.path === '/docs' }"
-            @click="isMenuOpen = false"
-          >
-            <UIcon name="i-heroicons-document-text" class="w-5 h-5 mr-3" />
-            <span>Documentation</span>
           </NuxtLink>
 
           <div class="flex flex-col space-y-2 pt-4 border-t border-gray-100">
