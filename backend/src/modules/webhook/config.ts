@@ -8,7 +8,7 @@ export default {
     name: 'webhook',
     displayName: 'Webhook',
     description: 'Receive HTTP POST webhooks and trigger workflows',
-    iconUrl: 'https://i.sstatic.net/S3SNU.jpg',
+    iconUrl: 'https://cdn.iconscout.com/icon/free/png-256/free-webhooks-icon-svg-download-png-282425.png',
     color: '#c4c4c4',
     authType: 'none',
     isActive: true,
