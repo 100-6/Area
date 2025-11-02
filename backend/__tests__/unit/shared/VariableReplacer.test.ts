@@ -167,6 +167,23 @@ describe('VariableReplacer', () => {
             // Primitive arrays should still use join
             expect(result).toBe('Tags: tag1, tag2, tag3, Numbers: 1, 2, 3');
         });
+
+        it('should handle arrays with null values using join (not JSON)', () => {
+            const context: ActionContext = {
+                areaId: 'test-area',
+                userId: 'test-user',
+                executionId: 'test-execution',
+                timestamp: '2025-01-15T00:00:00Z',
+                triggerData: {
+                    items: ['a', null, 'b', undefined, 'c']
+                }
+            };
+
+            const result = VariableReplacer.replace('Items: {{items}}', context);
+            // Arrays with only primitives and null/undefined should use join
+            expect(result).toBe('Items: a, , b, , c');
+            expect(result).not.toContain('[object Object]');
+        });
     });
 
     describe('replaceInObject', () => {
