@@ -131,22 +131,9 @@
     <div class="py-6 border-t border-gray-200">
       <UContainer>
         <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
-          <div class="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-6">
-            <p class="text-sm text-gray-500">
-              © {{ currentYear }} Auto. Tous droits réservés.
-            </p>
-            <div class="flex items-center space-x-6">
-              <NuxtLink to="/privacy" class="text-sm text-gray-500 hover:text-brand-tertiary transition-colors duration-200">
-                Confidentialité
-              </NuxtLink>
-              <NuxtLink to="/terms" class="text-sm text-gray-500 hover:text-brand-tertiary transition-colors duration-200">
-                Conditions
-              </NuxtLink>
-              <NuxtLink to="/cookies" class="text-sm text-gray-500 hover:text-brand-tertiary transition-colors duration-200">
-                Cookies
-              </NuxtLink>
-            </div>
-          </div>
+          <p class="text-sm text-gray-500">
+            © {{ currentYear }} Auto. Tous droits réservés.
+          </p>
 
           <div class="flex items-center space-x-4">
             <UBadge

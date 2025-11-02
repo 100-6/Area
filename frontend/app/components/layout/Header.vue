@@ -26,6 +26,12 @@
             :is-active="route.path === '/services'"
           />
           <UiNavButton
+            label="Tarifs"
+            icon="i-heroicons-currency-euro"
+            to="/pricing"
+            :is-active="route.path === '/pricing'"
+          />
+          <UiNavButton
             label="Téléchargement"
             icon="i-heroicons-arrow-down-tray"
             to="/download"
@@ -133,6 +139,15 @@
           >
             <UIcon name="i-heroicons-cog-6-tooth" class="w-5 h-5 mr-3" />
             <span>Services</span>
+          </NuxtLink>
+          <NuxtLink
+            to="/pricing"
+            class="nav-item-mobile group flex items-center px-3 py-3 rounded-lg transition-all duration-200"
+            :class="{ 'nav-active-mobile': $route.path === '/pricing' }"
+            @click="isMenuOpen = false"
+          >
+            <UIcon name="i-heroicons-currency-euro" class="w-5 h-5 mr-3" />
+            <span>Tarifs</span>
           </NuxtLink>
           <NuxtLink
             to="/download"

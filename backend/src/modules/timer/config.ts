@@ -2,8 +2,8 @@ export default {
     name: 'timer',
     displayName: 'Timer / Scheduler',
     description: 'Déclenche des actions selon un horaire',
-    iconUrl: '/icons/timer.png',
-    color: '#FF6B6B',
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/519/519869.png',
+    color: '#000000',    
     authType: 'none',
     isActive: true,
 

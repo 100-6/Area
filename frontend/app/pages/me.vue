@@ -120,15 +120,15 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <UiInfoCard
                 title="Workflows actifs"
-                :value="0"
+                :value="dashboardStats.activeAreas"
                 icon="i-heroicons-bolt"
                 layout="stat"
                 :hoverable="false"
               />
 
               <UiInfoCard
-                title="Exécutions ce mois"
-                :value="0"
+                title="Exécutions totales"
+                :value="dashboardStats.totalExecutions"
                 icon="i-heroicons-chart-bar"
                 layout="stat"
                 :hoverable="false"
@@ -150,18 +150,6 @@
                 Actions rapides
               </h3>
               <div class="space-y-4">
-                <InfoCard
-                  title="Paramètres du compte"
-                  subtitle="Gérer vos préférences"
-                  icon="i-heroicons-cog-6-tooth"
-                  icon-size="lg"
-                  class="bg-gradient-to-r from-gray-50 to-gray-100"
-                >
-                  <template #header-actions>
-                    <span class="text-xs bg-gray-200 px-2 py-1 rounded-full">Bientôt</span>
-                  </template>
-                </InfoCard>
-
                 <div
                   @click="handleLogout"
                   class="group relative overflow-hidden rounded-xl border border-red-200 p-6 transition-all duration-300 hover:border-red-300 hover:shadow-lg cursor-pointer transform hover:scale-[1.02]"
@@ -497,7 +485,7 @@
                   <!-- Effet de warning animé -->
                   <div class="absolute inset-0 bg-gradient-to-r from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                  <div class="relative flex items-center justify-between">
+                  <div class="relative space-y-4">
                     <div class="flex items-center space-x-4">
                       <div class="flex h-14 w-14 items-center justify-center rounded-full bg-red-100 group-hover:bg-red-200 transition-all duration-200 group-hover:scale-110">
                         <UIcon name="i-heroicons-trash" class="w-7 h-7 text-red-600" />
@@ -511,14 +499,26 @@
                       </div>
                     </div>
 
-                    <div class="flex flex-col items-end space-y-2">
+                    <div class="space-y-3 pt-4 border-t border-red-200">
+                      <label class="text-sm font-semibold text-red-700">
+                        Pour confirmer, tapez <span class="font-mono bg-red-100 px-2 py-1 rounded text-red-700">SUPPRIMER</span> dans le champ ci-dessous :
+                      </label>
+                      <UInput
+                        v-model="deleteConfirmationText"
+                        placeholder="Tapez SUPPRIMER"
+                        size="lg"
+                        :disabled="isDeletingAccount"
+                        class="w-full"
+                      />
                       <UButton
-                        @click="isDeleteModalOpen = true"
-                        class="group relative inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-white transition-all duration-200 bg-gradient-to-r from-red-500 to-red-600 rounded-lg shadow-sm hover:shadow-md hover:from-red-600 hover:to-red-700"
+                        @click="handleDeleteAccount"
+                        :loading="isDeletingAccount"
+                        :disabled="deleteConfirmationText !== 'SUPPRIMER'"
+                        size="lg"
+                        class="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-none"
                       >
                         <UIcon name="i-heroicons-trash" class="w-4 h-4 mr-2" />
-                        Supprimer le compte
-                        <div class="absolute inset-0 bg-red-700 rounded-lg opacity-0 group-hover:opacity-20 transition-opacity duration-200"></div>
+                        Supprimer définitivement mon compte
                       </UButton>
                     </div>
                   </div>
@@ -543,78 +543,6 @@
         </div>
       </div>
     </UContainer>
-
-    <!-- Modal de confirmation de suppression -->
-    <UModal v-model="isDeleteModalOpen" :ui="{ width: 'sm:max-w-md' }">
-      <div class="p-6">
-        <div class="flex items-center justify-between mb-6">
-          <h3 class="text-xl font-bold text-red-800 flex items-center">
-            <UIcon name="i-heroicons-exclamation-triangle" class="w-6 h-6 mr-2" />
-            Supprimer le compte
-          </h3>
-          <UButton
-            variant="ghost"
-            size="sm"
-            @click="isDeleteModalOpen = false"
-            :disabled="isDeletingAccount"
-          >
-            <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
-          </UButton>
-        </div>
-
-        <div class="space-y-4">
-          <div class="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
-            <div class="flex items-start space-x-3">
-              <UIcon name="i-heroicons-exclamation-circle" class="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-              <div class="text-sm text-red-800">
-                <p class="font-semibold mb-2">Cette action est irréversible !</p>
-                <p>La suppression de votre compte entraînera :</p>
-                <ul class="list-disc list-inside mt-2 space-y-1 text-red-700">
-                  <li>La suppression définitive de toutes vos données</li>
-                  <li>La suppression de tous vos workflows</li>
-                  <li>La déconnexion de tous vos services intégrés</li>
-                  <li>La perte de votre historique d'exécutions</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div class="space-y-3">
-            <label class="text-sm font-semibold text-gray-700">
-              Pour confirmer, tapez <span class="font-mono bg-gray-100 px-2 py-0.5 rounded text-red-600">SUPPRIMER</span>
-            </label>
-            <UInput
-              v-model="deleteConfirmationText"
-              placeholder="Tapez SUPPRIMER"
-              size="lg"
-              :disabled="isDeletingAccount"
-              class="w-full"
-            />
-          </div>
-
-          <div class="flex gap-3 pt-4">
-            <UButton
-              @click="handleDeleteAccount"
-              :loading="isDeletingAccount"
-              :disabled="deleteConfirmationText !== 'SUPPRIMER'"
-              size="lg"
-              class="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-none"
-            >
-              <UIcon name="i-heroicons-trash" class="w-4 h-4 mr-2" />
-              Supprimer définitivement
-            </UButton>
-            <UButton
-              variant="outline"
-              @click="isDeleteModalOpen = false"
-              size="lg"
-              :disabled="isDeletingAccount"
-            >
-              Annuler
-            </UButton>
-          </div>
-        </div>
-      </div>
-    </UModal>
   </div>
 </template>
 
@@ -629,11 +557,43 @@ import InfoCard from '~/components/ui/InfoCard.vue'
 const { user, logout, updateProfile, linkProvider, changePassword, deleteAccount } = useAuth()
 const { providers, isLoading: isLoadingProviders, error: providersError, fetchProviders } = useAuthProviders()
 
+// Dashboard statistics
+const dashboardStats = ref({
+  activeAreas: 0,
+  totalExecutions: 0
+})
+
+const fetchDashboardStats = async () => {
+  try {
+    const authToken = useCookie('auth-token')
+    if (!authToken.value) return
+
+    const config = useRuntimeConfig()
+    const backendUrl = process.server
+      ? (config.backendUrl || 'http://area_backend_dev:8080')
+      : (config.public.backendUrl || 'http://localhost:8080')
+
+    const response = await $fetch('/api/areas', {
+      baseURL: backendUrl,
+      headers: {
+        'Authorization': `Bearer ${authToken.value}`
+      }
+    })
+
+    if (response.success && response.areas) {
+      const areas = response.areas
+      dashboardStats.value.activeAreas = areas.filter((a: any) => a.is_active).length
+      dashboardStats.value.totalExecutions = areas.reduce((sum: number, a: any) => sum + (a.execution_count || 0), 0)
+    }
+  } catch (error) {
+    console.error('Failed to fetch dashboard stats:', error)
+  }
+}
+
 const isEditing = ref(false)
 const isSaving = ref(false)
 const isChangingPassword = ref(false)
 const isPasswordSaving = ref(false)
-const isDeleteModalOpen = ref(false)
 const isDeletingAccount = ref(false)
 const deleteConfirmationText = ref('')
 const passwordForm = ref({
@@ -828,7 +788,6 @@ const handleDeleteAccount = async () => {
     })
   } finally {
     isDeletingAccount.value = false
-    isDeleteModalOpen.value = false
     deleteConfirmationText.value = ''
   }
 }
@@ -871,12 +830,16 @@ watch(() => user.value, () => {
   if (user.value) {
     initEditForm()
     fetchProviders()
+    fetchDashboardStats()
   }
 }, { immediate: true })
 
 watch(activeTab, (value) => {
   if (value === 'connections') {
     fetchProviders()
+  }
+  if (value === 'overview') {
+    fetchDashboardStats()
   }
 })
 

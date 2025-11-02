@@ -142,7 +142,8 @@ export const useAuth = () => {
       outlook: '/api/outlook/connect',
       trello: '/api/trello/connect',
       slack: '/api/slack/connect',
-      twitch: '/api/twitch/connect'
+      twitch: '/api/twitch/connect',
+      notion: '/api/notion/connect'
     }
 
     return specialRoutes[provider] || `/api/auth/${provider}`

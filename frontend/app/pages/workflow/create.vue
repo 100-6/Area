@@ -306,7 +306,8 @@
 import type { Service, ServiceConfiguration } from '~/types'
 
 definePageMeta({
-  layout: 'default'
+  layout: 'default',
+  middleware: 'workflow-auth'
 })
 
 const {

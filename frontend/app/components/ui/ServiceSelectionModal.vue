@@ -3,6 +3,8 @@
     v-model:open="isOpen"
     :prevent-close="false"
     @close="closeModal"
+    title="Choisir un service"
+    description="Sélectionnez un service pour démarrer votre automatisation"
     :ui="{
       content: 'fixed bg-white divide-y divide-gray-200 flex flex-col focus:outline-none border-0 ring-0 shadow-xl',
       overlay: 'fixed inset-0 bg-gray-900/50',
@@ -146,6 +148,7 @@
 
 <script setup lang="ts">
 import type { Service } from '~/types'
+import { DialogTitle, DialogDescription } from 'reka-ui'
 
 interface Props {
   open?: boolean
