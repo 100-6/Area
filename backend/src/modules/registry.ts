@@ -9,6 +9,7 @@ import { outlookModule } from './outlook/module';
 import { githubModule } from './github/service';
 import { dropboxModule } from './dropbox/service';
 import { trelloModule } from './trello/service';
+import { notionModule } from './notion/service';
 import { ntfyModule } from './ntfy/service';
 import { rssModule } from './rss/service';
 import { webhookModule } from './webhook/service';
@@ -68,6 +69,7 @@ class ModuleRegistry {
             await this.registerModule(githubModule);
             await this.registerModule(dropboxModule);
             await this.registerModule(trelloModule);
+            await this.registerModule(notionModule);
             await this.registerModule(ntfyModule);
             await this.registerModule(rssModule);
             await this.registerModule(webhookModule);

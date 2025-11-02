@@ -30,6 +30,9 @@ router.get('/trello', authController.trelloLogin);
 router.get('/trello/callback', authController.trelloCallback);
 router.post('/trello/process', authController.trelloProcess);
 
+router.get('/notion', authController.notionLogin);
+router.get('/notion/callback', authController.notionCallback);
+
 router.get('/twitch', authController.twitchLogin);
 router.get('/twitch/callback', authController.twitchCallback);
 
