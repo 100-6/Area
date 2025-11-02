@@ -25,7 +25,7 @@ import twitchRoutes from '../../modules/twitch/routes';
 const router = Router();
 
 // Public routes (no authentication required)
-router.use('/webhook', webhookRoutes);
+router.use('/api/webhook', webhookRoutes);
 
 router.use('/api', systemRoutes);
 

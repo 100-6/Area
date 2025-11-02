@@ -133,9 +133,15 @@ class OAuthService {
     if (service == 'reddit') {
       return '$baseUrl/api/reddit/connect';
     }
+    if (service == 'slack') {
+      return '$baseUrl/api/slack/connect';
+    }
+    if (service == 'bitly') {
+      return '$baseUrl/api/bitly/connect';
+    }
 
     // Réutilise les routes OAuth existantes pour les autres services
-    // (Discord, GitHub, GitLab, Dropbox, Google, Telegram)
+    // (Discord, GitHub, GitLab, Dropbox, Google, Telegram, Trello, Twitch)
     return '$baseUrl/api/auth/$service';
   }
 

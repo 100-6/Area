@@ -6,7 +6,7 @@ export default {
     name: 'trello',
     displayName: 'Trello',
     description: 'Automate your Trello workflows with board events detection',
-    iconUrl: 'https://a.trello.services/prgb/dist/images/apple-touch-icon-152x152.4a0bb8a24ff2b2b8.png',
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/174/174874.png',
     color: '#0079BF',
     authType: 'oauth2',
     isActive: true,
