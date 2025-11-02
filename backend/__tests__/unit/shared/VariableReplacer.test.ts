@@ -130,6 +130,60 @@ describe('VariableReplacer', () => {
             const result = VariableReplacer.replace('Value: {{value}}, Nested: {{nested.value}}', context);
             expect(result).toBe('Value: {{value}}, Nested: {{nested.value}}');
         });
+
+        it('should handle arrays of objects by using JSON.stringify', () => {
+            const context: ActionContext = {
+                areaId: 'test-area',
+                userId: 'test-user',
+                executionId: 'test-execution',
+                timestamp: '2025-01-15T00:00:00Z',
+                triggerData: {
+                    results: [
+                        { id: '1', name: 'Song 1', artistName: 'Artist 1' },
+                        { id: '2', name: 'Song 2', artistName: 'Artist 2' }
+                    ]
+                }
+            };
+
+            const result = VariableReplacer.replace('Results: {{results}}', context);
+            // Should be JSON stringified, not "[object Object], [object Object]"
+            expect(result).toBe('Results: [{"id":"1","name":"Song 1","artistName":"Artist 1"},{"id":"2","name":"Song 2","artistName":"Artist 2"}]');
+            expect(result).not.toContain('[object Object]');
+        });
+
+        it('should handle arrays of primitives with join', () => {
+            const context: ActionContext = {
+                areaId: 'test-area',
+                userId: 'test-user',
+                executionId: 'test-execution',
+                timestamp: '2025-01-15T00:00:00Z',
+                triggerData: {
+                    tags: ['tag1', 'tag2', 'tag3'],
+                    numbers: [1, 2, 3]
+                }
+            };
+
+            const result = VariableReplacer.replace('Tags: {{tags}}, Numbers: {{numbers}}', context);
+            // Primitive arrays should still use join
+            expect(result).toBe('Tags: tag1, tag2, tag3, Numbers: 1, 2, 3');
+        });
+
+        it('should handle arrays with null values using join (not JSON)', () => {
+            const context: ActionContext = {
+                areaId: 'test-area',
+                userId: 'test-user',
+                executionId: 'test-execution',
+                timestamp: '2025-01-15T00:00:00Z',
+                triggerData: {
+                    items: ['a', null, 'b', undefined, 'c']
+                }
+            };
+
+            const result = VariableReplacer.replace('Items: {{items}}', context);
+            // Arrays with only primitives and null/undefined should use join
+            expect(result).toBe('Items: a, , b, , c');
+            expect(result).not.toContain('[object Object]');
+        });
     });
 
     describe('replaceInObject', () => {
