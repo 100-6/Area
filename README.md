@@ -904,7 +904,7 @@ graph TB
 This diagram shows the complete user journey through the AREA platform, from initial authentication to creating and managing workflows.
 
 ```mermaid
-graph TB
+graph LR
     Start([User arrives on AREA]) --> Login{Already registered?}
 
     Login -->|No| Register[Register Page]
@@ -973,13 +973,6 @@ graph TB
     DownloadAPK --> Dashboard
 
     Profile --> Dashboard
-
-    style Start fill:#e1f5ff
-    style Dashboard fill:#d4edda
-    style CreateWorkflow fill:#fff3cd
-    style Profile fill:#f8d7da
-    style SaveWorkflow fill:#d1ecf1
-    style Logout fill:#f8d7da
 ```
 
 ### Key Features Explained
