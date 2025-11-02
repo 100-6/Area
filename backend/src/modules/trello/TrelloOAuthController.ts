@@ -33,7 +33,6 @@ export class TrelloOAuthController {
                 });
                 return;
             }
-
             const decoded = this.jwtManager.verifyToken(token);
             if (!decoded || !decoded.userId) {
                 res.status(401).json({
@@ -43,15 +42,10 @@ export class TrelloOAuthController {
                 });
                 return;
             }
-
             console.log(`[Trello] Initiating OAuth for user ${decoded.userId}${isMobile ? ' (mobile)' : ''}`.cyan);
-
-            // Store state with userId and isMobile info
             const stateData = { userId: decoded.userId, isMobile };
             const state = Buffer.from(JSON.stringify(stateData)).toString('base64');
-
             const authUrl = await this.oauthManager.getTrelloAuthUrl(state);
-
             console.log(`[Trello] Redirecting to: ${authUrl}`.gray);
             res.redirect(authUrl);
         } catch (error: any) {
@@ -74,39 +68,22 @@ export class TrelloOAuthController {
 
         try {
             const { oauth_token, oauth_verifier, error } = req.query;
-
-            // Extract state from oauth_token (stored during authorization)
-            let stateData: { userId?: string; isMobile?: boolean } = {};
-            try {
-                // Trello stores our state in the oauth_token during the authorize phase
-                const storedState = await this.oauthManager.getTrelloState(oauth_token as string);
-                if (storedState) {
-                    stateData = JSON.parse(Buffer.from(storedState, 'base64').toString());
-                }
-            } catch (e) {
-                console.warn('[Trello] Failed to parse state:', e);
-            }
-
-            const isMobile = stateData.isMobile || this.isMobileRequest(req);
+            const isMobile = this.isMobileRequest(req);
             const redirectUrl = this.getRedirectUrl(isMobile);
 
-            // User denied authorization
             if (error) {
                 console.error(`[Trello] OAuth error:`.red, error);
                 return res.redirect(`${redirectUrl}/services?error=${error}`);
             }
-
             if (!oauth_token || !oauth_verifier) {
                 console.error(`[Trello] Missing oauth_token or oauth_verifier`.red);
                 return res.redirect(`${redirectUrl}/services?error=missing_params`);
             }
-
             console.log(`[Trello] Processing callback...`.cyan);
             await this.oauthManager.handleTrelloCallback(
                 oauth_token as string,
                 oauth_verifier as string
             );
-
             console.log(`[Trello] ✓ Connection successful`.green);
             res.redirect(`${redirectUrl}/services?success=trello`);
         } catch (error: any) {

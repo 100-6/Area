@@ -30,10 +30,8 @@ export class NotionOAuthController {
                 const stateData = { token, isMobile };
                 state = Buffer.from(JSON.stringify(stateData)).toString('base64');
             }
-
             console.log(`[Notion] Initiating OAuth${isMobile ? ' (mobile)' : ''}`.cyan);
             const authUrl = await this.oauthManager.getNotionAuthUrl(state);
-
             console.log(`[Notion] Redirecting to: ${authUrl}`.gray);
             res.redirect(authUrl);
         } catch (error: any) {
@@ -65,36 +63,26 @@ export class NotionOAuthController {
                     console.warn('[Notion] Failed to parse state:', e);
                 }
             }
-
             const isMobile = stateData.isMobile || this.isMobileRequest(req);
             const redirectUrl = this.getRedirectUrl(isMobile);
-
-            // User denied authorization
             if (error) {
                 console.error(`[Notion] OAuth error:`.red, error);
                 return res.redirect(`${redirectUrl}/services?error=${error}`);
             }
-
             if (!code) {
                 console.error(`[Notion] Missing code`.red);
                 return res.redirect(`${redirectUrl}/services?error=missing_code`);
             }
-
-            if (!stateData.token) {
+            if (!stateData.token)
                 return res.redirect(`${redirectUrl}/login?error=authentication_required`);
-            }
-
             const decoded = this.jwtManager.verifyToken(stateData.token);
-            if (!decoded || !decoded.userId) {
+            if (!decoded || !decoded.userId)
                 return res.redirect(`${redirectUrl}/login?error=invalid_token`);
-            }
-
             console.log(`[Notion] Processing callback for user ${decoded.userId}...`.cyan);
             await this.oauthManager.handleNotionCallback(
                 code as string,
                 decoded.userId
             );
-
             console.log(`[Notion] ✓ Connection successful`.green);
             res.redirect(`${redirectUrl}/services?success=notion`);
         } catch (error: any) {
