@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { TrelloController } from './controller';
 import { TrelloOAuthController } from './TrelloOAuthController';
 import { requireAuth } from '../../core/middleware/auth';
+import { requireTrelloAuth } from './middlewareTrello';
 
 /**
  * Routes Trello
@@ -16,11 +17,11 @@ const oauthController = new TrelloOAuthController();
  */
 
 /**
- * GET /api/trello/authorize
+ * GET /api/trello/connect
  * Initiate Trello OAuth flow
  * Query params: userId (required)
  */
-router.get('/authorize', oauthController.authorize);
+router.get('/connect', oauthController.authorize);
 
 /**
  * GET /api/trello/callback
@@ -29,9 +30,10 @@ router.get('/authorize', oauthController.authorize);
 router.get('/callback', oauthController.callback);
 
 /**
- * Protected routes (require auth)
+ * Protected routes (require auth + Trello connection)
  */
 router.use(requireAuth);
+router.use(requireTrelloAuth);
 
 /**
  * GET /api/trello/boards
@@ -44,11 +46,5 @@ router.get('/boards', controller.getBoards);
  * Récupère un board spécifique
  */
 router.get('/boards/:boardId', controller.getBoard);
-
-/**
- * GET /api/trello/connect
- * Vérifie la connexion Trello de l'utilisateur
- */
-router.get('/connect', controller.getConnection);
 
 export default router;
