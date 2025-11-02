@@ -43,9 +43,11 @@ export class VariableReplacer {
             if (value !== undefined && value !== null) {
                 let stringValue: string;
 
-                if (Array.isArray(value))
-                    stringValue = value.join(', ');
-                else if (typeof value === 'object')
+                if (Array.isArray(value)) {
+                    // Check if array contains objects - if so, use JSON.stringify
+                    const hasObjects = value.some(item => item !== null && typeof item === 'object');
+                    stringValue = hasObjects ? JSON.stringify(value) : value.join(', ');
+                } else if (typeof value === 'object')
                     stringValue = JSON.stringify(value);
                 else
                     stringValue = String(value);
