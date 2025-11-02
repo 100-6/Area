@@ -25,8 +25,10 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
 
   bool _isLoading = false;
   bool _isDescriptionExpanded = false;
+  bool _isAreaActive = false; // État actif de l'Area
   WorkflowNode? _triggerNode;
   List<WorkflowNode> _actionNodes = [];
+  int _tempNodeCounter = 0; // Compteur pour éviter les collisions d'IDs
 
   @override
   void initState() {
@@ -90,6 +92,7 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
         _nameController.text = area.name;
         _descriptionController.text = area.description ?? '';
         _isDescriptionExpanded = area.description != null && area.description!.isNotEmpty;
+        _isAreaActive = area.isActive; // Charger l'état actif
         _triggerNode = triggerNode;
         _actionNodes = nodes.where((n) => n.nodeType != 'trigger').toList();
         _isLoading = false;
@@ -226,27 +229,62 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
         // Créer les nouveaux nodes (ceux avec des IDs temporaires)
         debugPrint('💾 Checking for new nodes to create in existing Area...');
 
-        // Identifier les nouveaux action nodes (ceux qui commencent par 'temp_')
-        final newActionNodes = _actionNodes.where((node) => node.id.startsWith('temp_')).toList();
+        // Vérifier si le trigger est nouveau (ID temporaire)
+        bool hasNewTrigger = _triggerNode != null && _triggerNode!.id.startsWith('temp_');
+        String? newTriggerNodeId;
 
-        if (newActionNodes.isNotEmpty) {
-          debugPrint('💾 Found ${newActionNodes.length} new action(s) to create');
+        if (hasNewTrigger) {
+          debugPrint('💾 Found new trigger to create: ${_triggerNode!.serviceId}/${_triggerNode!.actionId}');
 
-          // Récupérer les nodes existants pour trouver le dernier
-          final existingNodes = await _areaService.getWorkflowNodes(
+          final createdTrigger = await _areaService.createWorkflowNode(
             areaId: areaId,
+            nodeType: 'trigger',
+            serviceId: _triggerNode!.serviceId,
+            actionId: _triggerNode!.actionId,
+            config: _triggerNode!.config,
+            positionX: _triggerNode!.positionX,
+            positionY: _triggerNode!.positionY,
+            label: _triggerNode!.label,
             token: token,
           );
 
-          // Trouver le dernier node de la chaîne
+          newTriggerNodeId = createdTrigger.id;
+          debugPrint('✅ New trigger node created: ${createdTrigger.id}');
+        }
+
+        // Identifier les nouveaux action nodes (ceux qui commencent par 'temp_')
+        final newActionNodes = _actionNodes.where((node) => node.id.startsWith('temp_')).toList();
+
+        if (newActionNodes.isNotEmpty || hasNewTrigger) {
+          debugPrint('💾 Found ${newActionNodes.length} new action(s) to create');
+
+          // Déterminer le dernier node de la chaîne LOCALEMENT (pas depuis le backend)
           String? lastNodeId;
-          if (existingNodes.isNotEmpty) {
-            // Le dernier node est celui qui n'est pas une source dans les connexions
-            final allNodes = existingNodes;
-            lastNodeId = allNodes.last.id;
+
+          if (hasNewTrigger) {
+            // Si on a créé un nouveau trigger, c'est le premier de la chaîne
+            lastNodeId = newTriggerNodeId;
+          } else {
+            // Sinon, chercher le dernier node dans notre liste LOCALE _actionNodes
+            // qui n'est PAS temporaire (donc qui existe dans le backend)
+            final existingLocalActions = _actionNodes.where((n) => !n.id.startsWith('temp_')).toList();
+
+            if (existingLocalActions.isNotEmpty) {
+              // Prendre le dernier node existant de notre liste locale
+              lastNodeId = existingLocalActions.last.id;
+              debugPrint('💾 Last existing action in local list: $lastNodeId');
+            } else if (_triggerNode != null && !_triggerNode!.id.startsWith('temp_')) {
+              // Si aucune action existante, se connecter au trigger
+              lastNodeId = _triggerNode!.id;
+              debugPrint('💾 Connecting to existing trigger: $lastNodeId');
+            } else if (hasNewTrigger) {
+              // Si le trigger est nouveau mais on l'a déjà créé
+              lastNodeId = newTriggerNodeId;
+              debugPrint('💾 Connecting to newly created trigger: $lastNodeId');
+            }
           }
 
-          // Créer chaque nouveau node et le connecter
+          // Créer chaque nouveau action node et le connecter
           for (int i = 0; i < newActionNodes.length; i++) {
             final newNode = newActionNodes[i];
             debugPrint('💾 Creating new action ${i + 1}/${newActionNodes.length}: ${newNode.serviceId}/${newNode.reactionId}');
@@ -296,6 +334,235 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: ${e.toString()}')),
         );
+      }
+    }
+  }
+
+  /// Désactive l'Area si elle est active avant de faire des modifications structurelles
+  /// Retourne true si l'Area a été désactivée, false sinon
+  Future<bool> _ensureAreaIsInactive() async {
+    // Si l'Area n'existe pas encore ou est déjà inactive, pas besoin de faire quoi que ce soit
+    if (widget.areaId == null || !_isAreaActive) {
+      return false;
+    }
+
+    // Demander confirmation à l'utilisateur
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Area active'),
+          ],
+        ),
+        content: const Text(
+          'Cette Area est actuellement active. Elle doit être désactivée avant de modifier sa structure.\n\n'
+          'Voulez-vous la désactiver temporairement ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.orange),
+            child: const Text('Désactiver'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) {
+      return false;
+    }
+
+    // Désactiver l'Area
+    setState(() => _isLoading = true);
+    try {
+      final authRepo = context.read<AuthRepository>();
+      final token = await authRepo.getToken();
+
+      if (token != null) {
+        debugPrint('⏸️ Deactivating Area before structural modification...');
+        await _areaService.toggleArea(
+          areaId: widget.areaId!,
+          isActive: false,
+          token: token,
+        );
+
+        setState(() {
+          _isAreaActive = false;
+          _isLoading = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Area désactivée pour permettre les modifications'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+
+        debugPrint('✅ Area deactivated successfully');
+        return true;
+      }
+    } catch (e) {
+      debugPrint('❌ Error deactivating Area: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la désactivation: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+
+    setState(() => _isLoading = false);
+    return false;
+  }
+
+  Future<void> _changeTrigger() async {
+    // Fonction pour changer complètement le trigger (supprimer l'ancien et en créer un nouveau)
+    if (_triggerNode == null) return;
+
+    // Confirmer le changement
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Changer le déclencheur'),
+        content: const Text('Êtes-vous sûr de vouloir changer le déclencheur ? Cette action ne peut pas être annulée.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.orange),
+            child: const Text('Changer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !mounted) return;
+
+    // Désactiver l'Area si elle est active avant le changement de trigger
+    await _ensureAreaIsInactive();
+    if (!mounted) return;
+
+    // Si l'utilisateur a annulé la désactivation, on arrête le changement
+    if (_isAreaActive) {
+      // L'Area est toujours active, l'utilisateur a annulé
+      return;
+    }
+
+    // Si c'est une Area existante avec un trigger existant
+    if (widget.areaId != null && !_triggerNode!.id.startsWith('temp_')) {
+      setState(() => _isLoading = true);
+
+      try {
+        final authRepo = context.read<AuthRepository>();
+        final token = await authRepo.getToken();
+
+        if (token != null) {
+          debugPrint('🔄 Deleting old trigger from backend: ${_triggerNode!.id}');
+
+          // Supprimer l'ancien trigger
+          await _areaService.deleteWorkflowNode(
+            nodeId: _triggerNode!.id,
+            token: token,
+          );
+
+          debugPrint('✅ Old trigger deleted successfully');
+        }
+      } catch (e) {
+        debugPrint('❌ Error deleting old trigger: $e');
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur lors de la suppression: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    }
+
+    // Maintenant, créer un nouveau trigger (même logique que dans _editTrigger quand il n'y a pas de trigger)
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ServiceSelectorScreen(nodeType: 'trigger'),
+      ),
+    );
+
+    if (result != null && mounted) {
+      final item = result['item'];
+      final serviceAction = item is ServiceAction ? item : null;
+
+      final config = await NodeConfigHelper.openConfigScreen(
+        context: context,
+        nodeType: 'trigger',
+        serviceName: result['service'],
+        actionName: result['name'],
+        description: result['description'],
+        serviceAction: serviceAction,
+      );
+
+      if (config != null && mounted) {
+        final authRepo = context.read<AuthRepository>();
+        final token = await authRepo.getToken();
+        Map<String, dynamic>? outputSchema;
+
+        if (token != null) {
+          outputSchema = await _moduleConfigService.getOutputSchemaByName(
+            moduleName: result['service'],
+            actionOrTriggerName: result['name'],
+            type: 'trigger',
+            token: token,
+          );
+          debugPrint('📦 Loaded outputSchema for new trigger: $outputSchema');
+        }
+
+        if (mounted) {
+          setState(() {
+            // Créer le nouveau trigger avec un nouvel ID temporaire
+            _triggerNode = WorkflowNode(
+              id: 'temp_trigger_${DateTime.now().millisecondsSinceEpoch}',
+              areaId: widget.areaId ?? 'new',
+              nodeType: 'trigger',
+              serviceId: result['service'],
+              actionId: result['name'],
+              config: config,
+              positionX: 100,
+              positionY: 100,
+              label: '${result['service']}: ${result['description']}',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            );
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Déclencheur changé avec succès'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     }
   }
@@ -624,16 +891,16 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
 
       if (config != null) {
         setState(() {
-          // Ajouter le node action avec la configuration
+          // Utiliser un compteur unique pour éviter les collisions d'IDs
           _actionNodes.add(WorkflowNode(
-            id: 'temp_action_${_actionNodes.length}',
+            id: 'temp_action_${_tempNodeCounter++}',
             areaId: widget.areaId ?? 'new',
             nodeType: 'action',
             serviceId: result['service'],
             reactionId: result['name'],
             config: config,
-            positionX: 100,
-            positionY: 200 + (_actionNodes.length * 500),
+            positionX: 600 + (_actionNodes.length * 500),
+            positionY: 100,
             label: '${result['service']}: ${result['description']}',
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
@@ -991,11 +1258,11 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
 
   Widget _buildTriggerCard() {
     final hasTrigger = _triggerNode != null;
-    
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: hasTrigger 
+          colors: hasTrigger
             ? [const Color(0xFF4CAF50), const Color(0xFF388E3C)]
             : [Colors.grey[100]!, Colors.grey[200]!],
           begin: Alignment.topLeft,
@@ -1004,7 +1271,7 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: hasTrigger 
+            color: hasTrigger
               ? const Color(0xFF4CAF50).withOpacity(0.3)
               : Colors.black.withOpacity(0.05),
             blurRadius: 12,
@@ -1078,7 +1345,7 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
                             _formatTriggerConfig(_triggerNode!),
                             style: TextStyle(
                               fontSize: 13,
-                              color: hasTrigger 
+                              color: hasTrigger
                                 ? Colors.white.withOpacity(0.9)
                                 : Colors.grey[600],
                             ),
@@ -1087,10 +1354,33 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: hasTrigger ? Colors.white : Colors.grey[400],
-                  size: 28,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (hasTrigger) ...[
+                      // Bouton pour changer le trigger
+                      Container(
+                        width: 36,
+                        height: 36,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 20),
+                          padding: EdgeInsets.zero,
+                          onPressed: () => _changeTrigger(),
+                          tooltip: 'Changer le déclencheur',
+                        ),
+                      ),
+                    ],
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: hasTrigger ? Colors.white : Colors.grey[400],
+                      size: 28,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1343,23 +1633,126 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
                     icon: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
                     padding: EdgeInsets.zero,
                     onPressed: () async {
+                      // Afficher une confirmation avant la suppression
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Supprimer l\'action'),
+                          content: const Text('Êtes-vous sûr de vouloir supprimer cette action ?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Annuler'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: TextButton.styleFrom(foregroundColor: Colors.red),
+                              child: const Text('Supprimer'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm != true || !mounted) return;
+
+                      // Désactiver l'Area si elle est active avant la suppression
+                      await _ensureAreaIsInactive();
+                      if (!mounted) return;
+
+                      // Si l'utilisateur a annulé la désactivation, on arrête la suppression
+                      if (_isAreaActive) {
+                        // L'Area est toujours active, l'utilisateur a annulé
+                        return;
+                      }
+
                       // Si c'est une Area existante et que le node a un ID réel (pas temporaire)
                       if (widget.areaId != null && !node.id.startsWith('temp_')) {
+                        // Montrer un indicateur de chargement
+                        setState(() => _isLoading = true);
+
                         try {
                           final authRepo = context.read<AuthRepository>();
                           final token = await authRepo.getToken();
 
                           if (token != null) {
                             debugPrint('🗑️ Deleting node from backend: ${node.id}');
+
+                            // Avant de supprimer, reconnecter le node précédent au node suivant
+                            // pour maintenir la chaîne intacte
+                            final nodeIndex = _actionNodes.indexOf(node);
+
+                            // Trouver le node précédent (soit une action existante, soit le trigger)
+                            String? previousNodeId;
+                            if (nodeIndex > 0) {
+                              // Il y a une action avant celle-ci
+                              previousNodeId = _actionNodes[nodeIndex - 1].id;
+                            } else if (_triggerNode != null) {
+                              // C'est la première action, le précédent est le trigger
+                              previousNodeId = _triggerNode!.id;
+                            }
+
+                            // Trouver le node suivant (l'action après celle qu'on supprime)
+                            String? nextNodeId;
+                            if (nodeIndex < _actionNodes.length - 1) {
+                              final nextNode = _actionNodes[nodeIndex + 1];
+                              // Ne prendre que les nodes non-temporaires
+                              if (!nextNode.id.startsWith('temp_')) {
+                                nextNodeId = nextNode.id;
+                              }
+                            }
+
+                            debugPrint('🔗 Reconnecting chain: $previousNodeId → $nextNodeId (skipping deleted node)');
+
+                            // Supprimer le node (le backend supprime automatiquement les connexions)
                             await _areaService.deleteWorkflowNode(
                               nodeId: node.id,
                               token: token,
                             );
+
                             debugPrint('✅ Node deleted successfully from backend');
+
+                            // Si on a un node précédent ET un node suivant, les reconnecter
+                            if (previousNodeId != null &&
+                                nextNodeId != null &&
+                                !previousNodeId.startsWith('temp_') &&
+                                !nextNodeId.startsWith('temp_')) {
+                              try {
+                                debugPrint('🔗 Creating reconnection: $previousNodeId → $nextNodeId');
+                                await _areaService.createWorkflowConnection(
+                                  areaId: widget.areaId!,
+                                  sourceNodeId: previousNodeId,
+                                  targetNodeId: nextNodeId,
+                                  token: token,
+                                );
+                                debugPrint('✅ Chain reconnected successfully');
+                              } catch (e) {
+                                debugPrint('⚠️ Could not reconnect chain: $e');
+                                // Ne pas bloquer si la reconnexion échoue
+                              }
+                            }
+
+                            // Supprimer localement sans recharger depuis le backend
+                            // pour éviter les race conditions
+                            if (mounted) {
+                              setState(() {
+                                _actionNodes.remove(node);
+                                _isLoading = false;
+                              });
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Action supprimée avec succès'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } else {
+                            setState(() => _isLoading = false);
                           }
                         } catch (e) {
                           debugPrint('❌ Error deleting node from backend: $e');
                           if (mounted) {
+                            setState(() => _isLoading = false);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('Erreur lors de la suppression: ${e.toString()}'),
@@ -1370,14 +1763,20 @@ class _AreaEditorScreenState extends State<AreaEditorScreen> {
                           return; // Ne pas supprimer localement si l'API a échoué
                         }
                       } else {
+                        // Node temporaire - supprimer seulement localement
                         debugPrint('🗑️ Removing temporary node locally: ${node.id}');
-                      }
-
-                      // Supprimer le node de la liste locale
-                      if (mounted) {
                         setState(() {
                           _actionNodes.remove(node);
                         });
+
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Action supprimée'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
                       }
                     },
                   ),
