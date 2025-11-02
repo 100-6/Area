@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="outlookGradient" x1="12" y1="12" x2="52" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0a94ff"/>
+      <stop offset="1" stop-color="#005bb5"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="12" width="40" height="40" rx="6" fill="url(#outlookGradient)"/>
+  <path d="M28 12H52a6 6 0 0 1 6 6v28a6 6 0 0 1-6 6H28V12Z" fill="#0a6dff"/>
+  <path d="M12 20h32l-16 12-16-12Z" fill="#fff" opacity=".9"/>
+  <path d="M12 44V22l16 12 16-12v22H12Z" fill="#e8f1ff" opacity=".9"/>
+  <circle cx="44" cy="32" r="9" fill="#fff" opacity=".95"/>
+  <path d="M44 26a6 6 0 1 0 0 12 6 6 0 0 0 0-12Zm0 2.4a3.6 3.6 0 1 1 0 7.2 3.6 3.6 0 0 1 0-7.2Z" fill="#0062d1"/>
+</svg>

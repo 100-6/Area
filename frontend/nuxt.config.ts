@@ -20,6 +20,18 @@ export default defineNuxtConfig({
   },
   css: ['~/assets/css/main.css', '~/assets/css/transitions.css'],
   app: {
+    head: {
+      title: 'Auto',
+      titleTemplate: (titleChunk?: string) => {
+        if (!titleChunk || titleChunk === 'Auto') {
+          return 'Auto';
+        }
+        return `${titleChunk} · Auto`;
+      },
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+      ]
+    },
     pageTransition: {
       name: 'page',
       mode: 'out-in'

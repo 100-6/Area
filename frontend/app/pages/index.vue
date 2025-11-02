@@ -22,7 +22,7 @@
               </h1>
 
               <p class="text-xl lg:text-2xl leading-relaxed" style="color: var(--text-secondary); font-weight: var(--font-weight-normal);">
-                Plus de 1000+ applications disponibles. Créez des automatisations puissantes
+                Plus de 20 applications disponibles. Créez des automatisations puissantes
                 en quelques clics. Sans code, sans complexité.
               </p>
             </div>
@@ -47,16 +47,6 @@
                   </div>
                 </NuxtLink>
               </UiGlareHover>
-
-              <UButton
-                size="xl"
-                variant="ghost"
-                class="px-8 py-4 text-lg font-medium smooth-hover"
-                style="color: var(--text-primary);"
-              >
-                <UIcon name="i-heroicons-eye" class="w-6 h-6 mr-2" />
-                Voir une démo
-              </UButton>
             </div>
 
             <div class="flex flex-wrap justify-center lg:justify-start gap-8 text-sm">
@@ -70,7 +60,7 @@
               </div>
               <div class="flex items-center gap-2" style="color: var(--text-secondary);">
                 <UIcon name="i-heroicons-users" class="w-5 h-5" style="color: var(--color-secondary);" />
-                <span>Utilisé par 50K+ équipes</span>
+                <span>Utilisé par des équipes de toutes tailles</span>
               </div>
             </div>
           </div>
@@ -186,29 +176,29 @@
       <UContainer>
         <div class="text-center max-w-3xl mx-auto mb-20 slide-up">
           <h2 class="text-4xl lg:text-5xl font-bold mb-6" style="color: var(--text-primary);">
-            Pourquoi 50K+ équipes nous font
-            <span class="text-green-600">confiance</span>
+            Pourquoi nous faire <span class="text-green-600">confiance&nbsp;?</span>
           </h2>
           <p class="text-xl" style="color: var(--text-secondary);">
             Des fonctionnalités pensées pour les équipes modernes qui veulent gagner du temps
           </p>
         </div>
 
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 fade-in">
+        <div class="grid md:grid-cols-2 gap-8 fade-in max-w-4xl mx-auto">
           <div class="group p-8 rounded-2xl border card-hover"
                style="background: var(--bg-card); border-color: var(--border-color);">
             <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 smooth-hover group-hover:scale-110"
                  style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));">
               <UIcon name="i-heroicons-puzzle-piece" class="w-7 h-7" style="color: var(--color-tertiary);" />
             </div>
-            <h3 class="text-xl font-bold mb-4" style="color: var(--text-primary);">1000+ Intégrations</h3>
+            <h3 class="text-xl font-bold mb-4" style="color: var(--text-primary);">20 Intégrations</h3>
             <p style="color: var(--text-secondary);">
               Connectez tous vos outils favoris : CRM, messageries, stockage cloud, réseaux sociaux et bien plus.
             </p>
             <div class="mt-6 flex flex-wrap gap-2">
               <span class="px-3 py-1 text-xs rounded-full" style="background: rgba(167, 240, 186, 0.2); color: var(--color-tertiary);">Gmail</span>
               <span class="px-3 py-1 text-xs rounded-full" style="background: rgba(167, 240, 186, 0.2); color: var(--color-tertiary);">Slack</span>
-              <span class="px-3 py-1 text-xs rounded-full" style="background: rgba(167, 240, 186, 0.2); color: var(--color-tertiary);">+998</span>
+              <span class="px-3 py-1 text-xs rounded-full" style="background: rgba(167, 240, 186, 0.2); color: var(--color-tertiary);">Trello</span>
+              <span class="px-3 py-1 text-xs rounded-full" style="background: rgba(167, 240, 186, 0.2); color: var(--color-tertiary);">Spotify</span>
             </div>
           </div>
 
@@ -224,23 +214,14 @@
             </p>
             <div class="mt-6">
               <div class="flex items-center gap-2">
-                <div class="flex-1 h-2 rounded-full" style="background: var(--bg-secondary);"></div>
+                <div class="flex-1 h-2 rounded-full overflow-hidden" style="background: rgba(167, 240, 186, 0.2);">
+                  <div class="h-full w-full" style="background: linear-gradient(90deg, var(--color-secondary), var(--color-primary));"></div>
+                </div>
                 <span class="text-sm font-medium" style="color: var(--color-secondary);">100% visuel</span>
               </div>
             </div>
           </div>
 
-          <div class="group p-8 rounded-2xl border card-hover"
-               style="background: var(--bg-card); border-color: var(--border-color);">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 smooth-hover group-hover:scale-110"
-                 style="background: linear-gradient(135deg, var(--color-primary), var(--color-tertiary));">
-              <UIcon name="i-heroicons-chart-bar-square" class="w-7 h-7" style="color: var(--text-white);" />
-            </div>
-            <h3 class="text-xl font-bold mb-4" style="color: var(--text-primary);">Analytics Avancés</h3>
-            <p style="color: var(--text-secondary);">
-              Suivez les performances de vos workflows avec des tableaux de bord détaillés.
-            </p>
-          </div>
         </div>
       </UContainer>
     </section>
@@ -250,7 +231,7 @@
       <UContainer>
         <div class="text-center max-w-3xl mx-auto mb-16 slide-up">
           <h2 class="text-4xl lg:text-5xl font-bold mb-6" style="color: var(--text-primary);">
-            Plus de <span class="text-green-600">1000 intégrations</span>
+            Plus de <span class="text-green-600">20 intégrations</span>
           </h2>
           <p class="text-xl" style="color: var(--text-secondary);">
             Connectez tous vos outils préférés en quelques clics
@@ -269,7 +250,17 @@
               <div class="flex items-center space-x-4 px-6 py-4 rounded-2xl border smooth-hover"
                    style="background: var(--bg-card); border-color: var(--border-color);">
                 <div class="w-10 h-10 flex items-center justify-center">
-                  <UIcon :name="service.icon" class="w-8 h-8" />
+                  <img
+                    v-if="service.image"
+                    :src="service.image"
+                    :alt="service.name"
+                    class="w-8 h-8 object-contain"
+                  />
+                  <UIcon
+                    v-else
+                    :name="service.icon"
+                    class="w-8 h-8"
+                  />
                 </div>
                 <span class="font-semibold" style="color: var(--text-primary);">{{ service.name }}</span>
               </div>
@@ -318,16 +309,6 @@
                 </div>
               </NuxtLink>
             </UiGlareHover>
-
-            <UButton
-              size="xl"
-              variant="outline"
-              class="px-10 py-5 text-lg font-semibold rounded-2xl border-2 button-hover"
-              style="border-color: var(--text-white); color: var(--text-white);"
-            >
-              <UIcon name="i-heroicons-calendar-days" class="w-6 h-6 mr-2" />
-              Planifier une démo
-            </UButton>
           </div>
 
           <div class="flex flex-wrap justify-center gap-8 pt-16 text-sm opacity-80">
@@ -355,17 +336,19 @@
 
 const services = [
   { name: 'Gmail', icon: 'i-logos-google-gmail' },
+  { name: 'Outlook', image: '/logos/outlook.svg' },
   { name: 'Slack', icon: 'i-logos-slack-icon' },
   { name: 'Discord', icon: 'i-logos-discord-icon' },
-  { name: 'GitHub', icon: 'i-logos-github-icon' },
-  { name: 'Twitter', icon: 'i-logos-twitter' },
-  { name: 'LinkedIn', icon: 'i-logos-linkedin-icon' },
-  { name: 'Spotify', icon: 'i-logos-spotify-icon' },
-  { name: 'Google Drive', icon: 'i-logos-google-drive' },
   { name: 'Dropbox', icon: 'i-logos-dropbox' },
+  { name: 'GitHub', icon: 'i-logos-github-icon' },
   { name: 'Trello', icon: 'i-logos-trello' },
   { name: 'Notion', icon: 'i-logos-notion-icon' },
-  { name: 'Calendly', icon: 'i-simple-icons-calendly' }
+  { name: 'Spotify', icon: 'i-logos-spotify-icon' },
+  { name: 'Strava', image: '/logos/strava.svg' },
+  { name: 'Telegram', icon: 'i-logos-telegram' },
+  { name: 'Twitch', icon: 'i-logos-twitch' },
+  { name: 'OpenAI', icon: 'i-logos-openai-icon' },
+  { name: 'Weather', image: '/logos/weather-cloud.svg' }
 ]
 </script>
 

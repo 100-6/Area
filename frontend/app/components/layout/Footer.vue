@@ -80,11 +80,6 @@
             <h3 class="font-semibold text-gray-900 mb-4">Support</h3>
             <ul class="space-y-3">
               <li>
-                <NuxtLink to="/docs" class="text-gray-600 hover:text-brand-tertiary transition-colors duration-200">
-                  Documentation
-                </NuxtLink>
-              </li>
-              <li>
                 <NuxtLink to="/help" class="text-gray-600 hover:text-brand-tertiary transition-colors duration-200">
                   Centre d'aide
                 </NuxtLink>
