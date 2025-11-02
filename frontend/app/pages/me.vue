@@ -512,17 +512,14 @@
                     </div>
 
                     <div class="flex flex-col items-end space-y-2">
-                      <span class="text-xs bg-red-100 text-red-700 px-3 py-1 rounded-full font-semibold border border-red-200">
-                        Fonctionnalité désactivée
-                      </span>
-                      <button
-                        disabled
-                        class="group relative inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-white transition-all duration-200 bg-gradient-to-r from-red-500 to-red-600 rounded-lg shadow-sm opacity-50 cursor-not-allowed"
+                      <UButton
+                        @click="isDeleteModalOpen = true"
+                        class="group relative inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-white transition-all duration-200 bg-gradient-to-r from-red-500 to-red-600 rounded-lg shadow-sm hover:shadow-md hover:from-red-600 hover:to-red-700"
                       >
                         <UIcon name="i-heroicons-trash" class="w-4 h-4 mr-2" />
                         Supprimer le compte
                         <div class="absolute inset-0 bg-red-700 rounded-lg opacity-0 group-hover:opacity-20 transition-opacity duration-200"></div>
-                      </button>
+                      </UButton>
                     </div>
                   </div>
                 </div>
@@ -546,6 +543,78 @@
         </div>
       </div>
     </UContainer>
+
+    <!-- Modal de confirmation de suppression -->
+    <UModal v-model="isDeleteModalOpen" :ui="{ width: 'sm:max-w-md' }">
+      <div class="p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-xl font-bold text-red-800 flex items-center">
+            <UIcon name="i-heroicons-exclamation-triangle" class="w-6 h-6 mr-2" />
+            Supprimer le compte
+          </h3>
+          <UButton
+            variant="ghost"
+            size="sm"
+            @click="isDeleteModalOpen = false"
+            :disabled="isDeletingAccount"
+          >
+            <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
+          </UButton>
+        </div>
+
+        <div class="space-y-4">
+          <div class="p-4 bg-red-50 border-2 border-red-200 rounded-lg">
+            <div class="flex items-start space-x-3">
+              <UIcon name="i-heroicons-exclamation-circle" class="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div class="text-sm text-red-800">
+                <p class="font-semibold mb-2">Cette action est irréversible !</p>
+                <p>La suppression de votre compte entraînera :</p>
+                <ul class="list-disc list-inside mt-2 space-y-1 text-red-700">
+                  <li>La suppression définitive de toutes vos données</li>
+                  <li>La suppression de tous vos workflows</li>
+                  <li>La déconnexion de tous vos services intégrés</li>
+                  <li>La perte de votre historique d'exécutions</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <label class="text-sm font-semibold text-gray-700">
+              Pour confirmer, tapez <span class="font-mono bg-gray-100 px-2 py-0.5 rounded text-red-600">SUPPRIMER</span>
+            </label>
+            <UInput
+              v-model="deleteConfirmationText"
+              placeholder="Tapez SUPPRIMER"
+              size="lg"
+              :disabled="isDeletingAccount"
+              class="w-full"
+            />
+          </div>
+
+          <div class="flex gap-3 pt-4">
+            <UButton
+              @click="handleDeleteAccount"
+              :loading="isDeletingAccount"
+              :disabled="deleteConfirmationText !== 'SUPPRIMER'"
+              size="lg"
+              class="flex-1 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-none"
+            >
+              <UIcon name="i-heroicons-trash" class="w-4 h-4 mr-2" />
+              Supprimer définitivement
+            </UButton>
+            <UButton
+              variant="outline"
+              @click="isDeleteModalOpen = false"
+              size="lg"
+              :disabled="isDeletingAccount"
+            >
+              Annuler
+            </UButton>
+          </div>
+        </div>
+      </div>
+    </UModal>
   </div>
 </template>
 
@@ -557,13 +626,16 @@ definePageMeta({
 // Import the InfoCard component explicitly to ensure it's available
 import InfoCard from '~/components/ui/InfoCard.vue'
 
-const { user, logout, updateProfile, linkProvider, changePassword } = useAuth()
+const { user, logout, updateProfile, linkProvider, changePassword, deleteAccount } = useAuth()
 const { providers, isLoading: isLoadingProviders, error: providersError, fetchProviders } = useAuthProviders()
 
 const isEditing = ref(false)
 const isSaving = ref(false)
 const isChangingPassword = ref(false)
 const isPasswordSaving = ref(false)
+const isDeleteModalOpen = ref(false)
+const isDeletingAccount = ref(false)
+const deleteConfirmationText = ref('')
 const passwordForm = ref({
   currentPassword: '',
   newPassword: '',
@@ -722,6 +794,43 @@ const cancelPasswordChange = () => {
     confirmPassword: ''
   }
   isChangingPassword.value = false
+}
+
+const handleDeleteAccount = async () => {
+  if (deleteConfirmationText.value !== 'SUPPRIMER') {
+    toast.add({
+      title: 'Erreur',
+      description: 'Veuillez taper "SUPPRIMER" pour confirmer',
+      color: 'red',
+      timeout: 3000,
+      icon: 'i-heroicons-exclamation-circle'
+    })
+    return
+  }
+
+  isDeletingAccount.value = true
+  try {
+    await deleteAccount()
+    toast.add({
+      title: 'Compte supprimé',
+      description: 'Votre compte a été supprimé avec succès',
+      color: 'green',
+      timeout: 3000,
+      icon: 'i-heroicons-check-circle'
+    })
+  } catch (error: any) {
+    toast.add({
+      title: 'Erreur',
+      description: error.message || 'Impossible de supprimer le compte',
+      color: 'red',
+      timeout: 5000,
+      icon: 'i-heroicons-exclamation-circle'
+    })
+  } finally {
+    isDeletingAccount.value = false
+    isDeleteModalOpen.value = false
+    deleteConfirmationText.value = ''
+  }
 }
 
 const handleProviderLink = (provider: string) => {

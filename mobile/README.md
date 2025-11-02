@@ -76,6 +76,14 @@ La documentation complète est organisée par thème dans le dossier [documentat
   - Tâches courantes
   - Dépannage de base
 
+- **[Quick Add Features](documentation-flutter/QUICK_ADD_FEATURES.md)** 🚀
+  *Guide pratique pour ajouter rapidement des features*
+  - Ajouter un nouveau service
+  - Ajouter un nouvel écran
+  - Ajouter une route de navigation
+  - Ajouter un provider
+  - Exemples complets et checklist
+
 ### Documentation technique
 
 - **[Technical Documentation](documentation-flutter/TECHNICAL_DOCUMENTATION.md)** 📖
