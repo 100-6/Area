@@ -30,6 +30,12 @@ router.get('/connect', oauthController.authorize);
 router.get('/callback', oauthController.callback);
 
 /**
+ * POST /api/trello/process
+ * Process Trello OAuth token (called from callback HTML page)
+ */
+router.post('/process', oauthController.process);
+
+/**
  * Protected routes (require auth + Trello connection)
  */
 router.use(requireAuth);
