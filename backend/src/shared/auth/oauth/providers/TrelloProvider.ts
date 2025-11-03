@@ -1,4 +1,5 @@
 import { IOAuthProvider, OAuthUserProfile } from '../IOAuthProvider';
+import 'colors';
 
 interface TrelloTokenResponse {
     token: string;
@@ -30,12 +31,11 @@ export class TrelloProvider implements IOAuthProvider {
     }
 
     getAuthUrl(customState?: string): string {
-        // Build return URL with state parameter if provided
         let returnUrl = this.redirectUri;
+
         if (customState) {
             returnUrl = `${this.redirectUri}?state=${encodeURIComponent(customState)}`;
         }
-
         const params = new URLSearchParams({
             expiration: 'never',
             name: this.appName,
@@ -44,8 +44,8 @@ export class TrelloProvider implements IOAuthProvider {
             key: this.apiKey,
             return_url: returnUrl,
         });
-
-        return `https://trello.com/1/authorize?${params.toString()}`;
+        const authUrl = `https://trello.com/1/authorize?${params.toString()}`;
+        return authUrl;
     }
 
     private async getMemberInfo(apiKey: string, token: string): Promise<TrelloMemberInfo> {
@@ -64,7 +64,6 @@ export class TrelloProvider implements IOAuthProvider {
                 const errorText = await response.text();
                 throw new Error(`Failed to get Trello member info: ${response.status} ${response.statusText} - ${errorText}`);
             }
-
             const memberInfo = await response.json() as TrelloMemberInfo;
             return memberInfo;
         } catch (error) {
@@ -76,19 +75,13 @@ export class TrelloProvider implements IOAuthProvider {
 
     async handleCallback(token: string): Promise<OAuthUserProfile> {
         try {
-            // Trello uses a different OAuth flow - the token is directly provided
-            // Unlike other providers, Trello doesn't have a code exchange step
             const memberInfo = await this.getMemberInfo(this.apiKey, token);
 
-            if (!memberInfo.email) {
+            if (!memberInfo.email)
                 throw new Error('Trello user email not available');
-            }
-
-            // Parse full name into first and last name
             const nameParts = memberInfo.fullName ? memberInfo.fullName.split(' ') : [memberInfo.username];
             const firstName = nameParts[0] || '';
             const lastName = nameParts.slice(1).join(' ') || '';
-
             return {
                 id: memberInfo.id,
                 email: memberInfo.email,
