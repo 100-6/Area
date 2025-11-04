@@ -135,18 +135,11 @@ export const useAuth = () => {
   }
 
   const getProviderAuthEndpoint = (provider: string): string => {
-    // Special routes for certain providers
-    const specialRoutes: Record<string, string> = {
-      spotify: '/api/spotify/connect',
-      gmail: '/api/gmail/connect',
-      outlook: '/api/outlook/connect',
-      trello: '/api/trello/connect',
-      slack: '/api/slack/connect',
-      twitch: '/api/twitch/connect',
-      notion: '/api/notion/connect'
-    }
+    const authProviders = ['google', 'discord', 'github', 'gitlab', 'dropbox']
 
-    return specialRoutes[provider] || `/api/auth/${provider}`
+    if (authProviders.includes(provider.toLowerCase()))
+      return `/api/auth/${provider}`
+    return `/api/${provider}/connect`
   }
 
   const linkProvider = (provider: string): void => {
