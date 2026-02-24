@@ -63,19 +63,18 @@ export class DiscordModule extends BaseModule {
      * Connecter le bot Discord
      */
     private async connectBot(): Promise<void> {
+        if (!process.env.DISCORD_BOT_TOKEN) {
+            console.warn('[Discord] ⚠️  DISCORD_BOT_TOKEN not configured, bot features will be disabled'.yellow.bold);
+            return;
+        }
         try {
-            if (!process.env.DISCORD_BOT_TOKEN) {
-                console.warn('[Discord] ⚠️  DISCORD_BOT_TOKEN not configured, bot features will be disabled'.yellow.bold);
-                return;
-            }
             console.log('[Discord] Connecting bot to Discord...'.cyan);
             await this.botClient.connect();
             console.log('[Discord] ✓ Bot connected successfully'.green);
         } catch (error) {
-            console.error('[Discord] ❌ Failed to connect bot:'.red, error);
-            throw error;
+            console.error('[Discord] ❌ Failed to connect bot (non-fatal, server will continue):'.red, error);
         }
-        }
+    }
 
     /**
      * Obtenir le client Discord bot
